@@ -137,6 +137,11 @@ type MemberListProps = {
     data: Member[];
 }
 
+const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
+const statuses = ['active', 'pending', 'inactive'];
+const branches = ['New York', 'London', 'Tokyo', 'Sydney'];
+
+
 export function MemberList({ data }: MemberListProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -165,15 +170,64 @@ export function MemberList({ data }: MemberListProps) {
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4 gap-4">
+      <div className="flex items-center py-4 gap-2 flex-wrap">
         <Input
           placeholder="Filter by name..."
           value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
           onChange={(event) =>
             table.getColumn('name')?.setFilterValue(event.target.value)
           }
-          className="max-w-sm"
+          className="max-w-xs"
         />
+        <Select
+            value={(table.getColumn('domain')?.getFilterValue() as string) ?? ''}
+            onValueChange={(value) =>
+                table.getColumn('domain')?.setFilterValue(value === 'all' ? '' : value)
+            }
+        >
+            <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by domain" />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="all">All Domains</SelectItem>
+                {domains.map((domain) => (
+                    <SelectItem key={domain} value={domain}>{domain}</SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
+         <Select
+            value={(table.getColumn('status')?.getFilterValue() as string) ?? ''}
+            onValueChange={(value) =>
+                table.getColumn('status')?.setFilterValue(value === 'all' ? '' : value)
+            }
+        >
+            <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                {statuses.map((status) => (
+                    <SelectItem key={status} value={status} className='capitalize'>{status}</SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
+        <Select
+            value={(table.getColumn('branch')?.getFilterValue() as string) ?? ''}
+            onValueChange={(value) =>
+                table.getColumn('branch')?.setFilterValue(value === 'all' ? '' : value)
+            }
+        >
+            <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by branch" />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="all">All Branches</SelectItem>
+                {branches.map((branch) => (
+                    <SelectItem key={branch} value={branch}>{branch}</SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">
