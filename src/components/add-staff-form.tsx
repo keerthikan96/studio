@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useFieldArray, useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useState, useTransition } from 'react';
 import {
@@ -18,14 +18,22 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { parseResumeAction } from '@/app/actions/staff';
-import { Loader2, UploadCloud, UserPlus } from 'lucide-react';
+import { Loader2, PlusCircle, Trash, UploadCloud, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Separator } from './ui/separator';
+
+const workExperienceSchema = z.object({
+  companyName: z.string().min(1, 'Company name is required.'),
+  role: z.string().min(1, 'Role is required.'),
+  years: z.string().min(1, 'Years are required.'),
+  keyResponsibilities: z.string().optional(),
+});
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
   phone: z.string().optional(),
-  experience: z.string().optional(),
+  experience: z.array(workExperienceSchema).optional(),
   education: z.string().optional(),
   skills: z.string().optional(),
 });
@@ -43,10 +51,15 @@ export default function AddStaffForm() {
       name: '',
       email: '',
       phone: '',
-      experience: '',
+      experience: [],
       education: '',
       skills: '',
     },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "experience",
   });
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,19 +203,81 @@ export default function AddStaffForm() {
               />
             </div>
             
-            <FormField
-              control={form.control}
-              name="experience"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Work Experience</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Describe work experience..." {...field} rows={5} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <FormLabel>Work Experience</FormLabel>
+              <div className="space-y-4 mt-2">
+                {fields.map((field, index) => (
+                  <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name={`experience.${index}.companyName`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Company Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="e.g. TechCorp" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`experience.${index}.role`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Role</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="e.g. Senior Developer" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`experience.${index}.years`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Duration</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="e.g. 2020 - Present" />
+                            </FormControl>
+                             <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                     <FormField
+                        control={form.control}
+                        name={`experience.${index}.keyResponsibilities`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Key Responsibilities</FormLabel>
+                            <FormControl>
+                              <Textarea {...field} placeholder="Describe key responsibilities..."/>
+                            </FormControl>
+                             <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button type="button" variant="destructive" size="sm" onClick={() => remove(index)} className="absolute top-2 right-2">
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => append({ companyName: '', role: '', years: '', keyResponsibilities: '' })}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Work Experience
+                </Button>
+              </div>
+            </div>
+
             <FormField
               control={form.control}
               name="education"
