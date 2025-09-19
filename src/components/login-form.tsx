@@ -42,7 +42,7 @@ export default function LoginForm() {
     startTransition(() => {
       // Mock authentication logic
       if (data.password === 'password') { // Simple password check for demo
-        if (data.email === 'admin@staffsync.com') {
+        if (data.email === 'admin@gmail.com') {
           toast({
             title: 'Login Successful',
             description: 'Redirecting to admin dashboard...',
