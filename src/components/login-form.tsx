@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, LogIn } from 'lucide-react';
 import { Member } from '@/lib/mock-data';
+import { getMembersAction } from '@/app/actions/staff';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
@@ -40,32 +41,35 @@ export default function LoginForm() {
     },
   });
 
+  const handleLogin = (user: { id: string, name: string, email: string, role: 'admin' | 'staff' }) => {
+    sessionStorage.setItem('loggedInUser', JSON.stringify(user));
+  };
+  
   useEffect(() => {
-    const handleLogin = (user: { name: string, email: string, role: 'admin' | 'staff' }) => {
-        sessionStorage.setItem('loggedInUser', JSON.stringify(user));
-    };
-
     // This is a workaround for a demo. In a real app, you'd clear this on logout.
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('new_user') === 'true') {
         const email = urlParams.get('email');
         if (email) {
-            // A real app would fetch the user's name from the DB here
-            handleLogin({ name: 'New Member', email, role: 'staff'});
+            startTransition(async () => {
+                const members = await getMembersAction();
+                const newUser = members.find(m => m.email === email);
+                if (newUser) {
+                    handleLogin({ id: newUser.id, name: newUser.name, email: newUser.email, role: 'staff'});
+                }
+            })
         }
     }
   }, []);
 
   function onSubmit(data: LoginFormValues) {
-    startTransition(() => {
-      const handleLogin = (user: { name: string, email: string, role: 'admin' | 'staff' }) => {
-          sessionStorage.setItem('loggedInUser', JSON.stringify(user));
-      };
+    startTransition(async () => {
       
       // Mock authentication logic
       if (data.password === 'password') { // Simple password check for demo
         if (data.email === 'admin@gmail.com') {
-          handleLogin({ name: 'Admin', email: 'admin@gmail.com', role: 'admin' });
+          // Admin login doesn't need a real DB record for this demo
+          handleLogin({ id: 'admin-user', name: 'Admin', email: 'admin@gmail.com', role: 'admin' });
           toast({
             title: 'Login Successful',
             description: 'Redirecting to admin dashboard...',
@@ -74,21 +78,25 @@ export default function LoginForm() {
           return;
         }
 
-        // For staff, we assume any valid email with the password "password" is a successful login
-        // A real application would have a database check here.
-        handleLogin({ name: 'Staff Member', email: data.email, role: 'staff' });
-        toast({
-            title: 'Login Successful',
-            description: 'Redirecting to your profile...',
-        });
-        router.push('/profile');
-        return;
+        // For staff, we check if they exist in the DB
+        const members = await getMembersAction();
+        const member = members.find(m => m.email === data.email && m.status === 'active');
+        
+        if (member) {
+            handleLogin({ id: member.id, name: member.name, email: data.email, role: 'staff' });
+            toast({
+                title: 'Login Successful',
+                description: 'Redirecting to your profile...',
+            });
+            router.push('/profile');
+            return;
+        }
       }
       
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: 'Invalid email or password.',
+        description: 'Invalid email, password, or inactive account.',
       });
     });
   }

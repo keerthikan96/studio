@@ -17,19 +17,18 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, Save, Trash, X as XIcon, ArrowLeft, MoreVertical } from 'lucide-react';
+import { Loader2, PlusCircle, Save, Trash, X as XIcon, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Member } from '@/lib/mock-data';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getMemberByIdAction, updateMemberAction, updateMemberProfilePictureAction, deleteMemberAction } from '@/app/actions/staff';
+import { getMemberByIdAction, updateMemberAction, deleteMemberAction } from '@/app/actions/staff';
 import ProfilePictureUploader from '@/components/profile-picture-uploader';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
@@ -59,7 +58,6 @@ const profileSchema = z.object({
   education: z.array(educationSchema).optional(),
   skills: z.array(z.string()).optional(),
   status: z.enum(['active', 'pending', 'inactive']),
-  profile_picture_url: z.string().optional(),
 }).refine(data => {
     if (data.country === 'Sri Lanka') {
         return sriLankanBranches.includes(data.branch);
@@ -92,6 +90,8 @@ export default function MemberProfilePage() {
   const params = useParams();
   const memberId = params.id as string;
   const [member, setMember] = useState<Member | null>(null);
+  const [imageVersion, setImageVersion] = useState(Date.now());
+
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -102,7 +102,6 @@ export default function MemberProfilePage() {
         experience: [],
         education: [],
         skills: [],
-        profile_picture_url: '',
     },
   });
 
@@ -117,7 +116,6 @@ export default function MemberProfilePage() {
                         experience: currentMember.experience || [],
                         education: currentMember.education || [],
                         skills: currentMember.skills || [],
-                        profile_picture_url: currentMember.profile_picture_url || '',
                     });
                 } else {
                     toast({ title: "Member not found", variant: "destructive" });
@@ -147,38 +145,26 @@ export default function MemberProfilePage() {
   
   function onSubmit(data: ProfileFormValues) {
     startTransition(async () => {
-        let hasError = false;
         const dirtyFields = form.formState.dirtyFields;
+        if (Object.keys(dirtyFields).length === 0) {
+            toast({
+                title: 'No Changes Detected',
+                description: 'You haven\'t made any changes to save.',
+            });
+            return;
+        }
+
         const dataToUpdate: Partial<ProfileFormValues> = {};
-
-        // 1. Handle profile picture update if it changed
-        if (dirtyFields.profile_picture_url && data.profile_picture_url) {
-            const pictureResult = await updateMemberProfilePictureAction(memberId, data.profile_picture_url);
-            if ('error' in pictureResult) {
-                toast({ title: 'Update Failed', description: pictureResult.error, variant: 'destructive' });
-                hasError = true;
-            }
-        }
-
-        // 2. Collect other dirty fields for update, excluding the profile picture
-        const otherDirtyFields = Object.keys(dirtyFields).filter(field => field !== 'profile_picture_url');
-        if (otherDirtyFields.length > 0) {
-             for (const field of otherDirtyFields) {
-                // @ts-ignore
-                dataToUpdate[field] = data[field];
-            }
-        }
-
-        // 3. Perform the update for other fields if there are any and no error has occurred yet
-        if (Object.keys(dataToUpdate).length > 0 && !hasError) {
-             const result = await updateMemberAction(memberId, dataToUpdate);
-            if ('error' in result) {
-                toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });
-                hasError = true;
-            }
+        for (const field in dirtyFields) {
+            // @ts-ignore
+            dataToUpdate[field] = data[field];
         }
         
-        if (!hasError && Object.keys(dirtyFields).length > 0) {
+        const result = await updateMemberAction(memberId, dataToUpdate);
+
+        if ('error' in result) {
+            toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });
+        } else {
             toast({
                 title: 'Profile Updated!',
                 description: `${data.name}'s information has been successfully saved.`,
@@ -194,11 +180,6 @@ export default function MemberProfilePage() {
                     skills: updatedMember.skills || [],
                 });
             }
-        } else if (Object.keys(dirtyFields).length === 0) {
-             toast({
-                title: 'No Changes Detected',
-                description: 'You haven\'t made any changes to save.',
-            });
         }
     });
   }
@@ -247,7 +228,7 @@ export default function MemberProfilePage() {
                 <div className="flex items-start justify-between gap-4">
                     <div className='flex items-center gap-4'>
                         <Avatar className="h-20 w-20 text-3xl">
-                            <AvatarImage src={member.profile_picture_url || undefined} alt={`${member.name}'s avatar`} />
+                            <AvatarImage key={imageVersion} src={`/api/staff/${member.id}/profile-picture?v=${imageVersion}`} alt={`${member.name}'s avatar`} />
                             <AvatarFallback>{fallback}</AvatarFallback>
                         </Avatar>
                         <div>
@@ -301,8 +282,9 @@ export default function MemberProfilePage() {
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                              <div className="flex flex-col items-center gap-4 text-center mb-8">
                                 <ProfilePictureUploader
-                                    currentImage={form.watch('profile_picture_url')}
-                                    onImageSelect={(dataUri) => form.setValue('profile_picture_url', dataUri, { shouldDirty: true })}
+                                    memberId={member.id}
+                                    currentImageVersion={imageVersion}
+                                    onUploadSuccess={() => setImageVersion(Date.now())}
                                     userName={member.name}
                                 />
                             </div>
@@ -606,5 +588,3 @@ export default function MemberProfilePage() {
     </div>
   );
 }
-
-    

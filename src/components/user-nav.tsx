@@ -18,6 +18,7 @@ import { CreditCard, LogOut, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 type UserData = {
+    id: string;
     name: string;
     email: string;
     role: 'admin' | 'staff';
@@ -46,6 +47,9 @@ export default function UserNav() {
   }
   
   const fallback = user.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
+  const imageSrc = user.role === 'admin' 
+    ? `https://picsum.photos/seed/${user.email}/100/100` 
+    : `/api/staff/${user.id}/profile-picture`;
 
   return (
     <DropdownMenu>
@@ -53,7 +57,8 @@ export default function UserNav() {
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-9 w-9">
             <AvatarImage
-              src={`https://picsum.photos/seed/${user.email}/100/100`}
+              key={imageSrc}
+              src={imageSrc}
               alt="User avatar"
               data-ai-hint="person portrait"
             />
@@ -72,10 +77,10 @@ export default function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <Link href="/profile">
+          <Link href={user.role === 'admin' ? '/admin/dashboard' : '/profile'}>
             <DropdownMenuItem>
               <User className="mr-2 h-4 w-4" />
-              <span>Profile</span>
+              <span>{user.role === 'admin' ? 'Dashboard' : 'Profile'}</span>
             </DropdownMenuItem>
           </Link>
           <DropdownMenuItem disabled>

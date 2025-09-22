@@ -3,29 +3,31 @@
 
 import { useState, useRef } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Camera } from 'lucide-react';
+import { Camera, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 type ProfilePictureUploaderProps = {
-  currentImage?: string | null;
-  onImageSelect: (dataUri: string) => void;
+  memberId: string;
+  currentImageVersion: number;
   userName: string;
+  onUploadSuccess: () => void;
 };
 
 const MAX_FILE_SIZE_MB = 10;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 export default function ProfilePictureUploader({
-  currentImage,
-  onImageSelect,
+  memberId,
+  currentImageVersion,
   userName,
+  onUploadSuccess,
 }: ProfilePictureUploaderProps) {
-  const [preview, setPreview] = useState(currentImage);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const [isUploading, setIsUploading] = useState(false);
+  
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -47,13 +49,38 @@ export default function ProfilePictureUploader({
         return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUri = reader.result as string;
-      setPreview(dataUri);
-      onImageSelect(dataUri);
-    };
-    reader.readAsDataURL(file);
+    setIsUploading(true);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+        const response = await fetch(`/api/staff/${memberId}/profile-picture`, {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Upload failed');
+        }
+        
+        toast({
+            title: 'Upload Successful',
+            description: 'Your profile picture has been updated.',
+        });
+        
+        onUploadSuccess();
+
+    } catch (error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Upload Failed',
+            description: error.message || 'An unknown error occurred.',
+        });
+    } finally {
+        setIsUploading(false);
+    }
   };
 
   const handleAvatarClick = () => {
@@ -68,14 +95,18 @@ export default function ProfilePictureUploader({
         className="w-32 h-32 text-4xl cursor-pointer"
         onClick={handleAvatarClick}
       >
-        <AvatarImage src={preview || undefined} alt={`${userName}'s avatar`} />
+        <AvatarImage key={currentImageVersion} src={`/api/staff/${memberId}/profile-picture?v=${currentImageVersion}`} alt={`${userName}'s avatar`} />
         <AvatarFallback>{fallback}</AvatarFallback>
       </Avatar>
       <div 
         className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-full cursor-pointer"
         onClick={handleAvatarClick}
       >
-        <Camera className="text-white h-8 w-8" />
+        {isUploading ? (
+            <Loader2 className="text-white h-8 w-8 animate-spin" />
+        ) : (
+            <Camera className="text-white h-8 w-8" />
+        )}
       </div>
       <input
         type="file"
@@ -83,6 +114,7 @@ export default function ProfilePictureUploader({
         onChange={handleFileChange}
         className="hidden"
         accept="image/png, image/jpeg, image/gif"
+        disabled={isUploading}
       />
     </div>
   );

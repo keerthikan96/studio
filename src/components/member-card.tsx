@@ -10,6 +10,7 @@ import { Member } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { CheckCircle, CircleSlash, Eye, Mail, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
 type MemberCardProps = {
   member: Member;
@@ -27,13 +28,15 @@ const statusStyles: { [key: string]: string } = {
 
 export function MemberCard({ member, onStatusChange, onDelete, onSendInvite }: MemberCardProps) {
   const fallback = member.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
+  const [imageVersion, setImageVersion] = useState(Date.now());
+
 
   return (
     <Card className="flex flex-col">
       <CardContent className="p-6 flex flex-col items-center text-center flex-grow">
         <div className="relative mb-4">
             <Avatar className="h-24 w-24 text-4xl">
-                <AvatarImage src={member.profile_picture_url || undefined} alt={`${member.name}'s avatar`} />
+                <AvatarImage key={imageVersion} src={`/api/staff/${member.id}/profile-picture?v=${imageVersion}`} alt={`${member.name}'s avatar`} />
                 <AvatarFallback>{fallback}</AvatarFallback>
             </Avatar>
              <div className="absolute -top-2 -right-2">

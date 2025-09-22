@@ -21,7 +21,7 @@ import { Loader2, PlusCircle, Save, Trash, X as XIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Member } from '@/lib/mock-data';
-import { getMemberByIdAction, updateMemberAction, updateMemberProfilePictureAction } from '../actions/staff';
+import { getMemberByIdAction, updateMemberAction } from '../actions/staff';
 import ProfilePictureUploader from '@/components/profile-picture-uploader';
 
 const workExperienceSchema = z.object({
@@ -44,7 +44,6 @@ const profileSchema = z.object({
   experience: z.array(workExperienceSchema).optional(),
   education: z.array(educationSchema).optional(),
   skills: z.array(z.string()).optional(),
-  profile_picture_url: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -54,6 +53,8 @@ export default function ProfilePage() {
   const [skillInput, setSkillInput] = useState('');
   const [member, setMember] = useState<Member | null>(null);
   const { toast } = useToast();
+  const [imageVersion, setImageVersion] = useState(Date.now());
+
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -64,7 +65,6 @@ export default function ProfilePage() {
       experience: [],
       education: [],
       skills: [],
-      profile_picture_url: '',
     },
   });
 
@@ -81,7 +81,6 @@ export default function ProfilePage() {
                 experience: currentMember.experience || [],
                 education: currentMember.education || [],
                 skills: currentMember.skills || [],
-                profile_picture_url: currentMember.profile_picture_url || '',
               });
             }
         });
@@ -109,35 +108,23 @@ export default function ProfilePage() {
     if (!member) return;
 
     startTransition(async () => {
-      let hasError = false;
       const dirtyFields = form.formState.dirtyFields;
-
-      // 1. Handle profile picture update separately
-      if (dirtyFields.profile_picture_url && data.profile_picture_url) {
-          const pictureResult = await updateMemberProfilePictureAction(member.id, data.profile_picture_url);
-          if ('error' in pictureResult) {
-              toast({ title: 'Update Failed', description: pictureResult.error, variant: 'destructive' });
-              hasError = true;
-          }
-      }
-
-      // 2. Handle other fields
-      const otherDirtyFields = Object.keys(dirtyFields).filter(field => field !== 'profile_picture_url');
-      if (otherDirtyFields.length > 0 && !hasError) {
-          const dataToUpdate: Partial<ProfileFormValues> = {};
-          for (const field of otherDirtyFields) {
-              // @ts-ignore
-              dataToUpdate[field] = data[field];
-          }
-
-          const result = await updateMemberAction(member.id, dataToUpdate);
-          if ('error' in result) {
-              toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });
-              hasError = true;
-          }
+      if (Object.keys(dirtyFields).length === 0) {
+        toast({ title: 'No Changes', description: 'No changes were detected to save.' });
+        return;
       }
       
-      if (!hasError && Object.keys(dirtyFields).length > 0) {
+      const dataToUpdate: Partial<ProfileFormValues> = {};
+      for (const field of Object.keys(dirtyFields)) {
+          // @ts-ignore
+          dataToUpdate[field] = data[field];
+      }
+
+      const result = await updateMemberAction(member.id, dataToUpdate);
+
+      if ('error' in result) {
+          toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });
+      } else {
         toast({
           title: 'Profile Updated!',
           description: 'Your information has been successfully saved.',
@@ -150,14 +137,8 @@ export default function ProfilePage() {
             experience: updatedMember.experience || [],
             education: updatedMember.education || [],
             skills: updatedMember.skills || [],
-            profile_picture_url: updatedMember.profile_picture_url || '',
           });
         }
-      } else if (Object.keys(dirtyFields).length === 0) {
-        toast({
-            title: 'No Changes',
-            description: 'No changes were detected to save.',
-        });
       }
     });
   }
@@ -183,8 +164,9 @@ export default function ProfilePage() {
       <CardHeader>
         <div className="flex flex-col items-center gap-4 text-center">
             <ProfilePictureUploader
-                currentImage={form.watch('profile_picture_url')}
-                onImageSelect={(dataUri) => form.setValue('profile_picture_url', dataUri, { shouldDirty: true })}
+                memberId={member.id}
+                currentImageVersion={imageVersion}
+                onUploadSuccess={() => setImageVersion(Date.now())}
                 userName={member.name}
             />
             <div>

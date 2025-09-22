@@ -41,7 +41,7 @@ export async function addStaffAction(staffData: Omit<Member, 'id' | 'status'>): 
 export async function getMembersAction(): Promise<Member[]> {
     await setupDatabase();
     try {
-        const result = await db.query('SELECT * FROM members ORDER BY created_at DESC');
+        const result = await db.query('SELECT id, name, email, phone, domain, country, branch, status FROM members ORDER BY created_at DESC');
         return result.rows;
     } catch (error) {
         console.error('Error fetching members:', error);
@@ -51,7 +51,7 @@ export async function getMembersAction(): Promise<Member[]> {
 
 export async function getMemberByIdAction(id: string): Promise<Member | null> {
     try {
-        const result = await db.query('SELECT * FROM members WHERE id = $1', [id]);
+        const result = await db.query('SELECT id, name, email, phone, domain, country, branch, status, experience, education, skills FROM members WHERE id = $1', [id]);
         if (result.rows.length === 0) return null;
         return result.rows[0];
     } catch (error) {
@@ -101,20 +101,6 @@ export async function updateMemberAction(id: string, data: Omit<Partial<Member>,
         return { error: 'Failed to update member profile.' };
     }
 }
-
-export async function updateMemberProfilePictureAction(id: string, profile_picture_url: string): Promise<Member | { error: string }> {
-    try {
-        const result = await db.query(
-            `UPDATE members SET profile_picture_url = $1, updated_at = NOW() WHERE id = $2 RETURNING *;`,
-            [profile_picture_url, id]
-        );
-        return result.rows[0];
-    } catch (error) {
-        console.error(`Error updating profile picture for member with id ${id}:`, error);
-        return { error: 'Failed to update profile picture.' };
-    }
-}
-
 
 export async function deleteMemberAction(id: string): Promise<{ success: boolean }> {
     try {
