@@ -284,7 +284,7 @@ export default function MemberProfilePage() {
                                 <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a branch in Sri Lanka" />
-                                    </Trigger>
+                                    </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
                                     {sriLankanBranches.map(branch => <SelectItem key={branch} value={branch}>{branch}</SelectItem>)}
