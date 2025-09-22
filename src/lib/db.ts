@@ -13,10 +13,11 @@ try {
   // Initialize the connection pool
   pool = new Pool({
     connectionString: process.env.POSTGRES_URL,
-    // Note: In production, you'll want to configure SSL
-    // ssl: {
-    //   rejectUnauthorized: false, 
-    // },
+    // Note: In production, you might want to use a more secure SSL configuration
+    // by providing the CA certificate. For many hosted databases, this is sufficient.
+    ssl: {
+      rejectUnauthorized: false, 
+    },
   });
 
   console.log('Database connection pool created successfully.');
@@ -59,7 +60,7 @@ export async function setupDatabase() {
                 education JSONB,
                 skills JSONB,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                updated_at TIMESTamPTZ NOT NULL DEFAULT NOW()
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
         console.log('`members` table is ready.');
