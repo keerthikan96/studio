@@ -4,7 +4,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useFieldArray, useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, KeyboardEvent } from 'react';
 import {
   Form,
   FormControl,
@@ -19,7 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { parseResumeAction } from '@/app/actions/staff';
-import { Loader2, PlusCircle, Trash, UploadCloud, UserPlus, Save } from 'lucide-react';
+import { Loader2, PlusCircle, Trash, UploadCloud, UserPlus, Save, X as XIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Member } from '@/lib/mock-data';
 import {
@@ -33,6 +33,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
@@ -45,6 +46,12 @@ const workExperienceSchema = z.object({
   keyResponsibilities: z.string().min(1, 'Key responsibilities are required.'),
 });
 
+const educationSchema = z.object({
+    institution: z.string().min(1, 'Institution is required.'),
+    degree: z.string().min(1, 'Degree is required.'),
+    years: z.string().min(1, 'Years are required.'),
+});
+
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
@@ -53,8 +60,8 @@ const formSchema = z.object({
   country: z.enum(countries as [string, ...string[]], { required_error: 'Country is required' }),
   branch: z.string().min(1, 'Branch is required.'),
   experience: z.array(workExperienceSchema).min(1, 'At least one work experience is required.'),
-  education: z.string().min(1, 'Education is required.'),
-  skills: z.string().min(1, 'Skills are required.'),
+  education: z.array(educationSchema).min(1, 'At least one education entry is required.'),
+  skills: z.array(z.string()).min(1, 'At least one skill is required.'),
 }).refine(data => {
     if (data.country === 'Sri Lanka') {
         return sriLankanBranches.includes(data.branch);
@@ -81,6 +88,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
   const [isParsing, setIsParsing] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [formData, setFormData] = useState<StaffFormValues | null>(null);
+  const [skillInput, setSkillInput] = useState('');
   const { toast } = useToast();
 
   const form = useForm<StaffFormValues>({
@@ -90,14 +98,24 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
       email: '',
       phone: '',
       experience: [],
-      education: '',
-      skills: '',
+      education: [],
+      skills: [],
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields: expFields, append: appendExp, remove: removeExp } = useFieldArray({
     control: form.control,
     name: "experience",
+  });
+
+  const { fields: eduFields, append: appendEdu, remove: removeEdu } = useFieldArray({
+    control: form.control,
+    name: "education",
+  });
+
+   const { fields: skillFields, append: appendSkill, remove: removeSkill } = useFieldArray({
+    control: form.control,
+    name: "skills",
   });
   
   const watchedCountry = form.watch('country');
@@ -190,6 +208,19 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
       form.reset();
   }
 
+  const handleSkillKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const newSkill = skillInput.trim();
+      // @ts-ignore
+      if (newSkill && !form.getValues('skills').includes(newSkill)) {
+        appendSkill(newSkill);
+        setSkillInput('');
+      }
+    }
+  };
+
+
   return (
     <>
     <Card>
@@ -267,7 +298,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Domain</FormLabel>
-                     <Select onValueChange={field.onChange} defaultValue={field.value}>
+                     <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                         <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select a domain" />
@@ -290,7 +321,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                      <Select onValueChange={(value) => {
                          field.onChange(value);
                          form.setValue('branch', ''); // Reset branch on country change
-                     }} defaultValue={field.value}>
+                     }} defaultValue={field.value} value={field.value}>
                         <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select a country" />
@@ -311,7 +342,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Branch</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                             <FormControl>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select a branch in Sri Lanka" />
@@ -340,26 +371,40 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                     )}
                 />
               )}
-              <FormField
-                control={form.control}
-                name="skills"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Skills</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. React, Next.js, Project Management" {...field} />
-                    </FormControl>
-                    <FormDescription>Comma-separated list of skills.</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+               <div className="md:col-span-2">
+                <FormItem>
+                  <FormLabel>Skills</FormLabel>
+                  <FormControl>
+                    <>
+                      <Input 
+                        placeholder="Type a skill and press Enter"
+                        value={skillInput}
+                        onChange={(e) => setSkillInput(e.target.value)}
+                        onKeyDown={handleSkillKeyDown}
+                      />
+                       <div className="flex flex-wrap gap-2 mt-2">
+                        {skillFields.map((field, index) => (
+                          <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
+                            {/* @ts-ignore */}
+                            {form.getValues('skills')[index]}
+                            <button type="button" onClick={() => removeSkill(index)}>
+                              <XIcon className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    </>
+                  </FormControl>
+                  <FormDescription>Press Enter or comma to add a skill.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              </div>
             </div>
             
             <div>
               <FormLabel>Work Experience</FormLabel>
               <div className="space-y-4 mt-2">
-                {fields.map((field, index) => (
+                {expFields.map((field, index) => (
                   <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <FormField
@@ -415,7 +460,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                           </FormItem>
                         )}
                       />
-                      <Button type="button" variant="destructive" size="sm" onClick={() => remove(index)} className="absolute top-2 right-2">
+                      <Button type="button" variant="destructive" size="sm" onClick={() => removeExp(index)} className="absolute top-2 right-2">
                         <Trash className="h-4 w-4" />
                       </Button>
                   </div>
@@ -423,7 +468,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => append({ companyName: '', role: '', years: '', keyResponsibilities: '' })}
+                  onClick={() => appendExp({ companyName: '', role: '', years: '', keyResponsibilities: '' })}
                 >
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add Work Experience
@@ -431,19 +476,68 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
               </div>
             </div>
 
-            <FormField
-              control={form.control}
-              name="education"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Education</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Describe education background..." {...field} rows={3}/>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <FormLabel>Education</FormLabel>
+              <div className="space-y-4 mt-2">
+                {eduFields.map((field, index) => (
+                  <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name={`education.${index}.institution`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Institution</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="e.g. University of Technology" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`education.${index}.degree`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Degree</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="e.g. B.S. in Computer Science" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                       <FormField
+                        control={form.control}
+                        name={`education.${index}.years`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Duration</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="e.g. 2014 - 2018" />
+                            </FormControl>
+                             <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                      <Button type="button" variant="destructive" size="sm" onClick={() => removeEdu(index)} className="absolute top-2 right-2">
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => appendEdu({ institution: '', degree: '', years: '' })}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Education
+                </Button>
+              </div>
+            </div>
+            
             <div className="flex justify-end">
               <Button type="submit" disabled={isPending || isParsing}>
                 {isPending ? (
