@@ -18,8 +18,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { parseResumeAction, addStaffAction } from '@/app/actions/staff';
-import { Loader2, PlusCircle, Trash, UploadCloud, UserPlus, Save, X as XIcon } from 'lucide-react';
+import { parseResumeAction } from '@/app/actions/staff';
+import { Loader2, PlusCircle, Trash, UploadCloud, Save, X as XIcon, CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Member } from '@/lib/mock-data';
 import {
@@ -35,6 +35,10 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Calendar } from './ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
@@ -56,15 +60,21 @@ const educationSchema = z.object({
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
-  phone: z.string().min(1, 'Phone number is required.'),
-  domain: z.enum(domains as [string, ...string[]], { required_error: 'Domain is required' }),
-  country: z.enum(countries as [string, ...string[]], { required_error: 'Country is required' }),
-  branch: z.string().min(1, 'Branch is required.'),
-  experience: z.array(workExperienceSchema).min(1, 'At least one work experience is required.'),
-  education: z.array(educationSchema).min(1, 'At least one education entry is required.'),
-  skills: z.array(z.string()).min(1, 'At least one skill is required.'),
+  phone: z.string().optional(),
+  job_title: z.string().optional(),
+  domain: z.enum(domains as [string, ...string[]]).optional(),
+  country: z.enum(countries as [string, ...string[]]).optional(),
+  branch: z.string().optional(),
+  experience: z.array(workExperienceSchema).optional(),
+  education: z.array(educationSchema).optional(),
+  skills: z.array(z.string()).optional(),
+  date_of_birth: z.date().optional(),
+  start_date: z.date().optional(),
+  address: z.string().optional(),
+  emergency_contact_name: z.string().optional(),
+  emergency_contact_phone: z.string().optional(),
 }).refine(data => {
-    if (data.country === 'Sri Lanka') {
+    if (data.country === 'Sri Lanka' && data.branch) {
         return sriLankanBranches.includes(data.branch);
     }
     return true;
@@ -178,6 +188,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
   function onSubmit(data: StaffFormValues) {
     setFormData(data);
     startTransition(async () => {
+        // @ts-ignore
         const success = await onAddStaff(data);
         if (success) {
             toast({
@@ -235,7 +246,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
       <CardHeader>
         <CardTitle>Add New Staff Member</CardTitle>
         <CardDescription>
-            Fill in the details below or upload a resume to have AI pre-fill the form for you. All fields are mandatory.
+            Fill in the details below or upload a resume to have AI pre-fill the form for you.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -287,6 +298,19 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                   </FormItem>
                 )}
               />
+               <FormField
+                control={form.control}
+                name="job_title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Job Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Software Engineer" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="phone"
@@ -300,6 +324,93 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="date_of_birth"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel>Date of Birth</FormLabel>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                    <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus />
+                            </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="start_date"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>Start Date</FormLabel>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                        </Button>
+                                    </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <div className="md:col-span-2">
+                    <FormField
+                        control={form.control}
+                        name="address"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Address</FormLabel>
+                            <FormControl>
+                                <Textarea placeholder="123 Main St, Anytown, USA" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                </div>
+                 <FormField
+                    control={form.control}
+                    name="emergency_contact_name"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Emergency Contact Name</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g. John Smith" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="emergency_contact_phone"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Emergency Contact Phone</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g. (987) 654-3210" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
                <FormField
                 control={form.control}
                 name="domain"

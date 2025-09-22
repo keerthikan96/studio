@@ -16,15 +16,23 @@ export type Member = {
     id: string;
     name: string;
     email: string;
-    domain: 'Engineering' | 'Design' | 'Marketing' | 'Sales' | 'HR';
-    country: 'Canada' | 'USA' | 'Sri Lanka';
-    branch: string; // Can be a state, province, or a Sri Lankan branch
+    domain?: 'Engineering' | 'Design' | 'Marketing' | 'Sales' | 'HR';
+    country?: 'Canada' | 'USA' | 'Sri Lanka';
+    branch?: string; // Can be a state, province, or a Sri Lankan branch
     status: 'active' | 'pending' | 'inactive';
     phone?: string;
     experience?: WorkExperience[];
     education?: Education[];
     skills?: string[];
-    profile_picture_url?: string; // This will now be dynamically generated, but kept for type consistency if needed elsewhere
+    profile_picture_url?: string | null;
+    job_title?: string | null;
+    date_of_birth?: Date | string | null;
+    start_date?: Date | string | null;
+    address?: string | null;
+    emergency_contact_name?: string | null;
+    emergency_contact_phone?: string | null;
+    created_at?: Date;
+    updated_at?: Date;
 };
   
 // This mock data is now only used as a fallback or for initial setup,

@@ -59,28 +59,47 @@ export async function setupDatabase() {
                 name VARCHAR(255) NOT NULL,
                 email VARCHAR(255) UNIQUE NOT NULL,
                 phone VARCHAR(50),
-                domain VARCHAR(100) NOT NULL,
-                country VARCHAR(100) NOT NULL,
-                branch VARCHAR(100) NOT NULL,
+                domain VARCHAR(100),
+                country VARCHAR(100),
+                branch VARCHAR(100),
                 status VARCHAR(50) NOT NULL DEFAULT 'pending',
                 experience JSONB,
                 education JSONB,
                 skills JSONB,
                 profile_picture_url VARCHAR(2048),
+                job_title VARCHAR(255),
+                date_of_birth DATE,
+                start_date DATE,
+                address TEXT,
+                emergency_contact_name VARCHAR(255),
+                emergency_contact_phone VARCHAR(50),
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
-        // Add profile_picture_url column if it doesn't exist for backward compatibility
-        const { rows } = await client.query(`
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_name='members' AND column_name='profile_picture_url';
-        `);
-        if (rows.length === 0) {
-            await client.query('ALTER TABLE members ADD COLUMN profile_picture_url VARCHAR(2048);');
-        }
+        
+        // Add new columns if they don't exist for backward compatibility
+        const columns = [
+            { name: 'profile_picture_url', type: 'VARCHAR(2048)' },
+            { name: 'job_title', type: 'VARCHAR(255)' },
+            { name: 'date_of_birth', type: 'DATE' },
+            { name: 'start_date', type: 'DATE' },
+            { name: 'address', type: 'TEXT' },
+            { name: 'emergency_contact_name', type: 'VARCHAR(255)' },
+            { name: 'emergency_contact_phone', type: 'VARCHAR(50)' },
+        ];
 
+        for (const col of columns) {
+            const { rows } = await client.query(`
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name='members' AND column_name=$1;
+            `, [col.name]);
+            if (rows.length === 0) {
+                await client.query(`ALTER TABLE members ADD COLUMN ${col.name} ${col.type};`);
+            }
+        }
+        
         console.log('`members` table is ready.');
     } catch (err) {
         console.error('Error setting up the database table:', err);

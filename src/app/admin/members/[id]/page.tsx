@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, Save, Trash, X as XIcon, ArrowLeft, Edit, Ban } from 'lucide-react';
+import { Loader2, PlusCircle, Save, Trash, X as XIcon, ArrowLeft, Edit, Ban, CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Member } from '@/lib/mock-data';
 import { useRouter, useParams } from 'next/navigation';
@@ -30,6 +30,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
@@ -52,14 +56,20 @@ const profileSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }).optional(),
   email: z.string().email({ message: 'Please enter a valid email address.' }).optional(),
   phone: z.string().optional(),
-  domain: z.enum(domains as [string, ...string[]], { required_error: 'Domain is required' }).optional(),
-  country: z.enum(countries as [string, ...string[]], { required_error: 'Country is required' }).optional(),
+  job_title: z.string().optional().nullable(),
+  domain: z.enum(domains as [string, ...string[]]).optional(),
+  country: z.enum(countries as [string, ...string[]]).optional(),
   branch: z.string().optional(),
   experience: z.array(workExperienceSchema).optional(),
   education: z.array(educationSchema).optional(),
   skills: z.array(z.string()).optional(),
   status: z.enum(['active', 'pending', 'inactive']).optional(),
   profile_picture_url: z.string().url().optional().nullable(),
+  date_of_birth: z.date().optional().nullable(),
+  start_date: z.date().optional().nullable(),
+  address: z.string().optional().nullable(),
+  emergency_contact_name: z.string().optional().nullable(),
+  emergency_contact_phone: z.string().optional().nullable(),
 }).refine(data => {
     if (data.country === 'Sri Lanka' && data.branch) {
         return sriLankanBranches.includes(data.branch);
@@ -80,34 +90,58 @@ const GeneralInfoView = ({ member }: { member: Member }) => (
             <CardDescription>Read-only view of the member's personal and professional information.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
                 <div className="flex flex-col">
-                    <span className="font-semibold">Full Name</span>
+                    <span className="font-semibold text-muted-foreground">Full Name</span>
                     <span>{member.name}</span>
                 </div>
                 <div className="flex flex-col">
-                    <span className="font-semibold">Email Address</span>
+                    <span className="font-semibold text-muted-foreground">Email Address</span>
                     <span>{member.email}</span>
                 </div>
+                 <div className="flex flex-col">
+                    <span className="font-semibold text-muted-foreground">Job Title</span>
+                    <span>{member.job_title || 'N/A'}</span>
+                </div>
                 <div className="flex flex-col">
-                    <span className="font-semibold">Phone Number</span>
+                    <span className="font-semibold text-muted-foreground">Phone Number</span>
                     <span>{member.phone || 'N/A'}</span>
                 </div>
                 <div className="flex flex-col">
-                    <span className="font-semibold">Domain</span>
-                    <span>{member.domain}</span>
+                    <span className="font-semibold text-muted-foreground">Date of Birth</span>
+                    <span>{member.date_of_birth ? format(new Date(member.date_of_birth), 'PPP') : 'N/A'}</span>
+                </div>
+                 <div className="flex flex-col">
+                    <span className="font-semibold text-muted-foreground">Start Date</span>
+                    <span>{member.start_date ? format(new Date(member.start_date), 'PPP') : 'N/A'}</span>
                 </div>
                 <div className="flex flex-col">
-                    <span className="font-semibold">Country</span>
-                    <span>{member.country}</span>
+                    <span className="font-semibold text-muted-foreground">Domain</span>
+                    <span>{member.domain || 'N/A'}</span>
                 </div>
                 <div className="flex flex-col">
-                    <span className="font-semibold">Branch / State</span>
-                    <span>{member.branch}</span>
+                    <span className="font-semibold text-muted-foreground">Country</span>
+                    <span>{member.country || 'N/A'}</span>
+                </div>
+                <div className="flex flex-col">
+                    <span className="font-semibold text-muted-foreground">Branch / State</span>
+                    <span>{member.branch || 'N/A'}</span>
+                </div>
+                <div className="flex flex-col md:col-span-2">
+                    <span className="font-semibold text-muted-foreground">Address</span>
+                    <span>{member.address || 'N/A'}</span>
+                </div>
+                <div className="flex flex-col">
+                    <span className="font-semibold text-muted-foreground">Emergency Contact</span>
+                    <span>{member.emergency_contact_name || 'N/A'}</span>
+                </div>
+                 <div className="flex flex-col">
+                    <span className="font-semibold text-muted-foreground">Emergency Phone</span>
+                    <span>{member.emergency_contact_phone || 'N/A'}</span>
                 </div>
             </div>
              <div className="space-y-2">
-                <h4 className="font-semibold">Skills</h4>
+                <h4 className="font-semibold text-muted-foreground">Skills</h4>
                 {member.skills && member.skills.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                         {member.skills.map((skill, index) => (
@@ -162,7 +196,7 @@ const GeneralInfoEdit = ({ form, member, onCancel, isPending }: { form: any, mem
                             userName={member.name}
                         />
                     </div>
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <FormField
                         control={form.control}
                         name="name"
@@ -189,6 +223,19 @@ const GeneralInfoEdit = ({ form, member, onCancel, isPending }: { form: any, mem
                         </FormItem>
                         )}
                     />
+                     <FormField
+                        control={form.control}
+                        name="job_title"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Job Title</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g. Software Engineer" {...field} value={field.value ?? ''} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
                     <FormField
                         control={form.control}
                         name="phone"
@@ -196,7 +243,94 @@ const GeneralInfoEdit = ({ form, member, onCancel, isPending }: { form: any, mem
                         <FormItem>
                             <FormLabel>Phone Number</FormLabel>
                             <FormControl>
-                            <Input placeholder="e.g. (123) 456-7890" {...field} />
+                            <Input placeholder="e.g. (123) 456-7890" {...field} value={field.value ?? ''}/>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="date_of_birth"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                                <FormLabel>Date of Birth</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus />
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    <FormField
+                        control={form.control}
+                        name="start_date"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                                <FormLabel>Start Date</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <div className="md:col-span-3">
+                        <FormField
+                            control={form.control}
+                            name="address"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Address</FormLabel>
+                                <FormControl>
+                                <Textarea placeholder="123 Main St, Anytown, USA" {...field} value={field.value ?? ''} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                    </div>
+                     <FormField
+                        control={form.control}
+                        name="emergency_contact_name"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Emergency Contact Name</FormLabel>
+                            <FormControl>
+                                <Input placeholder="e.g. John Smith" {...field} value={field.value ?? ''} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="emergency_contact_phone"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Emergency Contact Phone</FormLabel>
+                            <FormControl>
+                                <Input placeholder="e.g. (987) 654-3210" {...field} value={field.value ?? ''} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -274,14 +408,14 @@ const GeneralInfoEdit = ({ form, member, onCancel, isPending }: { form: any, mem
                             <FormItem>
                                 <FormLabel>Branch / State</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="e.g. New York, California" {...field} />
+                                    <Input placeholder="e.g. New York, California" {...field} value={field.value ?? ''} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
                             )}
                         />
                     )}
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-3">
                         <FormItem>
                         <FormLabel>Skills</FormLabel>
                         <FormControl>
@@ -457,8 +591,25 @@ export default function MemberProfilePage() {
         education: [],
         skills: [],
         profile_picture_url: null,
+        job_title: '',
+        date_of_birth: null,
+        start_date: null,
+        address: '',
+        emergency_contact_name: '',
+        emergency_contact_phone: '',
     },
   });
+  
+  const resetFormValues = (memberData: Member) => {
+    form.reset({
+        ...memberData,
+        date_of_birth: memberData.date_of_birth ? new Date(memberData.date_of_birth) : null,
+        start_date: memberData.start_date ? new Date(memberData.start_date) : null,
+        experience: memberData.experience || [],
+        education: memberData.education || [],
+        skills: memberData.skills || [],
+    });
+  }
 
   const fetchMember = (resetForm = true) => {
     startTransition(() => {
@@ -466,12 +617,7 @@ export default function MemberProfilePage() {
             if (currentMember) {
                 setMember(currentMember);
                 if (resetForm) {
-                   form.reset({
-                        ...currentMember,
-                        experience: currentMember.experience || [],
-                        education: currentMember.education || [],
-                        skills: currentMember.skills || [],
-                    });
+                   resetFormValues(currentMember);
                 }
             } else {
                 toast({ title: "Member not found", variant: "destructive" });
@@ -493,12 +639,7 @@ export default function MemberProfilePage() {
     setEditModes(prev => ({ ...prev, [tab]: isEnteringEdit }));
     
     if (isEnteringEdit && member) {
-        form.reset({
-            ...member,
-            experience: member.experience || [],
-            education: member.education || [],
-            skills: member.skills || [],
-        });
+        resetFormValues(member);
     }
   };
 
@@ -532,7 +673,7 @@ export default function MemberProfilePage() {
                 description: `${result.name}'s information has been successfully saved.`,
             });
             setMember(result as Member); // update local member state
-            form.reset(result as Member); // reset form with new data
+            resetFormValues(result as Member); // reset form with new data
             if(activeEditTab) toggleEditMode(activeEditTab);
 
             if ('profile_picture_url' in dataToUpdate) {
@@ -626,7 +767,7 @@ export default function MemberProfilePage() {
                         </Avatar>
                         <div>
                             <h1 className="text-2xl font-bold">{member.name}</h1>
-                            <p className="text-muted-foreground">{member.domain}</p>
+                            <p className="text-muted-foreground">{member.job_title || member.domain}</p>
                             <p className="text-sm text-muted-foreground">{member.email}</p>
                         </div>
                     </div>

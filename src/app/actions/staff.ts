@@ -23,13 +23,13 @@ export async function parseResumeAction(
 
 export async function addStaffAction(staffData: Omit<Member, 'id' | 'status' | 'profile_picture_url'>): Promise<Member | { error: string }> {
   await setupDatabase();
-  const { name, email, phone, domain, country, branch, experience, education, skills } = staffData;
+  const { name, email, phone, domain, country, branch, experience, education, skills, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone } = staffData;
   try {
     const result = await db.query(
-      `INSERT INTO members (name, email, phone, domain, country, branch, experience, education, skills, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
+      `INSERT INTO members (name, email, phone, domain, country, branch, experience, education, skills, status, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12, $13, $14, $15)
        RETURNING *;`,
-      [name, email, phone, domain, country, branch, JSON.stringify(experience), JSON.stringify(education), JSON.stringify(skills)]
+      [name, email, phone, domain, country, branch, JSON.stringify(experience), JSON.stringify(education), JSON.stringify(skills), job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone]
     );
     return result.rows[0];
   } catch (error) {
@@ -41,7 +41,7 @@ export async function addStaffAction(staffData: Omit<Member, 'id' | 'status' | '
 export async function getMembersAction(): Promise<Member[]> {
     await setupDatabase();
     try {
-        const result = await db.query('SELECT id, name, email, phone, domain, country, branch, status, profile_picture_url FROM members ORDER BY created_at DESC');
+        const result = await db.query('SELECT * FROM members ORDER BY created_at DESC');
         return result.rows;
     } catch (error) {
         console.error('Error fetching members:', error);
@@ -51,7 +51,7 @@ export async function getMembersAction(): Promise<Member[]> {
 
 export async function getMemberByIdAction(id: string): Promise<Member | null> {
     try {
-        const result = await db.query('SELECT id, name, email, phone, domain, country, branch, status, experience, education, skills, profile_picture_url FROM members WHERE id = $1', [id]);
+        const result = await db.query('SELECT * FROM members WHERE id = $1', [id]);
         if (result.rows.length === 0) return null;
         return result.rows[0];
     } catch (error) {
@@ -61,7 +61,7 @@ export async function getMemberByIdAction(id: string): Promise<Member | null> {
 }
 
 export async function updateMemberAction(id: string, data: Omit<Partial<Member>, 'id' | 'created_at' | 'updated_at'>): Promise<Member | { error: string }> {
-    const { name, email, phone, domain, country, branch, experience, education, skills, status, profile_picture_url } = data;
+    const { name, email, phone, domain, country, branch, experience, education, skills, status, profile_picture_url, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone } = data;
     try {
         const fields: string[] = [];
         const values: any[] = [];
@@ -78,6 +78,12 @@ export async function updateMemberAction(id: string, data: Omit<Partial<Member>,
         if (skills !== undefined) { fields.push(`skills = $${fieldIndex++}`); values.push(JSON.stringify(skills)); }
         if (status !== undefined) { fields.push(`status = $${fieldIndex++}`); values.push(status); }
         if (profile_picture_url !== undefined) { fields.push(`profile_picture_url = $${fieldIndex++}`); values.push(profile_picture_url); }
+        if (job_title !== undefined) { fields.push(`job_title = $${fieldIndex++}`); values.push(job_title); }
+        if (date_of_birth !== undefined) { fields.push(`date_of_birth = $${fieldIndex++}`); values.push(date_of_birth); }
+        if (start_date !== undefined) { fields.push(`start_date = $${fieldIndex++}`); values.push(start_date); }
+        if (address !== undefined) { fields.push(`address = $${fieldIndex++}`); values.push(address); }
+        if (emergency_contact_name !== undefined) { fields.push(`emergency_contact_name = $${fieldIndex++}`); values.push(emergency_contact_name); }
+        if (emergency_contact_phone !== undefined) { fields.push(`emergency_contact_phone = $${fieldIndex++}`); values.push(emergency_contact_phone); }
         
         if (fields.length === 0) {
             const member = await getMemberByIdAction(id);
