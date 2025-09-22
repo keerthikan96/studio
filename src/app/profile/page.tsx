@@ -21,7 +21,7 @@ import { Loader2, PlusCircle, Save, Trash, X as XIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Member } from '@/lib/mock-data';
-import { getMemberByIdAction, updateMemberAction } from '../actions/staff';
+import { getMemberByIdAction, updateMemberAction, updateMemberProfilePictureAction } from '../actions/staff';
 import ProfilePictureUploader from '@/components/profile-picture-uploader';
 
 const workExperienceSchema = z.object({
@@ -72,8 +72,6 @@ export default function ProfilePage() {
     const storedUser = sessionStorage.getItem('loggedInUser');
     if (storedUser) {
       const user = JSON.parse(storedUser);
-      // In a real app, you would fetch the full user profile from the DB using an ID.
-      // For this demo, we'll assume the member list from local storage has the data.
       startTransition(() => {
         getMemberByIdAction(user.id).then(currentMember => {
             if (currentMember) {
@@ -111,18 +109,37 @@ export default function ProfilePage() {
     if (!member) return;
 
     startTransition(async () => {
-      const result = await updateMemberAction(member.id, data);
-      if ('error' in result) {
-         toast({
-            title: 'Update Failed',
-            description: result.error,
-            variant: 'destructive',
-         });
-      } else {
+      let hasError = false;
+
+      const { profile_picture_url, ...otherData } = data;
+      const dirtyFields = form.formState.dirtyFields;
+
+      // Update profile picture only if it has changed
+      if (dirtyFields.profile_picture_url && profile_picture_url) {
+          const pictureResult = await updateMemberProfilePictureAction(member.id, profile_picture_url);
+          if ('error' in pictureResult) {
+              toast({ title: 'Update Failed', description: pictureResult.error, variant: 'destructive' });
+              hasError = true;
+          }
+      }
+
+      // Check if any other field is dirty before updating
+      const otherFieldsDirty = Object.keys(dirtyFields).some(field => field !== 'profile_picture_url');
+      if (otherFieldsDirty) {
+          const result = await updateMemberAction(member.id, otherData);
+          if ('error' in result) {
+              toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });
+              hasError = true;
+          }
+      }
+      
+      if (!hasError) {
         toast({
           title: 'Profile Updated!',
           description: 'Your information has been successfully saved.',
         });
+        // Optionally re-fetch data or reset form dirty state
+        form.reset(data);
       }
     });
   }
@@ -367,7 +384,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex justify-end">
-              <Button type="submit" disabled={isPending}>
+              <Button type="submit" disabled={isPending || !form.formState.isDirty}>
                 {isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (

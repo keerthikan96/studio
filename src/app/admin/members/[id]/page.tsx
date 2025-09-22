@@ -23,7 +23,7 @@ import { Member } from '@/lib/mock-data';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getMemberByIdAction, updateMemberAction } from '@/app/actions/staff';
+import { getMemberByIdAction, updateMemberAction, updateMemberProfilePictureAction } from '@/app/actions/staff';
 import ProfilePictureUploader from '@/components/profile-picture-uploader';
 import { Badge } from '@/components/ui/badge';
 
@@ -131,14 +131,31 @@ export default function MemberProfilePage() {
   
   function onSubmit(data: ProfileFormValues) {
     startTransition(async () => {
-        const result = await updateMemberAction(memberId, data);
-        if ('error' in result) {
-            toast({
-                title: 'Update Failed',
-                description: result.error,
-                variant: 'destructive',
-            });
-        } else {
+        let hasError = false;
+
+        const { profile_picture_url, ...otherData } = data;
+        const dirtyFields = form.formState.dirtyFields;
+
+        // Update profile picture only if it has changed
+        if (dirtyFields.profile_picture_url && profile_picture_url) {
+            const pictureResult = await updateMemberProfilePictureAction(memberId, profile_picture_url);
+            if ('error' in pictureResult) {
+                toast({ title: 'Update Failed', description: pictureResult.error, variant: 'destructive' });
+                hasError = true;
+            }
+        }
+
+        // Check if any other field is dirty before updating
+        const otherFieldsDirty = Object.keys(dirtyFields).some(field => field !== 'profile_picture_url');
+        if (otherFieldsDirty) {
+            const result = await updateMemberAction(memberId, otherData);
+            if ('error' in result) {
+                toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });
+                hasError = true;
+            }
+        }
+        
+        if (!hasError) {
             toast({
                 title: 'Profile Updated!',
                 description: `${data.name}'s information has been successfully saved.`,
@@ -475,7 +492,7 @@ export default function MemberProfilePage() {
                 </div>
 
                 <div className="flex justify-end">
-                <Button type="submit" disabled={isPending}>
+                <Button type="submit" disabled={isPending || !form.formState.isDirty}>
                     {isPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (

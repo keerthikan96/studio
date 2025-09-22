@@ -60,10 +60,9 @@ export async function getMemberByIdAction(id: string): Promise<Member | null> {
     }
 }
 
-export async function updateMemberAction(id: string, data: Partial<Member>): Promise<Member | { error: string }> {
-    const { name, email, phone, domain, country, branch, experience, education, skills, status, profile_picture_url } = data;
+export async function updateMemberAction(id: string, data: Omit<Partial<Member>, 'profile_picture_url'>): Promise<Member | { error: string }> {
+    const { name, email, phone, domain, country, branch, experience, education, skills, status } = data;
     try {
-        // Build the update query dynamically to avoid updating all fields
         const fields: string[] = [];
         const values: any[] = [];
         let fieldIndex = 1;
@@ -78,10 +77,12 @@ export async function updateMemberAction(id: string, data: Partial<Member>): Pro
         if (education !== undefined) { fields.push(`education = $${fieldIndex++}`); values.push(JSON.stringify(education)); }
         if (skills !== undefined) { fields.push(`skills = $${fieldIndex++}`); values.push(JSON.stringify(skills)); }
         if (status !== undefined) { fields.push(`status = $${fieldIndex++}`); values.push(status); }
-        if (profile_picture_url !== undefined) { fields.push(`profile_picture_url = $${fieldIndex++}`); values.push(profile_picture_url); }
         
         if (fields.length === 0) {
-            return { error: "No fields to update." };
+            // If no other fields are updated, we can just return the current user data
+            const member = await getMemberByIdAction(id);
+            if (!member) return { error: "Member not found." };
+            return member;
         }
 
         fields.push(`updated_at = NOW()`);
@@ -99,6 +100,19 @@ export async function updateMemberAction(id: string, data: Partial<Member>): Pro
     } catch (error) {
         console.error(`Error updating member with id ${id}:`, error);
         return { error: 'Failed to update member profile.' };
+    }
+}
+
+export async function updateMemberProfilePictureAction(id: string, profile_picture_url: string): Promise<Member | { error: string }> {
+    try {
+        const result = await db.query(
+            `UPDATE members SET profile_picture_url = $1, updated_at = NOW() WHERE id = $2 RETURNING *;`,
+            [profile_picture_url, id]
+        );
+        return result.rows[0];
+    } catch (error) {
+        console.error(`Error updating profile picture for member with id ${id}:`, error);
+        return { error: 'Failed to update profile picture.' };
     }
 }
 
