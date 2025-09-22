@@ -67,6 +67,7 @@ export async function setupDatabase() {
                 education JSONB,
                 skills JSONB,
                 profile_picture_url VARCHAR(2048),
+                cover_photo_url VARCHAR(2048),
                 job_title VARCHAR(255),
                 date_of_birth DATE,
                 start_date DATE,
@@ -81,6 +82,7 @@ export async function setupDatabase() {
         // Add new columns if they don't exist for backward compatibility
         const columns = [
             { name: 'profile_picture_url', type: 'VARCHAR(2048)' },
+            { name: 'cover_photo_url', type: 'VARCHAR(2048)' },
             { name: 'job_title', type: 'VARCHAR(255)' },
             { name: 'date_of_birth', type: 'DATE' },
             { name: 'start_date', type: 'DATE' },

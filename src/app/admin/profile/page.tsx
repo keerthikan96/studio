@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Member } from '@/lib/mock-data';
 import { getMemberByIdAction, updateMemberAction } from '../../actions/staff';
 import ProfilePictureUploader from '@/components/profile-picture-uploader';
+import CoverPhotoUploader from '@/components/cover-photo-uploader';
 
 const workExperienceSchema = z.object({
   companyName: z.string().min(1, 'Company name is required.'),
@@ -45,6 +46,7 @@ const profileSchema = z.object({
   education: z.array(educationSchema).optional(),
   skills: z.array(z.string()).optional(),
   profile_picture_url: z.string().url().optional().nullable(),
+  cover_photo_url: z.string().url().optional().nullable(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -65,6 +67,7 @@ export default function AdminProfilePage() {
       education: [],
       skills: [],
       profile_picture_url: null,
+      cover_photo_url: null,
     },
   });
 
@@ -82,6 +85,7 @@ export default function AdminProfilePage() {
            education: user.education || [],
            skills: user.skills || [],
            profile_picture_url: user.profile_picture_url || null,
+           cover_photo_url: user.cover_photo_url || null,
          };
          setMember(adminAsMember);
          form.reset(adminAsMember);
@@ -131,20 +135,22 @@ export default function AdminProfilePage() {
           description: 'Your information has been successfully saved.',
         });
         window.dispatchEvent(new CustomEvent('profile-picture-updated'));
-        form.reset(updatedAdmin); // reset to clear dirty state
+        window.dispatchEvent(new CustomEvent('cover-photo-updated'));
+        form.reset(updatedAdmin, { keepDirty: false });
         return;
     }
 
     startTransition(async () => {
       const dirtyFields = form.formState.dirtyFields;
-      const { profile_picture_url, ...otherDirtyFields } = dirtyFields;
+      // Image URLs are handled by their own components
+      const { profile_picture_url, cover_photo_url, ...otherDirtyFields } = dirtyFields;
 
       if (Object.keys(otherDirtyFields).length === 0) {
         toast({ title: 'No Changes', description: 'No changes were detected to save.' });
         return;
       }
       
-      const dataToUpdate: Partial<Omit<ProfileFormValues, 'profile_picture_url'>> = {};
+      const dataToUpdate: Partial<Omit<ProfileFormValues, 'profile_picture_url' | 'cover_photo_url'>> = {};
       for (const field of Object.keys(otherDirtyFields)) {
           // @ts-ignore
           dataToUpdate[field] = data[field];
@@ -161,6 +167,7 @@ export default function AdminProfilePage() {
         });
         const updatedMember = await getMemberByIdAction(member.id);
         if (updatedMember) {
+          setMember(updatedMember);
           form.reset({
             ...updatedMember,
             experience: updatedMember.experience || [],
@@ -172,21 +179,38 @@ export default function AdminProfilePage() {
     });
   }
 
-  const handleUploadSuccess = (newUrl: string) => {
+  const handleProfileUploadSuccess = (newUrl: string) => {
+    if (!member) return;
     form.setValue('profile_picture_url', newUrl, { shouldDirty: false });
-     if (member) {
-      const updatedMember = { ...member, profile_picture_url: newUrl };
+    const updatedMember = { ...member, profile_picture_url: newUrl };
+    setMember(updatedMember);
+    const storedUser = sessionStorage.getItem('loggedInUser');
+    if (storedUser) {
+        const user = JSON.parse(storedUser);
+        if (user.id === member.id) {
+            user.profile_picture_url = newUrl;
+            sessionStorage.setItem('loggedInUser', JSON.stringify(user));
+            window.dispatchEvent(new CustomEvent('profile-picture-updated'));
+        }
+    }
+  };
+  
+  const handleCoverUploadSuccess = (newUrl: string) => {
+    if (!member) return;
+    form.setValue('cover_photo_url', newUrl, { shouldDirty: false });
+     const updatedMember = { ...member, cover_photo_url: newUrl };
       setMember(updatedMember);
       const storedUser = sessionStorage.getItem('loggedInUser');
       if (storedUser) {
         const user = JSON.parse(storedUser);
         if (user.id === member.id) {
-          user.profile_picture_url = newUrl;
+          user.cover_photo_url = newUrl;
           sessionStorage.setItem('loggedInUser', JSON.stringify(user));
+           window.dispatchEvent(new CustomEvent('cover-photo-updated'));
         }
       }
-    }
   };
+
 
   const handleSkillKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
@@ -205,24 +229,30 @@ export default function AdminProfilePage() {
 
 
   return (
-    <Card className="max-w-4xl mx-auto">
-      <CardHeader>
-        <div className="flex flex-col items-center gap-4 text-center">
+    <Card className="max-w-4xl mx-auto overflow-hidden">
+        <CoverPhotoUploader
+            memberId={member.id}
+            currentImageUrl={member.cover_photo_url}
+            onUploadSuccess={handleCoverUploadSuccess}
+            isEditable={true}
+        />
+        <div className='-mt-16 sm:-mt-20 px-4 sm:px-6 flex items-end gap-4'>
             <ProfilePictureUploader
                 memberId={member.id}
                 currentImageUrl={member.profile_picture_url}
-                onUploadSuccess={handleUploadSuccess}
+                onUploadSuccess={handleProfileUploadSuccess}
                 userName={member.name}
+                isEditable={true}
+                className='w-24 h-24 sm:w-32 sm:h-32 text-4xl border-4 border-card'
             />
-            <div>
-                <CardTitle className="text-2xl">Your Profile</CardTitle>
+            <div className='pb-2'>
+                <CardTitle className="text-2xl sm:text-3xl">{member.name}</CardTitle>
                 <CardDescription>
-                    View and update your personal and professional information.
+                    {member.email}
                 </CardDescription>
             </div>
         </div>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">

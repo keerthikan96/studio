@@ -1,36 +1,38 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import { Camera, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Button } from './ui/button';
 
-type ProfilePictureUploaderProps = {
+type CoverPhotoUploaderProps = {
   memberId: string;
   currentImageUrl?: string | null;
-  userName: string;
   onUploadSuccess: (newUrl: string) => void;
   isEditable?: boolean;
-  className?: string;
 };
 
 const MAX_FILE_SIZE_MB = 10;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
-export default function ProfilePictureUploader({
+export default function CoverPhotoUploader({
   memberId,
   currentImageUrl,
-  userName,
   onUploadSuccess,
   isEditable = false,
-  className
-}: ProfilePictureUploaderProps) {
+}: CoverPhotoUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | undefined>(currentImageUrl ?? undefined);
+  const [imagePreview, setImagePreview] = useState<string | null>(currentImageUrl ?? null);
+  
+  useEffect(() => {
+    setImagePreview(currentImageUrl ?? null);
+  }, [currentImageUrl]);
+
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -55,7 +57,6 @@ export default function ProfilePictureUploader({
     }
 
     setIsUploading(true);
-    // Create a local preview
     const localPreviewUrl = URL.createObjectURL(file);
     setImagePreview(localPreviewUrl);
 
@@ -63,7 +64,7 @@ export default function ProfilePictureUploader({
     formData.append("file", file);
 
     try {
-        const response = await fetch(`/api/staff/${memberId}/profile-picture`, {
+        const response = await fetch(`/api/staff/${memberId}/cover-photo`, {
             method: 'POST',
             body: formData,
         });
@@ -75,13 +76,11 @@ export default function ProfilePictureUploader({
         
         toast({
             title: 'Upload Successful',
-            description: 'Your profile picture has been updated.',
+            description: 'Your cover photo has been updated.',
         });
         
-        // The API returns the new public URL
         onUploadSuccess(result.url);
-        // The parent component will update session storage, then we notify other components.
-        window.dispatchEvent(new CustomEvent('profile-picture-updated', { detail: { url: result.url } }));
+        window.dispatchEvent(new CustomEvent('cover-photo-updated', { detail: { url: result.url } }));
 
     } catch (error: any) {
         toast({
@@ -89,48 +88,46 @@ export default function ProfilePictureUploader({
             title: 'Upload Failed',
             description: error.message || 'An unknown error occurred.',
         });
-        // Revert to the original image on failure
-        setImagePreview(currentImageUrl ?? undefined);
+        setImagePreview(currentImageUrl ?? null);
     } finally {
         setIsUploading(false);
-        // Revoke the local URL to free up memory
         if (localPreviewUrl) {
             URL.revokeObjectURL(localPreviewUrl);
         }
     }
   };
 
-  const handleAvatarClick = () => {
-    if (isEditable) {
-        fileInputRef.current?.click();
-    }
+  const handleButtonClick = () => {
+    fileInputRef.current?.click();
   };
 
-  const fallback = userName.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
-
+  const src = imagePreview || 'https://picsum.photos/seed/header/1200/400';
+  
   return (
-    <div className={cn("relative group", className)}>
-      <Avatar
-        className={cn("w-full h-full", isEditable && "cursor-pointer")}
-        onClick={handleAvatarClick}
-      >
-        <AvatarImage src={imagePreview ?? currentImageUrl ?? undefined} alt={`${userName}'s avatar`} />
-        <AvatarFallback>{fallback}</AvatarFallback>
-      </Avatar>
+    <div className="relative w-full h-48 bg-muted rounded-t-lg group overflow-hidden">
+        <Image
+            src={src}
+            alt="Cover image"
+            fill
+            className="object-cover"
+            data-ai-hint="landscape abstract"
+        />
+
       {isEditable && (
         <div 
-            className={cn(
-                "absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity rounded-full",
-                isUploading ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-                isEditable && "cursor-pointer"
-            )}
-            onClick={handleAvatarClick}
+          className={cn(
+            "absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity",
+            isUploading ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          )}
         >
-            {isUploading ? (
-                <Loader2 className="text-white h-8 w-8 animate-spin" />
-            ) : (
-                <Camera className="text-white h-8 w-8" />
-            )}
+          {isUploading ? (
+              <Loader2 className="text-white h-8 w-8 animate-spin" />
+          ) : (
+              <Button variant="outline" size="sm" onClick={handleButtonClick}>
+                  <Camera className="mr-2 h-4 w-4" />
+                  Change Cover
+              </Button>
+          )}
         </div>
       )}
       <input

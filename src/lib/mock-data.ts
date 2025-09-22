@@ -25,6 +25,7 @@ export type Member = {
     education?: Education[];
     skills?: string[];
     profile_picture_url?: string | null;
+    cover_photo_url?: string | null;
     job_title?: string | null;
     date_of_birth?: Date | string | null;
     start_date?: Date | string | null;

@@ -32,7 +32,7 @@ export default function AdminLayout({
     { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/attendance", label: "Attendance", icon: Calendar },
     { href: "/admin/department", label: "Department", icon: Briefcase },
-    { href: "/admin/members", label: "Employee", icon: Users },
+    { href: "/admin/members", label: "Members", icon: Users },
     { href: "/admin/award", label: "Award", icon: Award },
     { href: "/admin/leave", label: "Leave", icon: Calendar },
     { href: "/admin/profile", label: "Profile", icon: User },

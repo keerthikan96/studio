@@ -21,7 +21,7 @@ export async function parseResumeAction(
   }
 }
 
-export async function addStaffAction(staffData: Omit<Member, 'id' | 'status' | 'profile_picture_url'>): Promise<Member | { error: string }> {
+export async function addStaffAction(staffData: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url'>): Promise<Member | { error: string }> {
   await setupDatabase();
   const { name, email, phone, domain, country, branch, experience, education, skills, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone } = staffData;
   try {
@@ -61,7 +61,7 @@ export async function getMemberByIdAction(id: string): Promise<Member | null> {
 }
 
 export async function updateMemberAction(id: string, data: Omit<Partial<Member>, 'id' | 'created_at' | 'updated_at'>): Promise<Member | { error: string }> {
-    const { name, email, phone, domain, country, branch, experience, education, skills, status, profile_picture_url, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone } = data;
+    const { name, email, phone, domain, country, branch, experience, education, skills, status, profile_picture_url, cover_photo_url, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone } = data;
     try {
         const fields: string[] = [];
         const values: any[] = [];
@@ -78,6 +78,7 @@ export async function updateMemberAction(id: string, data: Omit<Partial<Member>,
         if (skills !== undefined) { fields.push(`skills = $${fieldIndex++}`); values.push(JSON.stringify(skills)); }
         if (status !== undefined) { fields.push(`status = $${fieldIndex++}`); values.push(status); }
         if (profile_picture_url !== undefined) { fields.push(`profile_picture_url = $${fieldIndex++}`); values.push(profile_picture_url); }
+        if (cover_photo_url !== undefined) { fields.push(`cover_photo_url = $${fieldIndex++}`); values.push(cover_photo_url); }
         if (job_title !== undefined) { fields.push(`job_title = $${fieldIndex++}`); values.push(job_title); }
         if (date_of_birth !== undefined) { fields.push(`date_of_birth = $${fieldIndex++}`); values.push(date_of_birth); }
         if (start_date !== undefined) { fields.push(`start_date = $${fieldIndex++}`); values.push(start_date); }

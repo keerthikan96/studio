@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Member } from '@/lib/mock-data';
 import { getMemberByIdAction, updateMemberAction } from '../actions/staff';
 import ProfilePictureUploader from '@/components/profile-picture-uploader';
+import CoverPhotoUploader from '@/components/cover-photo-uploader';
 
 const workExperienceSchema = z.object({
   companyName: z.string().min(1, 'Company name is required.'),
@@ -45,6 +46,7 @@ const profileSchema = z.object({
   education: z.array(educationSchema).optional(),
   skills: z.array(z.string()).optional(),
   profile_picture_url: z.string().url().optional().nullable(),
+  cover_photo_url: z.string().url().optional().nullable(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -65,6 +67,7 @@ export default function ProfilePage() {
       education: [],
       skills: [],
       profile_picture_url: null,
+      cover_photo_url: null,
     },
   });
 
@@ -109,15 +112,15 @@ export default function ProfilePage() {
 
     startTransition(async () => {
       const dirtyFields = form.formState.dirtyFields;
-      // The profile picture is handled separately by its component, so we ignore it here.
-      const { profile_picture_url, ...otherDirtyFields } = dirtyFields;
+      // Image URLs are handled by their own components
+      const { profile_picture_url, cover_photo_url, ...otherDirtyFields } = dirtyFields;
 
       if (Object.keys(otherDirtyFields).length === 0) {
         toast({ title: 'No Changes', description: 'No changes were detected to save.' });
         return;
       }
       
-      const dataToUpdate: Partial<Omit<ProfileFormValues, 'profile_picture_url'>> = {};
+      const dataToUpdate: Partial<Omit<ProfileFormValues, 'profile_picture_url' | 'cover_photo_url'>> = {};
       for (const field of Object.keys(otherDirtyFields)) {
           // @ts-ignore
           dataToUpdate[field] = data[field];
@@ -132,35 +135,50 @@ export default function ProfilePage() {
           title: 'Profile Updated!',
           description: 'Your information has been successfully saved.',
         });
-        // Re-fetch data and reset form to reflect the new state and clear dirty status
         const updatedMember = await getMemberByIdAction(member.id);
         if (updatedMember) {
+          setMember(updatedMember);
           form.reset({
             ...updatedMember,
             experience: updatedMember.experience || [],
             education: updatedMember.education || [],
             skills: updatedMember.skills || [],
-          });
+          }, { keepDirty: false });
         }
       }
     });
   }
 
-  const handleUploadSuccess = (newUrl: string) => {
+  const handleProfileUploadSuccess = (newUrl: string) => {
+    if (!member) return;
     form.setValue('profile_picture_url', newUrl, { shouldDirty: false });
-     if (member) {
-      const updatedMember = { ...member, profile_picture_url: newUrl };
+    const updatedMember = { ...member, profile_picture_url: newUrl };
+    setMember(updatedMember);
+    const storedUser = sessionStorage.getItem('loggedInUser');
+    if (storedUser) {
+        const user = JSON.parse(storedUser);
+        if (user.id === member.id) {
+            user.profile_picture_url = newUrl;
+            sessionStorage.setItem('loggedInUser', JSON.stringify(user));
+            window.dispatchEvent(new CustomEvent('profile-picture-updated'));
+        }
+    }
+  };
+  
+  const handleCoverUploadSuccess = (newUrl: string) => {
+    if (!member) return;
+    form.setValue('cover_photo_url', newUrl, { shouldDirty: false });
+     const updatedMember = { ...member, cover_photo_url: newUrl };
       setMember(updatedMember);
-      // Also update session storage so other components can see the change
       const storedUser = sessionStorage.getItem('loggedInUser');
       if (storedUser) {
         const user = JSON.parse(storedUser);
         if (user.id === member.id) {
-          user.profile_picture_url = newUrl;
+          user.cover_photo_url = newUrl;
           sessionStorage.setItem('loggedInUser', JSON.stringify(user));
+           window.dispatchEvent(new CustomEvent('cover-photo-updated'));
         }
       }
-    }
   };
 
   const handleSkillKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -178,26 +196,29 @@ export default function ProfilePage() {
       return <div className='flex justify-center items-center h-full'><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
-
   return (
-    <Card className="max-w-4xl mx-auto">
-      <CardHeader>
-        <div className="flex flex-col items-center gap-4 text-center">
-            <ProfilePictureUploader
-                memberId={member.id}
-                currentImageUrl={member.profile_picture_url}
-                onUploadSuccess={handleUploadSuccess}
-                userName={member.name}
-            />
-            <div>
-                <CardTitle className="text-2xl">Your Profile</CardTitle>
-                <CardDescription>
-                    View and update your personal and professional information.
-                </CardDescription>
-            </div>
+    <Card className="max-w-4xl mx-auto overflow-hidden">
+      <CoverPhotoUploader
+        memberId={member.id}
+        currentImageUrl={member.cover_photo_url}
+        onUploadSuccess={handleCoverUploadSuccess}
+        isEditable={true}
+      />
+      <div className="-mt-16 sm:-mt-20 px-4 sm:px-6 flex items-end gap-4">
+        <ProfilePictureUploader
+          memberId={member.id}
+          currentImageUrl={member.profile_picture_url}
+          onUploadSuccess={handleProfileUploadSuccess}
+          userName={member.name}
+          isEditable={true}
+          className="w-24 h-24 sm:w-32 sm:h-32 text-4xl border-4 border-card"
+        />
+        <div className="pb-2">
+          <CardTitle className="text-2xl sm:text-3xl">{member.name}</CardTitle>
+          <CardDescription>{member.email}</CardDescription>
         </div>
-      </CardHeader>
-      <CardContent>
+      </div>
+      <CardContent className="pt-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">

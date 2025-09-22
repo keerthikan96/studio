@@ -24,6 +24,7 @@ type UserData = {
     email: string;
     role: 'admin' | 'staff';
     profile_picture_url?: string | null;
+    cover_photo_url?: string | null;
 }
 
 export default function UserNav() {
@@ -40,7 +41,11 @@ export default function UserNav() {
             // Fetch the latest user data to get the profile picture URL
             getMemberByIdAction(storedUser.id).then(member => {
                 if (member) {
-                    const fullUserData = { ...storedUser, profile_picture_url: member.profile_picture_url };
+                    const fullUserData = { 
+                        ...storedUser, 
+                        profile_picture_url: member.profile_picture_url,
+                        cover_photo_url: member.cover_photo_url
+                    };
                     setUser(fullUserData);
                     // Update session storage with the latest data
                     sessionStorage.setItem('loggedInUser', JSON.stringify(fullUserData));
@@ -61,11 +66,18 @@ export default function UserNav() {
         loadUser();
     };
 
+    const handleCoverUpdate = () => {
+        console.log("Cover photo updated event received!");
+        loadUser();
+    }
+
     window.addEventListener('profile-picture-updated', handleProfileUpdate);
+    window.addEventListener('cover-photo-updated', handleCoverUpdate);
 
     // Cleanup listener on component unmount
     return () => {
         window.removeEventListener('profile-picture-updated', handleProfileUpdate);
+        window.removeEventListener('cover-photo-updated', handleCoverUpdate);
     };
   }, []);
 

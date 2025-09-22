@@ -1,11 +1,11 @@
 
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useFieldArray, useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useState, useTransition, KeyboardEvent, useEffect } from 'react';
+import Image from 'next/image';
 import {
   Form,
   FormControl,
@@ -26,6 +26,7 @@ import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getMemberByIdAction, updateMemberAction, deleteMemberAction } from '@/app/actions/staff';
 import ProfilePictureUploader from '@/components/profile-picture-uploader';
+import CoverPhotoUploader from '@/components/cover-photo-uploader';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -65,6 +66,7 @@ const profileSchema = z.object({
   skills: z.array(z.string()).optional(),
   status: z.enum(['active', 'pending', 'inactive']).optional(),
   profile_picture_url: z.string().url().optional().nullable(),
+  cover_photo_url: z.string().url().optional().nullable(),
   date_of_birth: z.date().optional().nullable(),
   start_date: z.date().optional().nullable(),
   address: z.string().optional().nullable(),
@@ -175,10 +177,6 @@ const GeneralInfoEdit = ({ form, member, onCancel, isPending }: { form: any, mem
     }
   };
 
-  const handleUploadSuccess = (newUrl: string) => {
-    form.setValue('profile_picture_url', newUrl, { shouldDirty: true });
-  };
-  
     return (
         <Card>
             <CardHeader>
@@ -188,14 +186,6 @@ const GeneralInfoEdit = ({ form, member, onCancel, isPending }: { form: any, mem
             <CardContent>
                 <Form {...form}>
                 <form className="space-y-8">
-                    <div className="flex flex-col items-center gap-4 text-center mb-8">
-                        <ProfilePictureUploader
-                            memberId={member.id}
-                            currentImageUrl={member.profile_picture_url}
-                            onUploadSuccess={handleUploadSuccess}
-                            userName={member.name}
-                        />
-                    </div>
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <FormField
                         control={form.control}
@@ -591,6 +581,7 @@ export default function MemberProfilePage() {
         education: [],
         skills: [],
         profile_picture_url: null,
+        cover_photo_url: null,
         job_title: '',
         date_of_birth: null,
         start_date: null,
@@ -636,33 +627,68 @@ export default function MemberProfilePage() {
 
   const toggleEditMode = (tab: string) => {
     const isEnteringEdit = !editModes[tab];
-    setEditModes(prev => ({ ...prev, [tab]: isEnteringEdit }));
+    const newEditModes = { ...editModes, [tab]: isEnteringEdit };
+
+    // When entering edit mode for a tab, exit edit mode for all other tabs
+    if (isEnteringEdit) {
+      Object.keys(editModes).forEach(key => {
+        if (key !== tab) {
+          newEditModes[key] = false;
+        }
+      });
+    }
+
+    setEditModes(newEditModes);
     
     if (isEnteringEdit && member) {
         resetFormValues(member);
     }
   };
 
-  function onSubmit(data: ProfileFormValues) {
+  const handleCoverUploadSuccess = (newUrl: string) => {
+    if (!member) return;
+    const updatedMember = { ...member, cover_photo_url: newUrl };
+    setMember(updatedMember);
+    form.setValue('cover_photo_url', newUrl, { shouldDirty: true });
+    toast({ title: 'Cover photo updated!', description: 'Saving your changes...' });
+    onSubmit({ cover_photo_url: newUrl });
+  };
+  
+  const handleProfilePicUploadSuccess = (newUrl: string) => {
+    if (!member) return;
+    const updatedMember = { ...member, profile_picture_url: newUrl };
+    setMember(updatedMember);
+    form.setValue('profile_picture_url', newUrl, { shouldDirty: true });
+    toast({ title: 'Profile picture updated!', description: 'Saving your changes...' });
+    onSubmit({ profile_picture_url: newUrl });
+  };
+
+  function onSubmit(data: Partial<ProfileFormValues>) {
     startTransition(async () => {
         const dirtyFields = form.formState.dirtyFields;
         const activeEditTab = Object.keys(editModes).find(key => editModes[key]);
-
-        if (Object.keys(dirtyFields).length === 0) {
-            toast({ title: 'No Changes Detected', description: 'You haven\'t made any changes to save.' });
-            if(activeEditTab) toggleEditMode(activeEditTab);
-            return;
-        }
-
-        const dataToUpdate: Partial<ProfileFormValues> = {};
-        for (const field in dirtyFields) {
-            // @ts-ignore
-            if (Object.prototype.hasOwnProperty.call(data, field)) {
-                 // @ts-ignore
-                dataToUpdate[field] = data[field];
-            }
-        }
         
+        let dataToUpdate = data;
+        
+        if (Object.keys(data).length === 0) {
+            if (Object.keys(dirtyFields).length === 0) {
+                toast({ title: 'No Changes Detected', description: 'You haven\'t made any changes to save.' });
+                if(activeEditTab) toggleEditMode(activeEditTab);
+                return;
+            }
+
+            const fullData = form.getValues();
+            const changedData: Partial<ProfileFormValues> = {};
+             for (const field in dirtyFields) {
+                // @ts-ignore
+                if (Object.prototype.hasOwnProperty.call(fullData, field)) {
+                    // @ts-ignore
+                    changedData[field] = fullData[field];
+                }
+            }
+            dataToUpdate = changedData;
+        }
+
         const result = await updateMemberAction(memberId, dataToUpdate);
 
         if ('error' in result) {
@@ -678,6 +704,9 @@ export default function MemberProfilePage() {
 
             if ('profile_picture_url' in dataToUpdate) {
                 window.dispatchEvent(new CustomEvent('profile-picture-updated'));
+            }
+            if ('cover_photo_url' in dataToUpdate) {
+                window.dispatchEvent(new CustomEvent('cover-photo-updated'));
             }
         }
     });
@@ -708,7 +737,7 @@ export default function MemberProfilePage() {
                 <Button onClick={() => toggleEditMode(tab)} variant="outline" disabled={isPending}>
                     <Ban className="mr-2 h-4 w-4" /> Cancel
                 </Button>
-                <Button onClick={form.handleSubmit(onSubmit)} disabled={isPending || !form.formState.isDirty}>
+                <Button onClick={() => onSubmit({})} disabled={isPending || !form.formState.isDirty}>
                     {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Save
                 </Button>
             </div>
@@ -747,6 +776,7 @@ export default function MemberProfilePage() {
 
   const fallback = member.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
   const tabs = ["General Info", "Job", "Education", "Leave", "Notes", "Performance", "Permission", "Assets", "Documents", "Training", "To-Do", "Payslip", "Payroll", "Attendance"];
+  const isAnyTabEditing = Object.values(editModes).some(v => v);
 
   return (
     <div className='space-y-6'>
@@ -757,21 +787,24 @@ export default function MemberProfilePage() {
             </Link>
         </Button>
 
-        <Card>
-            <CardHeader>
-                <div className="flex items-start justify-between gap-4">
-                    <div className='flex items-center gap-4'>
-                        <Avatar className="h-20 w-20 text-3xl">
-                            <AvatarImage src={member.profile_picture_url ?? undefined} alt={`${member.name}'s avatar`} />
-                            <AvatarFallback>{fallback}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <h1 className="text-2xl font-bold">{member.name}</h1>
-                            <p className="text-muted-foreground">{member.job_title || member.domain}</p>
-                            <p className="text-sm text-muted-foreground">{member.email}</p>
-                        </div>
-                    </div>
-                     <div className="flex items-center gap-2">
+        <Card className='overflow-hidden'>
+            <CoverPhotoUploader
+                memberId={member.id}
+                currentImageUrl={member.cover_photo_url}
+                onUploadSuccess={handleCoverUploadSuccess}
+                isEditable={!isAnyTabEditing}
+            />
+            <CardHeader className='pt-0'>
+                <div className="flex items-end justify-between gap-4 -mt-12">
+                    <ProfilePictureUploader
+                        memberId={member.id}
+                        currentImageUrl={member.profile_picture_url}
+                        onUploadSuccess={handleProfilePicUploadSuccess}
+                        userName={member.name}
+                        isEditable={!isAnyTabEditing}
+                        className='w-24 h-24 text-3xl border-4 border-card'
+                    />
+                     <div className="flex items-center gap-2 pb-4">
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="destructive">Terminate</Button>
@@ -792,6 +825,11 @@ export default function MemberProfilePage() {
                             </AlertDialogContent>
                         </AlertDialog>
                     </div>
+                </div>
+                 <div className='pt-4'>
+                    <h1 className="text-2xl font-bold">{member.name}</h1>
+                    <p className="text-muted-foreground">{member.job_title || member.domain}</p>
+                    <p className="text-sm text-muted-foreground">{member.email}</p>
                 </div>
             </CardHeader>
         </Card>
