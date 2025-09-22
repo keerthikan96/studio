@@ -20,7 +20,7 @@ export default function AddStaffPage() {
         const updatedMembers = [...savedMembers, newMember];
         localStorage.setItem('members', JSON.stringify(updatedMembers));
         
-        router.push('/admin/members');
+        // No redirect here, dialog is handled in the form
     };
     
     return (

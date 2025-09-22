@@ -2,6 +2,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -15,9 +16,15 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import {
+  CheckCircle,
   ChevronDown,
+  CircleSlash,
+  Eye,
   Mail,
   MoreHorizontal,
+  Pencil,
+  Trash2,
+  XCircle,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -44,6 +51,7 @@ import { Member } from '@/lib/mock-data';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { cn } from '@/lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 
 const statusStyles: { [key: string]: string } = {
   active: 'bg-green-100 text-green-800 border-green-200 hover:bg-green-100',
@@ -51,7 +59,11 @@ const statusStyles: { [key: string]: string } = {
   inactive: 'bg-red-100 text-red-800 border-red-200 hover:bg-red-100',
 };
 
-const getColumns = (onSendInvite: (member: Member) => void): ColumnDef<Member>[] => [
+const getColumns = (
+    onSendInvite: (member: Member) => void,
+    onStatusChange: (member: Member, status: Member['status']) => void,
+    onDelete: (member: Member) => void,
+): ColumnDef<Member>[] => [
   {
     id: 'select',
     header: ({ table }) => (
@@ -124,20 +136,42 @@ const getColumns = (onSendInvite: (member: Member) => void): ColumnDef<Member>[]
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <Link href={`/admin/members/${member.id}`}>
+              <DropdownMenuItem>
+                <Eye className="mr-2 h-4 w-4" />
+                View
+              </DropdownMenuItem>
+            </Link>
+            <Link href={`/admin/members/${member.id}`}>
+              <DropdownMenuItem>
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+            </Link>
+            <DropdownMenuSeparator />
             {member.status === 'pending' && (
                  <DropdownMenuItem onClick={() => onSendInvite(member)}>
-                    <Mail className='mr-2' />
+                    <Mail className="mr-2 h-4 w-4" />
                     Send Invite
                  </DropdownMenuItem>
             )}
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(member.id)}
-            >
-              Copy member ID
-            </DropdownMenuItem>
+             {member.status === 'inactive' && (
+                 <DropdownMenuItem onClick={() => onStatusChange(member, 'active')}>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Activate
+                 </DropdownMenuItem>
+            )}
+            {member.status === 'active' && (
+                 <DropdownMenuItem onClick={() => onStatusChange(member, 'inactive')}>
+                    <CircleSlash className="mr-2 h-4 w-4" />
+                    Deactivate
+                 </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem>View details</DropdownMenuItem>
-            <DropdownMenuItem>Edit member</DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive" onClick={() => onDelete(member)}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
@@ -163,8 +197,20 @@ export function MemberList({ data, setMembers, onSendInvite }: MemberListProps) 
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
+  const [memberToDelete, setMemberToDelete] = React.useState<Member | null>(null);
+
+  const handleStatusChange = (member: Member, status: Member['status']) => {
+    setMembers(current => current.map(m => m.id === member.id ? {...m, status} : m));
+  };
   
-  const columns = React.useMemo(() => getColumns(onSendInvite), [onSendInvite]);
+  const handleDeleteConfirm = () => {
+    if (memberToDelete) {
+        setMembers(current => current.filter(m => m.id !== memberToDelete.id));
+        setMemberToDelete(null);
+    }
+  }
+
+  const columns = React.useMemo(() => getColumns(onSendInvite, handleStatusChange, setMemberToDelete), [onSendInvite]);
 
   const table = useReactTable({
     data,
@@ -177,9 +223,6 @@ export function MemberList({ data, setMembers, onSendInvite }: MemberListProps) 
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    meta: {
-        setMembers,
-    },
     state: {
       sorting,
       columnFilters,
@@ -377,6 +420,20 @@ export function MemberList({ data, setMembers, onSendInvite }: MemberListProps) 
           </Button>
         </div>
       </div>
+      <AlertDialog open={!!memberToDelete} onOpenChange={() => setMemberToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the member account for {memberToDelete?.name}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className={buttonVariants({ variant: "destructive" })}>Yes, Delete Member</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
