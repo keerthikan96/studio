@@ -1,10 +1,11 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
-import { useTransition } from 'react';
+import { useTransition, useEffect } from 'react';
 import {
   Form,
   FormControl,
@@ -38,11 +39,31 @@ export default function LoginForm() {
     },
   });
 
+  useEffect(() => {
+    const handleLogin = (user: { name: string, email: string, role: 'admin' | 'staff' }) => {
+        sessionStorage.setItem('loggedInUser', JSON.stringify(user));
+    };
+
+    // This is a workaround for a demo. In a real app, you'd clear this on logout.
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('new_user') === 'true') {
+        const email = urlParams.get('email');
+        if (email) {
+            handleLogin({ name: 'New Member', email, role: 'staff'});
+        }
+    }
+  }, []);
+
   function onSubmit(data: LoginFormValues) {
     startTransition(() => {
+      const handleLogin = (user: { name: string, email: string, role: 'admin' | 'staff' }) => {
+          sessionStorage.setItem('loggedInUser', JSON.stringify(user));
+      };
+      
       // Mock authentication logic
       if (data.password === 'password') { // Simple password check for demo
         if (data.email === 'admin@gmail.com') {
+          handleLogin({ name: 'Admin', email: 'admin@gmail.com', role: 'admin' });
           toast({
             title: 'Login Successful',
             description: 'Redirecting to admin dashboard...',
@@ -50,13 +71,30 @@ export default function LoginForm() {
           router.push('/admin/dashboard');
           return;
         }
-        if (data.email === 'alex.doe@staffsync.com' || data.email === 'new.member@example.com') {
+        if (data.email === 'alex.doe@staffsync.com') {
+            handleLogin({ name: 'Alex Doe', email: 'alex.doe@staffsync.com', role: 'staff' });
            toast({
             title: 'Login Successful',
             description: 'Redirecting to your profile...',
           });
           router.push('/profile');
           return;
+        }
+        
+        // Check if it's a newly created member from our localStorage list
+        const savedMembersString = localStorage.getItem('members');
+        if (savedMembersString) {
+            const savedMembers = JSON.parse(savedMembersString);
+            const member = savedMembers.find((m: any) => m.email === data.email);
+            if (member) {
+                 handleLogin({ name: member.name, email: member.email, role: 'staff' });
+                 toast({
+                    title: 'Login Successful',
+                    description: 'Redirecting to your profile...',
+                });
+                router.push('/profile');
+                return;
+            }
         }
       }
       

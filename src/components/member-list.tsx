@@ -16,6 +16,7 @@ import {
 } from '@tanstack/react-table';
 import {
   ChevronDown,
+  Mail,
   MoreHorizontal,
 } from 'lucide-react';
 
@@ -42,14 +43,15 @@ import {
 import { Member } from '@/lib/mock-data';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { cn } from '@/lib/utils';
 
 const statusStyles: { [key: string]: string } = {
-  active: 'bg-green-100 text-green-800 border-green-200',
-  pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  inactive: 'bg-red-100 text-red-800 border-red-200',
+  active: 'bg-green-100 text-green-800 border-green-200 hover:bg-green-100',
+  pending: 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-100',
+  inactive: 'bg-red-100 text-red-800 border-red-200 hover:bg-red-100',
 };
 
-export const columns: ColumnDef<Member>[] = [
+const getColumns = (onSendInvite: (member: Member) => void): ColumnDef<Member>[] => [
   {
     id: 'select',
     header: ({ table }) => (
@@ -117,6 +119,12 @@ export const columns: ColumnDef<Member>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            {member.status === 'pending' && (
+                 <DropdownMenuItem onClick={() => onSendInvite(member)}>
+                    <Mail className='mr-2' />
+                    Send Invite
+                 </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               onClick={() => navigator.clipboard.writeText(member.id)}
             >
@@ -135,6 +143,8 @@ export const columns: ColumnDef<Member>[] = [
 
 type MemberListProps = {
     data: Member[];
+    setMembers: React.Dispatch<React.SetStateAction<Member[]>>;
+    onSendInvite: (member: Member) => void;
 }
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
@@ -142,12 +152,14 @@ const statuses = ['active', 'pending', 'inactive'];
 const branches = ['New York', 'London', 'Tokyo', 'Sydney'];
 
 
-export function MemberList({ data }: MemberListProps) {
+export function MemberList({ data, setMembers, onSendInvite }: MemberListProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
+  
+  const columns = React.useMemo(() => getColumns(onSendInvite), [onSendInvite]);
 
   const table = useReactTable({
     data,
@@ -160,6 +172,9 @@ export function MemberList({ data }: MemberListProps) {
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    meta: {
+        setMembers,
+    },
     state: {
       sorting,
       columnFilters,
@@ -351,8 +366,4 @@ export function MemberList({ data }: MemberListProps) {
       </div>
     </div>
   );
-}
-
-function cn(arg0: string, arg1: string): string | undefined {
-    return [arg0, arg1].filter(Boolean).join(' ');
 }

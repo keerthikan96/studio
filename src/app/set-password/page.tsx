@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -17,7 +18,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Logo from '@/components/logo';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const formSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters.'),
@@ -30,6 +31,8 @@ const formSchema = z.object({
 export default function SetPasswordPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const email = searchParams.get('email');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -38,11 +41,23 @@ export default function SetPasswordPage() {
 
   function onSubmit(data: z.infer<typeof formSchema>) {
     console.log('Setting password:', data.password);
+    
+    // In a real app, you would also update the user's status in the database from 'pending' to 'active'.
+    const savedMembersString = localStorage.getItem('members');
+    if (savedMembersString && email) {
+        let savedMembers = JSON.parse(savedMembersString);
+        const memberIndex = savedMembers.findIndex((m: any) => m.email === email);
+        if (memberIndex !== -1) {
+            savedMembers[memberIndex].status = 'active';
+            localStorage.setItem('members', JSON.stringify(savedMembers));
+        }
+    }
+    
     toast({
       title: 'Password Set Successfully!',
       description: 'You can now log in with your new password.',
     });
-    router.push('/profile');
+    router.push(`/?new_user=true&email=${email}`);
   }
 
   return (
@@ -53,7 +68,7 @@ export default function SetPasswordPage() {
                 <Logo />
             </div>
           <CardTitle>Create Your Password</CardTitle>
-          <CardDescription>Welcome to StaffSync! Please set a secure password to access your account.</CardDescription>
+          <CardDescription>Welcome to StaffSync! Please set a secure password for {email}.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>

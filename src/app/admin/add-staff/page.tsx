@@ -1,9 +1,31 @@
+
+'use client';
 import AddStaffForm from "@/components/add-staff-form";
+import { Member } from "@/lib/mock-data";
+import { useRouter } from "next/navigation";
 
 export default function AddStaffPage() {
+    const router = useRouter();
+
+    const handleAddStaff = (newStaff: Omit<Member, 'id' | 'status'>) => {
+        const savedMembersString = localStorage.getItem('members');
+        const savedMembers: Member[] = savedMembersString ? JSON.parse(savedMembersString) : [];
+
+        const newMember: Member = {
+            ...newStaff,
+            id: `m_${savedMembers.length + 1}`,
+            status: 'pending',
+        };
+        
+        const updatedMembers = [...savedMembers, newMember];
+        localStorage.setItem('members', JSON.stringify(updatedMembers));
+        
+        router.push('/admin/members');
+    };
+    
     return (
         <div>
-            <AddStaffForm />
+            <AddStaffForm onAddStaff={handleAddStaff} />
         </div>
     );
 }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,8 +19,23 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { parseResumeAction } from '@/app/actions/staff';
-import { Loader2, PlusCircle, Trash, UploadCloud, UserPlus } from 'lucide-react';
+import { Loader2, PlusCircle, Trash, UploadCloud, UserPlus, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Member } from '@/lib/mock-data';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
+const branches = ['New York', 'London', 'Tokyo', 'Sydney'];
 
 const workExperienceSchema = z.object({
   companyName: z.string().min(1, 'Company name is required.'),
@@ -32,6 +48,8 @@ const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
   phone: z.string().optional(),
+  domain: z.enum(domains as [string, ...string[]], { required_error: 'Domain is required' }),
+  branch: z.enum(branches as [string, ...string[]], { required_error: 'Branch is required' }),
   experience: z.array(workExperienceSchema).optional(),
   education: z.string().optional(),
   skills: z.string().optional(),
@@ -39,14 +57,20 @@ const formSchema = z.object({
 
 type StaffFormValues = z.infer<typeof formSchema>;
 
+type AddStaffFormProps = {
+    onAddStaff: (staff: Omit<Member, 'id' | 'status'>) => void;
+};
+
 function generateSecureToken() {
     // In a real app, use a crypto library for this.
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
 
-export default function AddStaffForm() {
+export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
   const [isPending, startTransition] = useTransition();
   const [isParsing, setIsParsing] = useState(false);
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [formData, setFormData] = useState<StaffFormValues | null>(null);
   const { toast } = useToast();
 
   const form = useForm<StaffFormValues>({
@@ -89,10 +113,18 @@ export default function AddStaffForm() {
             description: result.error,
           });
         } else {
-          form.reset(result);
+          // Keep domain and branch if they were already selected.
+          const currentValues = form.getValues();
+          form.reset({
+            ...result,
+            // @ts-ignore
+            domain: result.domain || currentValues.domain,
+            // @ts-ignore
+            branch: result.branch || currentValues.branch,
+          });
           toast({
             title: 'Resume Parsed Successfully!',
-            description: 'The form has been pre-filled with the extracted information.',
+            description: 'The form has been pre-filled. Please select a domain and branch.',
           });
         }
         setIsParsing(false);
@@ -110,29 +142,42 @@ export default function AddStaffForm() {
   };
   
   function onSubmit(data: StaffFormValues) {
+    setFormData(data);
     startTransition(() => {
-      const token = generateSecureToken();
-      // In a real app, you would store the token with the user's email and an expiry date in your database.
-      // Then you would send an email with a link like the one below.
-      const invitationLink = `${window.location.origin}/set-password?token=${token}&email=${encodeURIComponent(data.email)}`;
+        const { experience, education, skills, phone, ...memberData} = data;
+        // @ts-ignore
+        onAddStaff(memberData);
+        toast({
+            title: 'Member Saved',
+            description: `${data.name} has been added to the member list.`,
+        });
+        setShowInviteDialog(true);
+    });
+  }
+
+  const handleSendInvite = () => {
+    if (!formData) return;
+     const token = generateSecureToken();
+      const invitationLink = `${window.location.origin}/set-password?token=${token}&email=${encodeURIComponent(formData.email)}`;
       
       console.log('--- Invitation Email ---');
-      console.log(`To: ${data.email}`);
+      console.log(`To: ${formData.email}`);
       console.log('Subject: You have been invited to join StaffSync!');
-      console.log(`Hi ${data.name},`);
+      console.log(`Hi ${formData.name},`);
       console.log(`Please click the link below to set up your account. This link will expire in 7 days.`);
       console.log(invitationLink);
       console.log('------------------------');
       
       toast({
         title: 'Invitation Sent!',
-        description: `An invitation has been sent to ${data.name} at ${data.email}.`,
+        description: `An invitation has been sent to ${formData.name} at ${formData.email}.`,
       });
+      setShowInviteDialog(false);
       form.reset();
-    });
   }
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle>Add New Staff Member</CardTitle>
@@ -198,6 +243,46 @@ export default function AddStaffForm() {
                     <FormControl>
                       <Input placeholder="e.g. (123) 456-7890" {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="domain"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Domain</FormLabel>
+                     <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a domain" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {domains.map(domain => <SelectItem key={domain} value={domain}>{domain}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="branch"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Branch</FormLabel>
+                     <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a branch" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {branches.map(branch => <SelectItem key={branch} value={branch}>{branch}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -311,14 +396,29 @@ export default function AddStaffForm() {
                 {isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <UserPlus className="mr-2 h-4 w-4" />
+                  <Save className="mr-2 h-4 w-4" />
                 )}
-                Invite Staff Member
+                Save Member
               </Button>
             </div>
           </form>
         </Form>
       </CardContent>
     </Card>
+    <AlertDialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send Invitation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The member has been saved. Would you like to send an invitation email to {formData?.name} now?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => form.reset()}>No, Later</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSendInvite}>Yes, Send Invite</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

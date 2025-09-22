@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Parses a resume to pre-fill a staff profile form.
@@ -28,6 +29,9 @@ const WorkExperienceSchema = z.object({
   keyResponsibilities: z.string().describe('A summary of key responsibilities and achievements in the role.'),
 });
 
+const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
+const branches = ['New York', 'London', 'Tokyo', 'Sydney'];
+
 const ParseResumeToAutofillProfileOutputSchema = z.object({
   name: z.string().describe('The name of the staff member.'),
   email: z.string().email().describe('The email address of the staff member.'),
@@ -37,6 +41,8 @@ const ParseResumeToAutofillProfileOutputSchema = z.object({
   experience: z.array(WorkExperienceSchema).describe('The work experience of the staff member.'),
   education: z.string().describe('The education details of the staff member.'),
   skills: z.string().describe('The skills of the staff member'),
+  domain: z.enum(domains as [string, ...string[]]).optional().describe("The most likely job domain/department based on the resume. Choose from: " + domains.join(', ')),
+  branch: z.enum(branches as [string, ...string[]]).optional().describe("Guess the most likely branch location. Choose from: " + branches.join(', ')),
 });
 
 export type ParseResumeToAutofillProfileOutput = z.infer<
@@ -53,7 +59,7 @@ const prompt = ai.definePrompt({
   name: 'parseResumeToAutofillProfilePrompt',
   input: {schema: ParseResumeToAutofillProfileInputSchema},
   output: {schema: ParseResumeToAutofillProfileOutputSchema},
-  prompt: `You are an expert resume parser. Extract the following information from the resume: name, email, phone, a list of work experiences (including companyName, role, years, and keyResponsibilities), education, and skills.  Return the information in JSON format.
+  prompt: `You are an expert resume parser. Extract the following information from the resume: name, email, phone, a list of work experiences (including companyName, role, years, and keyResponsibilities), education, and skills. Also, infer the most appropriate 'domain' and 'branch' from the provided options. Return the information in JSON format.
 
 Resume: {{media url=resumeDataUri}}`,
 });
