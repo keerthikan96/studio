@@ -50,7 +50,7 @@ export default function LoginForm() {
           router.push('/admin/dashboard');
           return;
         }
-        if (data.email === 'alex.doe@staffsync.com') {
+        if (data.email === 'alex.doe@staffsync.com' || data.email === 'new.member@example.com') {
            toast({
             title: 'Login Successful',
             description: 'Redirecting to your profile...',

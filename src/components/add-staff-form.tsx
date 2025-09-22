@@ -20,7 +20,6 @@ import { useToast } from '@/hooks/use-toast';
 import { parseResumeAction } from '@/app/actions/staff';
 import { Loader2, PlusCircle, Trash, UploadCloud, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Separator } from './ui/separator';
 
 const workExperienceSchema = z.object({
   companyName: z.string().min(1, 'Company name is required.'),
@@ -39,6 +38,11 @@ const formSchema = z.object({
 });
 
 type StaffFormValues = z.infer<typeof formSchema>;
+
+function generateSecureToken() {
+    // In a real app, use a crypto library for this.
+    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
 
 export default function AddStaffForm() {
   const [isPending, startTransition] = useTransition();
@@ -107,8 +111,19 @@ export default function AddStaffForm() {
   
   function onSubmit(data: StaffFormValues) {
     startTransition(() => {
-      // Here you would typically send an invitation email via an API call
-      console.log('Inviting staff with data:', data);
+      const token = generateSecureToken();
+      // In a real app, you would store the token with the user's email and an expiry date in your database.
+      // Then you would send an email with a link like the one below.
+      const invitationLink = `${window.location.origin}/set-password?token=${token}&email=${encodeURIComponent(data.email)}`;
+      
+      console.log('--- Invitation Email ---');
+      console.log(`To: ${data.email}`);
+      console.log('Subject: You have been invited to join StaffSync!');
+      console.log(`Hi ${data.name},`);
+      console.log(`Please click the link below to set up your account. This link will expire in 7 days.`);
+      console.log(invitationLink);
+      console.log('------------------------');
+      
       toast({
         title: 'Invitation Sent!',
         description: `An invitation has been sent to ${data.name} at ${data.email}.`,
