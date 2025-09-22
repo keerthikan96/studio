@@ -17,15 +17,19 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, Save, Trash, X as XIcon, ArrowLeft } from 'lucide-react';
+import { Loader2, PlusCircle, Save, Trash, X as XIcon, ArrowLeft, MoreVertical } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Member } from '@/lib/mock-data';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getMemberByIdAction, updateMemberAction, updateMemberProfilePictureAction } from '@/app/actions/staff';
+import { getMemberByIdAction, updateMemberAction, updateMemberProfilePictureAction, deleteMemberAction } from '@/app/actions/staff';
 import ProfilePictureUploader from '@/components/profile-picture-uploader';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
@@ -67,6 +71,18 @@ const profileSchema = z.object({
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
+
+const PlaceholderContent = ({ title }: { title: string }) => (
+    <Card>
+        <CardHeader>
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>Details for {title.toLowerCase()} will be displayed here.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <p className="text-sm text-muted-foreground">No {title.toLowerCase()} information available yet.</p>
+        </CardContent>
+    </Card>
+);
 
 export default function MemberProfilePage() {
   const [isPending, startTransition] = useTransition();
@@ -133,8 +149,9 @@ export default function MemberProfilePage() {
     startTransition(async () => {
         let hasError = false;
         const dirtyFields = form.formState.dirtyFields;
+        const dataToUpdate: Partial<ProfileFormValues> = {};
 
-        // 1. Handle profile picture update separately if it changed
+        // 1. Handle profile picture update if it changed
         if (dirtyFields.profile_picture_url && data.profile_picture_url) {
             const pictureResult = await updateMemberProfilePictureAction(memberId, data.profile_picture_url);
             if ('error' in pictureResult) {
@@ -143,29 +160,57 @@ export default function MemberProfilePage() {
             }
         }
 
-        // 2. Collect other dirty fields for a separate update
+        // 2. Collect other dirty fields for update, excluding the profile picture
         const otherDirtyFields = Object.keys(dirtyFields).filter(field => field !== 'profile_picture_url');
-        
-        if (otherDirtyFields.length > 0 && !hasError) {
-            const dataToUpdate: Partial<ProfileFormValues> = {};
-            for (const field of otherDirtyFields) {
+        if (otherDirtyFields.length > 0) {
+             for (const field of otherDirtyFields) {
                 // @ts-ignore
                 dataToUpdate[field] = data[field];
             }
+        }
 
-            const result = await updateMemberAction(memberId, dataToUpdate);
+        // 3. Perform the update for other fields if there are any and no error has occurred yet
+        if (Object.keys(dataToUpdate).length > 0 && !hasError) {
+             const result = await updateMemberAction(memberId, dataToUpdate);
             if ('error' in result) {
                 toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });
                 hasError = true;
             }
         }
         
-        if (!hasError) {
+        if (!hasError && Object.keys(dirtyFields).length > 0) {
             toast({
                 title: 'Profile Updated!',
                 description: `${data.name}'s information has been successfully saved.`,
             });
+            // Re-fetch data to show the latest state and reset form dirty state
+            const updatedMember = await getMemberByIdAction(memberId);
+            if (updatedMember) {
+                setMember(updatedMember);
+                form.reset({
+                    ...updatedMember,
+                    experience: updatedMember.experience || [],
+                    education: updatedMember.education || [],
+                    skills: updatedMember.skills || [],
+                });
+            }
+        } else if (Object.keys(dirtyFields).length === 0) {
+             toast({
+                title: 'No Changes Detected',
+                description: 'You haven\'t made any changes to save.',
+            });
+        }
+    });
+  }
+
+  const handleDelete = () => {
+    startTransition(async () => {
+        const result = await deleteMemberAction(memberId);
+        if (result.success) {
+            toast({ title: "Member Terminated", description: `${member?.name} has been removed.` });
             router.push('/admin/members');
+        } else {
+            toast({ title: "Error", description: "Failed to terminate member.", variant: "destructive" });
         }
     });
   }
@@ -185,331 +230,381 @@ export default function MemberProfilePage() {
       return <div className='flex justify-center items-center h-full'><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
+  const fallback = member.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
+  const tabs = ["General Info", "Job", "Leave", "Notes", "Performance", "Permission", "Assets", "Documents", "Training", "To-Do", "Payslip", "Payroll", "Attendance"];
+
   return (
-    <>
-        <Button variant="outline" asChild className="mb-4">
+    <div className='space-y-6'>
+        <Button variant="outline" asChild>
             <Link href="/admin/members">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Member List
             </Link>
         </Button>
-        <Card className="max-w-4xl mx-auto">
-        <CardHeader>
-            <div className="flex flex-col items-center gap-4 text-center">
-                 <ProfilePictureUploader
-                    currentImage={form.watch('profile_picture_url')}
-                    onImageSelect={(dataUri) => form.setValue('profile_picture_url', dataUri, { shouldDirty: true })}
-                    userName={member.name}
-                 />
-                <div>
-                    <CardTitle className="text-2xl">Edit Profile</CardTitle>
-                    <CardDescription>
-                        View and update member's personal and professional information.
-                    </CardDescription>
-                </div>
-            </div>
-        </CardHeader>
-        <CardContent>
-            <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Full Name</FormLabel>
-                        <FormControl>
-                        <Input placeholder="e.g. Alex Doe" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Email Address</FormLabel>
-                        <FormControl>
-                        <Input placeholder="e.g. alex.doe@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
-                        <FormControl>
-                        <Input placeholder="e.g. (123) 456-7890" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="domain"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Domain</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a domain" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {domains.map(domain => <SelectItem key={domain} value={domain}>{domain}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="country"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Country</FormLabel>
-                        <Select onValueChange={(value) => {
-                            field.onChange(value);
-                            form.setValue('branch', ''); // Reset branch on country change
-                        }} defaultValue={field.value} value={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a country" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {countries.map(country => <SelectItem key={country} value={country}>{country}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                {watchedCountry === 'Sri Lanka' ? (
-                    <FormField
-                        control={form.control}
-                        name="branch"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Branch</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                                <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a branch in Sri Lanka" />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {sriLankanBranches.map(branch => <SelectItem key={branch} value={branch}>{branch}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                ) : (
-                    <FormField
-                        control={form.control}
-                        name="branch"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Branch / State</FormLabel>
-                            <FormControl>
-                                <Input placeholder="e.g. New York, California" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                )}
-                <div className="md:col-span-2">
-                    <FormItem>
-                    <FormLabel>Skills</FormLabel>
-                    <FormControl>
+
+        <Card>
+            <CardHeader>
+                <div className="flex items-start justify-between gap-4">
+                    <div className='flex items-center gap-4'>
+                        <Avatar className="h-20 w-20 text-3xl">
+                            <AvatarImage src={member.profile_picture_url || undefined} alt={`${member.name}'s avatar`} />
+                            <AvatarFallback>{fallback}</AvatarFallback>
+                        </Avatar>
                         <div>
-                        <Input 
-                            placeholder="Type a skill and press Enter"
-                            value={skillInput}
-                            onChange={(e) => setSkillInput(e.target.value)}
-                            onKeyDown={handleSkillKeyDown}
-                        />
-                        <div className="flex flex-wrap gap-2 mt-2">
-                            {skillFields.map((field, index) => (
-                            <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
-                                {form.getValues('skills')?.[index]}
-                                <button type="button" onClick={() => removeSkill(index)}>
-                                <XIcon className="h-3 w-3" />
-                                </button>
-                            </Badge>
-                            ))}
+                            <h1 className="text-2xl font-bold">{member.name}</h1>
+                            <p className="text-muted-foreground">{member.domain}</p>
+                            <p className="text-sm text-muted-foreground">{member.email}</p>
                         </div>
-                        </div>
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                </div>
-                </div>
-                
-                <div>
-                <FormLabel>Work Experience</FormLabel>
-                <div className="space-y-4 mt-2">
-                    {expFields.map((field, index) => (
-                    <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <FormField
-                            control={form.control}
-                            name={`experience.${index}.companyName`}
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Company Name</FormLabel>
-                                <FormControl>
-                                <Input {...field} placeholder="e.g. TechCorp" />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name={`experience.${index}.role`}
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Role</FormLabel>
-                                <FormControl>
-                                <Input {...field} placeholder="e.g. Senior Developer" />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name={`experience.${index}.years`}
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Duration</FormLabel>
-                                <FormControl>
-                                <Input {...field} placeholder="e.g. 2020 - Present" />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        </div>
-                        <FormField
-                            control={form.control}
-                            name={`experience.${index}.keyResponsibilities`}
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Key Responsibilities</FormLabel>
-                                <FormControl>
-                                <Textarea {...field} placeholder="Describe key responsibilities..."/>
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <Button type="button" variant="destructive" size="icon" onClick={() => removeExp(index)} className="absolute top-2 right-2 h-7 w-7">
-                            <Trash className="h-4 w-4" />
-                        </Button>
                     </div>
-                    ))}
-                    <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => appendExp({ companyName: '', role: '', years: '', keyResponsibilities: '' })}
-                    >
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Work Experience
-                    </Button>
-                </div>
-                </div>
-
-                <div>
-                <FormLabel>Education</FormLabel>
-                <div className="space-y-4 mt-2">
-                    {eduFields.map((field, index) => (
-                    <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <FormField
-                            control={form.control}
-                            name={`education.${index}.institution`}
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Institution</FormLabel>
-                                <FormControl>
-                                <Input {...field} placeholder="e.g. University of Technology" />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name={`education.${index}.degree`}
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Degree</FormLabel>
-                                <FormControl>
-                                <Input {...field} placeholder="e.g. B.S. in Computer Science" />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name={`education.${index}.years`}
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Duration</FormLabel>
-                                <FormControl>
-                                <Input {...field} placeholder="e.g. 2014 - 2018" />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        </div>
-                        <Button type="button" variant="destructive" size="icon" onClick={() => removeEdu(index)} className="absolute top-2 right-2 h-7 w-7">
-                            <Trash className="h-4 w-4" />
+                     <div className="flex items-center gap-2">
+                         <Button onClick={form.handleSubmit(onSubmit)} disabled={isPending || !form.formState.isDirty}>
+                            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                            Save Changes
                         </Button>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive">Terminate</Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the member account for {member.name}.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDelete} disabled={isPending}>
+                                    {isPending ? 'Terminating...' : 'Yes, Terminate'}
+                                </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     </div>
-                    ))}
-                    <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => appendEdu({ institution: '', degree: '', years: '' })}
-                    >
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Education
-                    </Button>
                 </div>
-                </div>
-
-                <div className="flex justify-end">
-                <Button type="submit" disabled={isPending || !form.formState.isDirty}>
-                    {isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                    <Save className="mr-2 h-4 w-4" />
-                    )}
-                    Save Changes
-                </Button>
-                </div>
-            </form>
-            </Form>
-        </CardContent>
+            </CardHeader>
         </Card>
-    </>
+
+        <Tabs defaultValue="General Info" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-13">
+                 {tabs.map(tab => <TabsTrigger key={tab} value={tab}>{tab}</TabsTrigger>)}
+            </TabsList>
+
+            <TabsContent value="General Info" className='mt-6'>
+                <Card>
+                     <CardHeader>
+                        <CardTitle>General Information</CardTitle>
+                        <CardDescription>View and update member's personal and professional information.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                             <div className="flex flex-col items-center gap-4 text-center mb-8">
+                                <ProfilePictureUploader
+                                    currentImage={form.watch('profile_picture_url')}
+                                    onImageSelect={(dataUri) => form.setValue('profile_picture_url', dataUri, { shouldDirty: true })}
+                                    userName={member.name}
+                                />
+                            </div>
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                            <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Full Name</FormLabel>
+                                    <FormControl>
+                                    <Input placeholder="e.g. Alex Doe" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="email"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Email Address</FormLabel>
+                                    <FormControl>
+                                    <Input placeholder="e.g. alex.doe@example.com" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="phone"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Phone Number</FormLabel>
+                                    <FormControl>
+                                    <Input placeholder="e.g. (123) 456-7890" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="domain"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Domain</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a domain" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {domains.map(domain => <SelectItem key={domain} value={domain}>{domain}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="country"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Country</FormLabel>
+                                    <Select onValueChange={(value) => {
+                                        field.onChange(value);
+                                        form.setValue('branch', ''); // Reset branch on country change
+                                    }} defaultValue={field.value} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a country" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {countries.map(country => <SelectItem key={country} value={country}>{country}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            {watchedCountry === 'Sri Lanka' ? (
+                                <FormField
+                                    control={form.control}
+                                    name="branch"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Branch</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select a branch in Sri Lanka" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {sriLankanBranches.map(branch => <SelectItem key={branch} value={branch}>{branch}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                            ) : (
+                                <FormField
+                                    control={form.control}
+                                    name="branch"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Branch / State</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g. New York, California" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                            )}
+                            <div className="md:col-span-2">
+                                <FormItem>
+                                <FormLabel>Skills</FormLabel>
+                                <FormControl>
+                                    <div>
+                                    <Input 
+                                        placeholder="Type a skill and press Enter"
+                                        value={skillInput}
+                                        onChange={(e) => setSkillInput(e.target.value)}
+                                        onKeyDown={handleSkillKeyDown}
+                                    />
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        {skillFields.map((field, index) => (
+                                        <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
+                                            {form.getValues('skills')?.[index]}
+                                            <button type="button" onClick={() => removeSkill(index)}>
+                                            <XIcon className="h-3 w-3" />
+                                            </button>
+                                        </Badge>
+                                        ))}
+                                    </div>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            </div>
+                            </div>
+                            
+                            <div>
+                            <h3 className="text-lg font-medium mb-4">Work Experience</h3>
+                            <div className="space-y-4">
+                                {expFields.map((field, index) => (
+                                <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <FormField
+                                        control={form.control}
+                                        name={`experience.${index}.companyName`}
+                                        render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Company Name</FormLabel>
+                                            <FormControl>
+                                            <Input {...field} placeholder="e.g. TechCorp" />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name={`experience.${index}.role`}
+                                        render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Role</FormLabel>
+                                            <FormControl>
+                                            <Input {...field} placeholder="e.g. Senior Developer" />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name={`experience.${index}.years`}
+                                        render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Duration</FormLabel>
+                                            <FormControl>
+                                            <Input {...field} placeholder="e.g. 2020 - Present" />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                        )}
+                                    />
+                                    </div>
+                                    <FormField
+                                        control={form.control}
+                                        name={`experience.${index}.keyResponsibilities`}
+                                        render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Key Responsibilities</FormLabel>
+                                            <FormControl>
+                                            <Textarea {...field} placeholder="Describe key responsibilities..."/>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                        )}
+                                    />
+                                    <Button type="button" variant="destructive" size="icon" onClick={() => removeExp(index)} className="absolute top-2 right-2 h-7 w-7">
+                                        <Trash className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                                ))}
+                                <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => appendExp({ companyName: '', role: '', years: '', keyResponsibilities: '' })}
+                                >
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Add Work Experience
+                                </Button>
+                            </div>
+                            </div>
+
+                            <div>
+                            <h3 className="text-lg font-medium mb-4">Education</h3>
+                            <div className="space-y-4">
+                                {eduFields.map((field, index) => (
+                                <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <FormField
+                                        control={form.control}
+                                        name={`education.${index}.institution`}
+                                        render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Institution</FormLabel>
+                                            <FormControl>
+                                            <Input {...field} placeholder="e.g. University of Technology" />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name={`education.${index}.degree`}
+                                        render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Degree</FormLabel>
+                                            <FormControl>
+                                            <Input {...field} placeholder="e.g. B.S. in Computer Science" />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name={`education.${index}.years`}
+                                        render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Duration</FormLabel>
+                                            <FormControl>
+                                            <Input {...field} placeholder="e.g. 2014 - 2018" />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                        )}
+                                    />
+                                    </div>
+                                    <Button type="button" variant="destructive" size="icon" onClick={() => removeEdu(index)} className="absolute top-2 right-2 h-7 w-7">
+                                        <Trash className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                                ))}
+                                <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => appendEdu({ institution: '', degree: '', years: '' })}
+                                >
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Add Education
+                                </Button>
+                            </div>
+                            </div>
+
+                        </form>
+                        </Form>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+            
+            {tabs.filter(t => t !== "General Info").map(tab => (
+                 <TabsContent key={tab} value={tab} className='mt-6'>
+                    <PlaceholderContent title={tab} />
+                 </TabsContent>
+            ))}
+
+        </Tabs>
+    </div>
   );
 }
+
+    
