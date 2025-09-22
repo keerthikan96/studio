@@ -80,7 +80,7 @@ export default function UserNav() {
   }
   
   const fallback = user.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
-  const imageSrc = `https://i.pravatar.cc/150?u=johan-alexandra`;
+  const imageSrc = user.profile_picture_url || `https://i.pravatar.cc/150?u=johan-alexandra`;
   
   return (
     <DropdownMenu>
@@ -114,10 +114,10 @@ export default function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <Link href={user.role === 'admin' ? '/admin/dashboard' : '/profile'}>
+          <Link href={user.role === 'HR' ? '/admin/profile' : '/profile'}>
             <DropdownMenuItem>
               <User className="mr-2 h-4 w-4" />
-              <span>{user.role === 'admin' ? 'Dashboard' : 'Profile'}</span>
+              <span>Profile</span>
             </DropdownMenuItem>
           </Link>
           <DropdownMenuItem disabled>
@@ -134,4 +134,3 @@ export default function UserNav() {
     </DropdownMenu>
   );
 }
-
