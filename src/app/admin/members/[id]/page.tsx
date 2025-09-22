@@ -184,8 +184,7 @@ const GeneralInfoEdit = ({ form, member, onCancel, isPending }: { form: any, mem
                 <CardDescription>Update member's personal and professional information.</CardDescription>
             </CardHeader>
             <CardContent>
-                <Form {...form}>
-                <form className="space-y-8">
+                <div className="space-y-8">
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <FormField
                         control={form.control}
@@ -432,8 +431,7 @@ const GeneralInfoEdit = ({ form, member, onCancel, isPending }: { form: any, mem
                         </FormItem>
                     </div>
                     </div>
-                </form>
-                </Form>
+                </div>
             </CardContent>
         </Card>
     );
@@ -732,18 +730,21 @@ export default function MemberProfilePage() {
     const isEditing = !!editModes[tab];
 
     const EditWrapper = ({ children }: { children: React.ReactNode }) => (
-        <div className="space-y-4">
-             <div className="flex justify-end items-center gap-2">
-                <Button onClick={() => toggleEditMode(tab)} variant="outline" disabled={isPending}>
-                    <Ban className="mr-2 h-4 w-4" /> Cancel
-                </Button>
-                <Button onClick={() => onSubmit({})} disabled={isPending || !form.formState.isDirty}>
-                    {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Save
-                </Button>
-            </div>
-            {children}
-        </div>
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="flex justify-end items-center gap-2">
+                    <Button onClick={() => toggleEditMode(tab)} variant="outline" disabled={isPending}>
+                        <Ban className="mr-2 h-4 w-4" /> Cancel
+                    </Button>
+                    <Button type="submit" disabled={isPending || !form.formState.isDirty}>
+                        {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Save
+                    </Button>
+                </div>
+                {children}
+            </form>
+        </Form>
     );
+
      const ViewWrapper = ({ children }: { children: React.ReactNode }) => (
         <div className="space-y-4">
             <div className="flex justify-end items-center">
@@ -849,3 +850,5 @@ export default function MemberProfilePage() {
     </div>
   );
 }
+
+    
