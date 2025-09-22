@@ -59,15 +59,9 @@ export const uploadFileToGCS = (buffer: Buffer, destination: string): Promise<st
             reject(err);
         });
 
-        blobStream.on('finish', async () => {
-            try {
-                // Make the file public
-                await blob.makePublic();
-                const publicUrl = format(`https://storage.googleapis.com/${bucket.name}/${blob.name}`);
-                resolve(publicUrl);
-            } catch (err) {
-                reject(new Error('Failed to make file public. Ensure the service account has "Storage Object Admin" role.'));
-            }
+        blobStream.on('finish', () => {
+            const publicUrl = format(`https://storage.googleapis.com/${bucket.name}/${blob.name}`);
+            resolve(publicUrl);
         });
 
         blobStream.end(buffer);
