@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -48,19 +49,19 @@ const educationSchema = z.object({
 });
 
 const profileSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  email: z.string().email({ message: 'Please enter a valid email address.' }),
+  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }).optional(),
+  email: z.string().email({ message: 'Please enter a valid email address.' }).optional(),
   phone: z.string().optional(),
-  domain: z.enum(domains as [string, ...string[]], { required_error: 'Domain is required' }),
-  country: z.enum(countries as [string, ...string[]], { required_error: 'Country is required' }),
-  branch: z.string().min(1, 'Branch is required.'),
+  domain: z.enum(domains as [string, ...string[]], { required_error: 'Domain is required' }).optional(),
+  country: z.enum(countries as [string, ...string[]], { required_error: 'Country is required' }).optional(),
+  branch: z.string().optional(),
   experience: z.array(workExperienceSchema).optional(),
   education: z.array(educationSchema).optional(),
   skills: z.array(z.string()).optional(),
-  status: z.enum(['active', 'pending', 'inactive']),
+  status: z.enum(['active', 'pending', 'inactive']).optional(),
   profile_picture_url: z.string().url().optional().nullable(),
 }).refine(data => {
-    if (data.country === 'Sri Lanka') {
+    if (data.country === 'Sri Lanka' && data.branch) {
         return sriLankanBranches.includes(data.branch);
     }
     return true;
@@ -115,45 +116,12 @@ const GeneralInfoView = ({ member }: { member: Member }) => (
                     </div>
                 ) : <p className="text-muted-foreground text-sm">No skills listed.</p>}
             </div>
-            <div className="space-y-4">
-                <h4 className="font-semibold">Work Experience</h4>
-                {member.experience && member.experience.length > 0 ? (
-                    member.experience.map((exp, index) => (
-                        <div key={index} className="p-4 border rounded-md text-sm">
-                            <h5 className="font-bold">{exp.role}</h5>
-                            <p className="text-muted-foreground">{exp.companyName} | {exp.years}</p>
-                            <p className="mt-2">{exp.keyResponsibilities}</p>
-                        </div>
-                    ))
-                ) : <p className="text-muted-foreground text-sm">No work experience listed.</p>}
-            </div>
-            <div className="space-y-4">
-                <h4 className="font-semibold">Education</h4>
-                {member.education && member.education.length > 0 ? (
-                    member.education.map((edu, index) => (
-                        <div key={index} className="p-4 border rounded-md text-sm">
-                            <h5 className="font-bold">{edu.degree}</h5>
-                            <p className="text-muted-foreground">{edu.institution} | {edu.years}</p>
-                        </div>
-                    ))
-                ) : <p className="text-muted-foreground text-sm">No education history listed.</p>}
-            </div>
         </CardContent>
     </Card>
 );
 
 const GeneralInfoEdit = ({ form, member, onCancel, isPending }: { form: any, member: Member, onCancel: () => void, isPending: boolean }) => {
   const [skillInput, setSkillInput] = useState('');
-  
-  const { fields: expFields, append: appendExp, remove: removeExp } = useFieldArray({
-    control: form.control,
-    name: "experience",
-  });
-
-  const { fields: eduFields, append: appendEdu, remove: removeEdu } = useFieldArray({
-    control: form.control,
-    name: "education",
-  });
 
   const { fields: skillFields, append: appendSkill, remove: removeSkill } = useFieldArray({
     control: form.control,
@@ -340,163 +308,129 @@ const GeneralInfoEdit = ({ form, member, onCancel, isPending }: { form: any, mem
                         </FormItem>
                     </div>
                     </div>
-                    
-                    <div>
-                    <h3 className="text-lg font-medium mb-4">Work Experience</h3>
-                    <div className="space-y-4">
-                        {expFields.map((field, index) => (
-                        <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <FormField
-                                control={form.control}
-                                name={`experience.${index}.companyName`}
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Company Name</FormLabel>
-                                    <FormControl>
-                                    <Input {...field} placeholder="e.g. TechCorp" />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name={`experience.${index}.role`}
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Role</FormLabel>
-                                    <FormControl>
-                                    <Input {...field} placeholder="e.g. Senior Developer" />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name={`experience.${index}.years`}
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Duration</FormLabel>
-                                    <FormControl>
-                                    <Input {...field} placeholder="e.g. 2020 - Present" />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            </div>
-                            <FormField
-                                control={form.control}
-                                name={`experience.${index}.keyResponsibilities`}
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Key Responsibilities</FormLabel>
-                                    <FormControl>
-                                    <Textarea {...field} placeholder="Describe key responsibilities..."/>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            <Button type="button" variant="destructive" size="icon" onClick={() => removeExp(index)} className="absolute top-2 right-2 h-7 w-7">
-                                <Trash className="h-4 w-4" />
-                            </Button>
-                        </div>
-                        ))}
-                        <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => appendExp({ companyName: '', role: '', years: '', keyResponsibilities: '' })}
-                        >
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Work Experience
-                        </Button>
-                    </div>
-                    </div>
-
-                    <div>
-                    <h3 className="text-lg font-medium mb-4">Education</h3>
-                    <div className="space-y-4">
-                        {eduFields.map((field, index) => (
-                        <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <FormField
-                                control={form.control}
-                                name={`education.${index}.institution`}
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Institution</FormLabel>
-                                    <FormControl>
-                                    <Input {...field} placeholder="e.g. University of Technology" />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name={`education.${index}.degree`}
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Degree</FormLabel>
-                                    <FormControl>
-                                    <Input {...field} placeholder="e.g. B.S. in Computer Science" />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name={`education.${index}.years`}
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Duration</FormLabel>
-                                    <FormControl>
-                                    <Input {...field} placeholder="e.g. 2014 - 2018" />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            </div>
-                            <Button type="button" variant="destructive" size="icon" onClick={() => removeEdu(index)} className="absolute top-2 right-2 h-7 w-7">
-                                <Trash className="h-4 w-4" />
-                            </Button>
-                        </div>
-                        ))}
-                        <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => appendEdu({ institution: '', degree: '', years: '' })}
-                        >
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Education
-                        </Button>
-                    </div>
-                    </div>
                 </form>
                 </Form>
             </CardContent>
         </Card>
     );
-}
+};
 
-const PlaceholderContent = ({ title, onEdit, isEditing }: { title: string, onEdit: () => void, isEditing: boolean }) => (
+const JobInfoView = ({ member }: { member: Member }) => (
+    <Card>
+        <CardHeader>
+            <CardTitle>Job Information</CardTitle>
+            <CardDescription>Work experience and job-related details.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+            <h4 className="font-semibold">Work Experience</h4>
+            {member.experience && member.experience.length > 0 ? (
+                member.experience.map((exp, index) => (
+                    <div key={index} className="p-4 border rounded-md text-sm">
+                        <h5 className="font-bold">{exp.role}</h5>
+                        <p className="text-muted-foreground">{exp.companyName} | {exp.years}</p>
+                        <p className="mt-2">{exp.keyResponsibilities}</p>
+                    </div>
+                ))
+            ) : <p className="text-muted-foreground text-sm">No work experience listed.</p>}
+        </CardContent>
+    </Card>
+);
+
+const JobInfoEdit = ({ form }: { form: any }) => {
+    const { fields, append, remove } = useFieldArray({
+        control: form.control,
+        name: "experience",
+    });
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Job Information</CardTitle>
+                <CardDescription>Update work experience.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <h3 className="text-lg font-medium">Work Experience</h3>
+                {fields.map((field, index) => (
+                    <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <FormField control={form.control} name={`experience.${index}.companyName`} render={({ field }) => (<FormItem><FormLabel>Company</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={form.control} name={`experience.${index}.role`} render={({ field }) => (<FormItem><FormLabel>Role</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={form.control} name={`experience.${index}.years`} render={({ field }) => (<FormItem><FormLabel>Years</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        </div>
+                        <FormField control={form.control} name={`experience.${index}.keyResponsibilities`} render={({ field }) => (<FormItem><FormLabel>Responsibilities</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="absolute top-2 right-2 h-7 w-7"><Trash className="h-4 w-4" /></Button>
+                    </div>
+                ))}
+                <Button type="button" variant="outline" onClick={() => append({ companyName: '', role: '', years: '', keyResponsibilities: '' })}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Experience
+                </Button>
+            </CardContent>
+        </Card>
+    );
+};
+
+const EducationView = ({ member }: { member: Member }) => (
+    <Card>
+        <CardHeader>
+            <CardTitle>Education</CardTitle>
+            <CardDescription>Member's educational background.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+            {member.education && member.education.length > 0 ? (
+                member.education.map((edu, index) => (
+                    <div key={index} className="p-4 border rounded-md text-sm">
+                        <h5 className="font-bold">{edu.degree}</h5>
+                        <p className="text-muted-foreground">{edu.institution} | {edu.years}</p>
+                    </div>
+                ))
+            ) : <p className="text-muted-foreground text-sm">No education history listed.</p>}
+        </CardContent>
+    </Card>
+);
+
+const EducationEdit = ({ form }: { form: any }) => {
+    const { fields, append, remove } = useFieldArray({
+        control: form.control,
+        name: "education",
+    });
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Education</CardTitle>
+                <CardDescription>Update educational background.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {fields.map((field, index) => (
+                    <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                             <FormField control={form.control} name={`education.${index}.institution`} render={({ field }) => (<FormItem><FormLabel>Institution</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={form.control} name={`education.${index}.degree`} render={({ field }) => (<FormItem><FormLabel>Degree</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        </div>
+                        <FormField control={form.control} name={`education.${index}.years`} render={({ field }) => (<FormItem><FormLabel>Years</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="absolute top-2 right-2 h-7 w-7"><Trash className="h-4 w-4" /></Button>
+                    </div>
+                ))}
+                <Button type="button" variant="outline" onClick={() => append({ institution: '', degree: '', years: '' })}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Education
+                </Button>
+            </CardContent>
+        </Card>
+    );
+};
+
+
+const PlaceholderContent = ({ title, onEdit }: { title: string, onEdit: () => void }) => (
     <Card>
         <CardHeader className="flex flex-row items-center justify-between">
             <div>
                 <CardTitle>{title}</CardTitle>
                 <CardDescription>Details for {title.toLowerCase()} will be displayed here.</CardDescription>
             </div>
-            {!isEditing && (
-                <Button variant="outline" size="sm" onClick={onEdit}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit
-                </Button>
-            )}
+            <Button variant="outline" size="sm" onClick={onEdit}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+            </Button>
         </CardHeader>
         <CardContent>
             <p className="text-sm text-muted-foreground">No {title.toLowerCase()} information available yet.</p>
@@ -555,9 +489,10 @@ export default function MemberProfilePage() {
   }, [memberId]);
 
   const toggleEditMode = (tab: string) => {
-    setEditModes(prev => ({ ...prev, [tab]: !prev[tab] }));
-     // When entering edit mode, reset form to latest member data
-    if (!editModes[tab] && member) {
+    const isEnteringEdit = !editModes[tab];
+    setEditModes(prev => ({ ...prev, [tab]: isEnteringEdit }));
+    
+    if (isEnteringEdit && member) {
         form.reset({
             ...member,
             experience: member.experience || [],
@@ -570,20 +505,21 @@ export default function MemberProfilePage() {
   function onSubmit(data: ProfileFormValues) {
     startTransition(async () => {
         const dirtyFields = form.formState.dirtyFields;
-        
+        const activeEditTab = Object.keys(editModes).find(key => editModes[key]);
+
         if (Object.keys(dirtyFields).length === 0) {
-            toast({
-                title: 'No Changes Detected',
-                description: 'You haven\'t made any changes to save.',
-            });
-            toggleEditMode("General Info"); // Exit edit mode even if no changes
+            toast({ title: 'No Changes Detected', description: 'You haven\'t made any changes to save.' });
+            if(activeEditTab) toggleEditMode(activeEditTab);
             return;
         }
 
         const dataToUpdate: Partial<ProfileFormValues> = {};
         for (const field in dirtyFields) {
             // @ts-ignore
-            dataToUpdate[field] = data[field];
+            if (Object.prototype.hasOwnProperty.call(data, field)) {
+                 // @ts-ignore
+                dataToUpdate[field] = data[field];
+            }
         }
         
         const result = await updateMemberAction(memberId, dataToUpdate);
@@ -593,12 +529,12 @@ export default function MemberProfilePage() {
         } else {
             toast({
                 title: 'Profile Updated!',
-                description: `${data.name}'s information has been successfully saved.`,
+                description: `${result.name}'s information has been successfully saved.`,
             });
-            // Re-fetch data to show the latest state and exit edit mode
-            fetchMember(false); // fetch without resetting the form state immediately
-            toggleEditMode("General Info");
-            // update session storage for profile picture if it was changed
+            setMember(result as Member); // update local member state
+            form.reset(result as Member); // reset form with new data
+            if(activeEditTab) toggleEditMode(activeEditTab);
+
             if ('profile_picture_url' in dataToUpdate) {
                 window.dispatchEvent(new CustomEvent('profile-picture-updated'));
             }
@@ -621,10 +557,55 @@ export default function MemberProfilePage() {
   if (!member) {
       return <div className='flex justify-center items-center h-full'><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
+  
+  const renderTabContent = (tab: string) => {
+    const isEditing = !!editModes[tab];
+
+    const EditWrapper = ({ children }: { children: React.ReactNode }) => (
+        <div className="space-y-4">
+             <div className="flex justify-end items-center gap-2">
+                <Button onClick={() => toggleEditMode(tab)} variant="outline" disabled={isPending}>
+                    <Ban className="mr-2 h-4 w-4" /> Cancel
+                </Button>
+                <Button onClick={form.handleSubmit(onSubmit)} disabled={isPending || !form.formState.isDirty}>
+                    {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Save
+                </Button>
+            </div>
+            {children}
+        </div>
+    );
+     const ViewWrapper = ({ children }: { children: React.ReactNode }) => (
+        <div className="space-y-4">
+            <div className="flex justify-end items-center">
+                 <Button onClick={() => toggleEditMode(tab)} variant="outline">
+                    <Edit className="mr-2 h-4 w-4" /> Edit
+                </Button>
+            </div>
+            {children}
+        </div>
+    );
+
+    switch(tab) {
+        case "General Info":
+            return isEditing 
+                ? <EditWrapper><GeneralInfoEdit form={form} member={member} onCancel={() => toggleEditMode(tab)} isPending={isPending} /></EditWrapper>
+                : <ViewWrapper><GeneralInfoView member={member} /></ViewWrapper>;
+        case "Job":
+             return isEditing
+                ? <EditWrapper><JobInfoEdit form={form} /></EditWrapper>
+                : <ViewWrapper><JobInfoView member={member} /></ViewWrapper>;
+        case "Education":
+             return isEditing
+                ? <EditWrapper><EducationEdit form={form} /></EditWrapper>
+                : <ViewWrapper><EducationView member={member} /></ViewWrapper>;
+        default:
+            return <PlaceholderContent title={tab} onEdit={() => toggleEditMode(tab)} />;
+    }
+  }
+
 
   const fallback = member.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
-  const tabs = ["General Info", "Job", "Leave", "Notes", "Performance", "Permission", "Assets", "Documents", "Training", "To-Do", "Payslip", "Payroll", "Attendance"];
-  const isGeneralInfoEditing = !!editModes["General Info"];
+  const tabs = ["General Info", "Job", "Education", "Leave", "Notes", "Performance", "Permission", "Assets", "Documents", "Training", "To-Do", "Payslip", "Payroll", "Attendance"];
 
   return (
     <div className='space-y-6'>
@@ -679,43 +660,9 @@ export default function MemberProfilePage() {
                  {tabs.map(tab => <TabsTrigger key={tab} value={tab}>{tab}</TabsTrigger>)}
             </TabsList>
 
-            <TabsContent value="General Info" className='mt-6'>
-                <div className="flex justify-end items-center mb-4 gap-2">
-                    {isGeneralInfoEditing ? (
-                        <>
-                            <Button onClick={() => {
-                                toggleEditMode("General Info");
-                                fetchMember(); // reset changes on cancel
-                            }} variant="outline" disabled={isPending}>
-                                <Ban className="mr-2 h-4 w-4" />
-                                Cancel
-                            </Button>
-                            <Button onClick={form.handleSubmit(onSubmit)} disabled={isPending || !form.formState.isDirty}>
-                                {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                Save Changes
-                            </Button>
-                        </>
-                    ) : (
-                        <Button onClick={() => toggleEditMode("General Info")} variant="outline">
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                        </Button>
-                    )}
-                </div>
-                {isGeneralInfoEditing ? (
-                     <GeneralInfoEdit form={form} member={member} onCancel={() => toggleEditMode("General Info")} isPending={isPending} />
-                ) : (
-                    <GeneralInfoView member={member} />
-                )}
-            </TabsContent>
-            
-            {tabs.filter(t => t !== "General Info").map(tab => (
+            {tabs.map(tab => (
                  <TabsContent key={tab} value={tab} className='mt-6'>
-                    <PlaceholderContent 
-                        title={tab} 
-                        onEdit={() => toggleEditMode(tab)} 
-                        isEditing={!!editModes[tab]} 
-                    />
+                    {renderTabContent(tab)}
                  </TabsContent>
             ))}
 
@@ -723,5 +670,3 @@ export default function MemberProfilePage() {
     </div>
   );
 }
-
-    
