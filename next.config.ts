@@ -33,8 +33,10 @@ const nextConfig: NextConfig = {
   },
    webpack: (config, { isServer }) => {
     if (isServer) {
-      config.externals.push('sharp');
+        // Exclude sharp from the server-side bundle
+        config.externals.push('sharp');
     }
+    // Return the modified config
     return config;
   },
 };
