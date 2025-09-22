@@ -5,13 +5,6 @@ import sharp from 'sharp';
 import { uploadFileToGCS } from "@/lib/gcs";
 import { updateMemberAction } from "@/app/actions/staff";
 
-const MIME_TYPES: { [key: string]: string } = {
-  'image/jpeg': 'jpeg',
-  'image/png': 'png',
-  'image/gif': 'gif',
-  'image/webp': 'webp',
-};
-
 // POST /api/staff/[id]/profile-picture
 export async function POST(
     req: NextRequest,
@@ -24,8 +17,8 @@ export async function POST(
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
-    
-    if (!MIME_TYPES[file.type]) {
+
+    if (!file.type.startsWith('image/')) {
         return NextResponse.json({ error: "Invalid file type" }, { status: 400 });
     }
 
