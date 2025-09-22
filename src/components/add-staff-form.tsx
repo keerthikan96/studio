@@ -176,9 +176,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
   function onSubmit(data: StaffFormValues) {
     setFormData(data);
     startTransition(() => {
-        const { experience, education, skills, phone, ...memberData} = data;
-        // @ts-ignore
-        onAddStaff(memberData);
+        onAddStaff(data);
         toast({
             title: 'Member Saved',
             description: `${data.name} has been added to the member list.`,
@@ -385,8 +383,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                        <div className="flex flex-wrap gap-2 mt-2">
                         {skillFields.map((field, index) => (
                           <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
-                            {/* @ts-ignore */}
-                            {form.getValues('skills')[index]}
+                            {form.getValues('skills')?.[index]}
                             <button type="button" onClick={() => removeSkill(index)}>
                               <XIcon className="h-3 w-3" />
                             </button>

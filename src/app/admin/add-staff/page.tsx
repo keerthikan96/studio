@@ -12,9 +12,9 @@ export default function AddStaffPage() {
         const savedMembers: Member[] = savedMembersString ? JSON.parse(savedMembersString) : [];
 
         const newMember: Member = {
-            ...newStaff,
             id: `m_${savedMembers.length + 1}`,
             status: 'pending',
+            ...newStaff,
         };
         
         const updatedMembers = [...savedMembers, newMember];
