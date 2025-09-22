@@ -22,7 +22,7 @@ type UserData = {
     id: string;
     name: string;
     email: string;
-    role: 'admin' | 'staff';
+    role: 'admin' | 'staff' | 'HR';
     profile_picture_url?: string | null;
     cover_photo_url?: string | null;
 }
@@ -35,8 +35,8 @@ export default function UserNav() {
     const storedUserStr = sessionStorage.getItem('loggedInUser');
     if (storedUserStr) {
         const storedUser = JSON.parse(storedUserStr);
-        if (storedUser.role === 'admin') {
-            setUser({...storedUser, name: 'Johan Alexandra', role: 'HR'}); // As per image
+        if (storedUser.role === 'admin' || storedUser.email === 'admin@gmail.com') {
+             setUser({...storedUser, name: storedUser.name || 'Admin', role: 'HR'});
         } else {
             // Fetch the latest user data to get the profile picture URL
             getMemberByIdAction(storedUser.id).then(member => {
@@ -92,7 +92,7 @@ export default function UserNav() {
   }
   
   const fallback = user.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
-  const imageSrc = user.profile_picture_url || `https://i.pravatar.cc/150?u=johan-alexandra`;
+  const imageSrc = user.profile_picture_url;
   
   return (
     <DropdownMenu>

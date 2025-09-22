@@ -75,9 +75,9 @@ export default function AdminProfilePage() {
     const storedUser = sessionStorage.getItem('loggedInUser');
     if (storedUser) {
       const user = JSON.parse(storedUser);
-      if (user.role === 'admin') {
+      if (user.role === 'admin' || user.email === 'admin@gmail.com') {
          const adminAsMember: Member = {
-           id: user.id,
+           id: user.id || 'admin-user',
            name: user.name,
            email: user.email,
            status: 'active',
@@ -126,57 +126,62 @@ export default function AdminProfilePage() {
   function onSubmit(data: ProfileFormValues) {
     if (!member) return;
 
+    // Special handling for the admin user who is not in the database
     if (member.email === 'admin@gmail.com') {
-         const updatedAdmin = { ...JSON.parse(sessionStorage.getItem('loggedInUser')!), ...data };
-         sessionStorage.setItem('loggedInUser', JSON.stringify(updatedAdmin));
-         setMember(updatedAdmin);
-         toast({
-          title: 'Profile Updated!',
-          description: 'Your information has been successfully saved.',
+        const updatedAdmin = { ...JSON.parse(sessionStorage.getItem('loggedInUser')!), ...data };
+        sessionStorage.setItem('loggedInUser', JSON.stringify(updatedAdmin));
+        
+        setMember(prev => ({...prev, ...updatedAdmin}));
+        form.reset(updatedAdmin, { keepDirty: false });
+
+        toast({
+            title: 'Profile Updated!',
+            description: 'Your information has been successfully saved.',
         });
+        
+        // Notify other components like UserNav to update
         window.dispatchEvent(new CustomEvent('profile-picture-updated'));
         window.dispatchEvent(new CustomEvent('cover-photo-updated'));
-        form.reset(updatedAdmin, { keepDirty: false });
-        return;
-    }
+    } else {
+        // Standard update logic for regular members
+        startTransition(async () => {
+            const dirtyFields = form.formState.dirtyFields;
+            // Image URLs are handled separately by their uploader components and don't need to be in this submission
+            const { profile_picture_url, cover_photo_url, ...otherDirtyFields } = dirtyFields;
 
-    startTransition(async () => {
-      const dirtyFields = form.formState.dirtyFields;
-      // Image URLs are handled by their own components
-      const { profile_picture_url, cover_photo_url, ...otherDirtyFields } = dirtyFields;
+            if (Object.keys(otherDirtyFields).length === 0) {
+                toast({ title: 'No Changes', description: 'No changes were detected to save.' });
+                return;
+            }
+            
+            const dataToUpdate: Partial<Omit<ProfileFormValues, 'profile_picture_url' | 'cover_photo_url'>> = {};
+            for (const field of Object.keys(otherDirtyFields)) {
+                // @ts-ignore
+                if(Object.prototype.hasOwnProperty.call(data, field)) {
+                    // @ts-ignore
+                    dataToUpdate[field] = data[field];
+                }
+            }
+            
+            const result = await updateMemberAction(member.id, dataToUpdate);
 
-      if (Object.keys(otherDirtyFields).length === 0) {
-        toast({ title: 'No Changes', description: 'No changes were detected to save.' });
-        return;
-      }
-      
-      const dataToUpdate: Partial<Omit<ProfileFormValues, 'profile_picture_url' | 'cover_photo_url'>> = {};
-      for (const field of Object.keys(otherDirtyFields)) {
-          // @ts-ignore
-          dataToUpdate[field] = data[field];
-      }
-
-      const result = await updateMemberAction(member.id, dataToUpdate);
-
-      if ('error' in result) {
-          toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });
-      } else {
-        toast({
-          title: 'Profile Updated!',
-          description: 'Your information has been successfully saved.',
+            if ('error' in result) {
+                toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });
+            } else {
+                toast({
+                    title: 'Profile Updated!',
+                    description: 'Your information has been successfully saved.',
+                });
+                setMember(result as Member);
+                form.reset({
+                    ...(result as Member),
+                    experience: (result as Member).experience || [],
+                    education: (result as Member).education || [],
+                    skills: (result as Member).skills || [],
+                }, { keepDirty: false });
+            }
         });
-        const updatedMember = await getMemberByIdAction(member.id);
-        if (updatedMember) {
-          setMember(updatedMember);
-          form.reset({
-            ...updatedMember,
-            experience: updatedMember.experience || [],
-            education: updatedMember.education || [],
-            skills: updatedMember.skills || [],
-          });
-        }
-      }
-    });
+    }
   }
 
   const handleProfileUploadSuccess = (newUrl: string) => {
@@ -187,7 +192,7 @@ export default function AdminProfilePage() {
     const storedUser = sessionStorage.getItem('loggedInUser');
     if (storedUser) {
         const user = JSON.parse(storedUser);
-        if (user.id === member.id) {
+        if (user.id === member.id || user.email === 'admin@gmail.com') {
             user.profile_picture_url = newUrl;
             sessionStorage.setItem('loggedInUser', JSON.stringify(user));
             window.dispatchEvent(new CustomEvent('profile-picture-updated'));
@@ -203,7 +208,7 @@ export default function AdminProfilePage() {
       const storedUser = sessionStorage.getItem('loggedInUser');
       if (storedUser) {
         const user = JSON.parse(storedUser);
-        if (user.id === member.id) {
+        if (user.id === member.id || user.email === 'admin@gmail.com') {
           user.cover_photo_url = newUrl;
           sessionStorage.setItem('loggedInUser', JSON.stringify(user));
            window.dispatchEvent(new CustomEvent('cover-photo-updated'));
@@ -289,7 +294,7 @@ export default function AdminProfilePage() {
                   <FormItem>
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. (123) 456-7890" {...field} />
+                      <Input placeholder="e.g. (123) 456-7890" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -374,7 +379,7 @@ export default function AdminProfilePage() {
                           <FormItem>
                             <FormLabel>Key Responsibilities</FormLabel>
                             <FormControl>
-                              <Textarea {...field} placeholder="Describe key responsibilities..."/>
+                              <Textarea {...field} placeholder="Describe key responsibilities..." value={field.value ?? ''}/>
                             </FormControl>
                              <FormMessage />
                           </FormItem>
