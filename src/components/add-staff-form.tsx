@@ -35,24 +35,34 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
-const branches = ['New York', 'London', 'Tokyo', 'Sydney'];
+const countries = ['Canada', 'USA', 'Sri Lanka'];
+const sriLankanBranches = ['Nothern', 'Central', 'Eastern'];
 
 const workExperienceSchema = z.object({
   companyName: z.string().min(1, 'Company name is required.'),
   role: z.string().min(1, 'Role is required.'),
   years: z.string().min(1, 'Years are required.'),
-  keyResponsibilities: z.string().optional(),
+  keyResponsibilities: z.string().min(1, 'Key responsibilities are required.'),
 });
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
-  phone: z.string().optional(),
+  phone: z.string().min(1, 'Phone number is required.'),
   domain: z.enum(domains as [string, ...string[]], { required_error: 'Domain is required' }),
-  branch: z.enum(branches as [string, ...string[]], { required_error: 'Branch is required' }),
-  experience: z.array(workExperienceSchema).optional(),
-  education: z.string().optional(),
-  skills: z.string().optional(),
+  country: z.enum(countries as [string, ...string[]], { required_error: 'Country is required' }),
+  branch: z.string().min(1, 'Branch is required.'),
+  experience: z.array(workExperienceSchema).min(1, 'At least one work experience is required.'),
+  education: z.string().min(1, 'Education is required.'),
+  skills: z.string().min(1, 'Skills are required.'),
+}).refine(data => {
+    if (data.country === 'Sri Lanka') {
+        return sriLankanBranches.includes(data.branch);
+    }
+    return true;
+}, {
+    message: 'Invalid branch for the selected country.',
+    path: ['branch'],
 });
 
 type StaffFormValues = z.infer<typeof formSchema>;
@@ -89,6 +99,8 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
     control: form.control,
     name: "experience",
   });
+  
+  const watchedCountry = form.watch('country');
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -120,11 +132,13 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
             // @ts-ignore
             domain: result.domain || currentValues.domain,
             // @ts-ignore
+            country: result.country || currentValues.country,
+            // @ts-ignore
             branch: result.branch || currentValues.branch,
           });
           toast({
             title: 'Resume Parsed Successfully!',
-            description: 'The form has been pre-filled. Please select a domain and branch.',
+            description: 'The form has been pre-filled. Please review and complete all fields.',
           });
         }
         setIsParsing(false);
@@ -182,7 +196,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
       <CardHeader>
         <CardTitle>Add New Staff Member</CardTitle>
         <CardDescription>
-            Fill in the details below or upload a resume to have AI pre-fill the form for you.
+            Fill in the details below or upload a resume to have AI pre-fill the form for you. All fields are mandatory.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -267,26 +281,65 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                   </FormItem>
                 )}
               />
-              <FormField
+               <FormField
                 control={form.control}
-                name="branch"
+                name="country"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Branch</FormLabel>
-                     <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormLabel>Country</FormLabel>
+                     <Select onValueChange={(value) => {
+                         field.onChange(value);
+                         form.setValue('branch', ''); // Reset branch on country change
+                     }} defaultValue={field.value}>
                         <FormControl>
                             <SelectTrigger>
-                                <SelectValue placeholder="Select a branch" />
+                                <SelectValue placeholder="Select a country" />
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                            {branches.map(branch => <SelectItem key={branch} value={branch}>{branch}</SelectItem>)}
+                            {countries.map(country => <SelectItem key={country} value={country}>{country}</SelectItem>)}
                         </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              {watchedCountry === 'Sri Lanka' ? (
+                <FormField
+                    control={form.control}
+                    name="branch"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Branch</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a branch in Sri Lanka" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {sriLankanBranches.map(branch => <SelectItem key={branch} value={branch}>{branch}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              ) : (
+                <FormField
+                    control={form.control}
+                    name="branch"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Branch / State</FormLabel>
+                        <FormControl>
+                            <Input placeholder="e.g. New York, California" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              )}
               <FormField
                 control={form.control}
                 name="skills"

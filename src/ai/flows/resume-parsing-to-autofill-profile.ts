@@ -30,7 +30,8 @@ const WorkExperienceSchema = z.object({
 });
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
-const branches = ['New York', 'London', 'Tokyo', 'Sydney'];
+const countries = ['Canada', 'USA', 'Sri Lanka'];
+const sriLankanBranches = ['Nothern', 'Central', 'Eastern'];
 
 const ParseResumeToAutofillProfileOutputSchema = z.object({
   name: z.string().describe('The name of the staff member.'),
@@ -42,7 +43,8 @@ const ParseResumeToAutofillProfileOutputSchema = z.object({
   education: z.string().describe('The education details of the staff member.'),
   skills: z.string().describe('The skills of the staff member'),
   domain: z.enum(domains as [string, ...string[]]).optional().describe("The most likely job domain/department based on the resume. Choose from: " + domains.join(', ')),
-  branch: z.enum(branches as [string, ...string[]]).optional().describe("Guess the most likely branch location. Choose from: " + branches.join(', ')),
+  country: z.enum(countries as [string, ...string[]]).optional().describe("Guess the most likely country based on location information in the resume. Choose from: " + countries.join(', ')),
+  branch: z.string().optional().describe("Guess the most likely branch, state, or province. If the country is Sri Lanka, choose from: " + sriLankanBranches.join(', ') + ". Otherwise, provide the state or province name."),
 });
 
 export type ParseResumeToAutofillProfileOutput = z.infer<
@@ -59,7 +61,7 @@ const prompt = ai.definePrompt({
   name: 'parseResumeToAutofillProfilePrompt',
   input: {schema: ParseResumeToAutofillProfileInputSchema},
   output: {schema: ParseResumeToAutofillProfileOutputSchema},
-  prompt: `You are an expert resume parser. Extract the following information from the resume: name, email, phone, a list of work experiences (including companyName, role, years, and keyResponsibilities), education, and skills. Also, infer the most appropriate 'domain' and 'branch' from the provided options. Return the information in JSON format.
+  prompt: `You are an expert resume parser. Extract the following information from the resume: name, email, phone, a list of work experiences (including companyName, role, years, and keyResponsibilities), education, and skills. Also, infer the most appropriate 'domain', 'country', and 'branch' from the provided options. Return the information in JSON format.
 
 Resume: {{media url=resumeDataUri}}`,
 });

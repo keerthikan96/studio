@@ -90,6 +90,11 @@ const getColumns = (onSendInvite: (member: Member) => void): ColumnDef<Member>[]
     cell: ({ row }) => <div className="capitalize">{row.getValue('domain')}</div>
   },
   {
+    accessorKey: 'country',
+    header: 'Country',
+    cell: ({ row }) => <div className="capitalize">{row.getValue('country')}</div>
+  },
+  {
     accessorKey: 'branch',
     header: 'Branch',
     cell: ({ row }) => <div className="capitalize">{row.getValue('branch')}</div>
@@ -149,7 +154,7 @@ type MemberListProps = {
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const statuses = ['active', 'pending', 'inactive'];
-const branches = ['New York', 'London', 'Tokyo', 'Sydney'];
+const countries = ['Canada', 'USA', 'Sri Lanka'];
 
 
 export function MemberList({ data, setMembers, onSendInvite }: MemberListProps) {
@@ -227,21 +232,29 @@ export function MemberList({ data, setMembers, onSendInvite }: MemberListProps) 
             </SelectContent>
         </Select>
         <Select
-            value={(table.getColumn('branch')?.getFilterValue() as string) ?? ''}
+            value={(table.getColumn('country')?.getFilterValue() as string) ?? ''}
             onValueChange={(value) =>
-                table.getColumn('branch')?.setFilterValue(value === 'all' ? '' : value)
+                table.getColumn('country')?.setFilterValue(value === 'all' ? '' : value)
             }
         >
             <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by branch" />
+                <SelectValue placeholder="Filter by country" />
             </SelectTrigger>
             <SelectContent>
-                <SelectItem value="all">All Branches</SelectItem>
-                {branches.map((branch) => (
-                    <SelectItem key={branch} value={branch}>{branch}</SelectItem>
+                <SelectItem value="all">All Countries</SelectItem>
+                {countries.map((country) => (
+                    <SelectItem key={country} value={country}>{country}</SelectItem>
                 ))}
             </SelectContent>
         </Select>
+        <Input
+          placeholder="Filter by branch..."
+          value={(table.getColumn('branch')?.getFilterValue() as string) ?? ''}
+          onChange={(event) =>
+            table.getColumn('branch')?.setFilterValue(event.target.value)
+          }
+          className="max-w-xs"
+        />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
