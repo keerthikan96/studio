@@ -15,9 +15,7 @@ try {
     connectionString: process.env.POSTGRES_URL,
     // Note: In production, you might want to use a more secure SSL configuration
     // by providing the CA certificate. For many hosted databases, this is sufficient.
-    ssl: {
-      rejectUnauthorized: false, 
-    },
+    ssl: process.env.POSTGRES_URL ? true : false,
   });
 
   console.log('Database connection pool created successfully.');
