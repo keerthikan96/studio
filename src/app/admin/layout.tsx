@@ -13,10 +13,13 @@ import {
   SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
+  SidebarInput,
+  SidebarGroup,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, Award, Calendar, User, FileText, Search, Bell } from "lucide-react";
 import Logo from "@/components/logo";
 import UserNav from "@/components/user-nav";
+import { Input } from "@/components/ui/input";
 
 export default function AdminLayout({
   children,
@@ -25,6 +28,24 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
 
+  const menuItems = [
+    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/admin/attendance", label: "Attendance", icon: Calendar },
+    { href: "/admin/department", label: "Department", icon: Briefcase },
+    { href: "/admin/members", label: "Employee", icon: Users },
+    { href: "/admin/award", label: "Award", icon: Award },
+    { href: "/admin/leave", label: "Leave", icon: Calendar },
+    { href: "/admin/profile", label: "Profile", icon: User },
+    { href: "/admin/notice", label: "Notice", icon: FileText },
+  ];
+
+  const getIsActive = (href: string) => {
+     if (href === '/admin/members') {
+        return pathname.startsWith("/admin/members") || pathname === "/admin/add-staff";
+     }
+     return pathname === href;
+  }
+
   return (
     <SidebarProvider>
       <Sidebar>
@@ -32,41 +53,45 @@ export default function AdminLayout({
           <Logo />
         </SidebarHeader>
         <SidebarContent>
+           <SidebarGroup>
+            <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <SidebarInput placeholder="Search..." className="pl-8" />
+            </div>
+           </SidebarGroup>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <Link href="/admin/dashboard">
-                <SidebarMenuButton
-                  isActive={pathname === "/admin/dashboard"}
-                  tooltip={{ children: "Dashboard" }}
-                >
-                  <LayoutDashboard />
-                  <span>Dashboard</span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-                <Link href="/admin/members">
+            {menuItems.map(item => (
+                <SidebarMenuItem key={item.href}>
+                <Link href={item.href}>
                     <SidebarMenuButton
-                        isActive={pathname.startsWith("/admin/members") || pathname === "/admin/add-staff"}
-                        tooltip={{ children: "Members" }}
+                    isActive={getIsActive(item.href)}
+                    tooltip={{ children: item.label }}
                     >
-                        <Users />
-                        <span>Member List</span>
+                    <item.icon />
+                    <span>{item.label}</span>
                     </SidebarMenuButton>
                 </Link>
-            </SidebarMenuItem>
+                </SidebarMenuItem>
+            ))}
           </SidebarMenu>
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-14 items-center justify-between border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:h-[60px]">
-          <SidebarTrigger className="lg:hidden" />
-          <div className="flex-1">
-            {/* Can add breadcrumbs here */}
+        <header className="flex h-16 items-center justify-between border-b bg-background px-6">
+          <div className="flex items-center gap-4">
+            <SidebarTrigger className="lg:hidden" />
+            <h1 className="text-xl font-semibold">Dashboard</h1>
           </div>
-          <UserNav />
+           <div className="relative md:w-1/3 lg:w-1/4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search here..." className="pl-9 bg-muted border-none focus-visible:ring-primary" />
+            </div>
+          <div className="flex items-center gap-4">
+            <Bell className="h-5 w-5 text-muted-foreground" />
+            <UserNav />
+          </div>
         </header>
-        <main className="flex-1 p-4 md:p-8">
+        <main className="flex-1 p-6 bg-muted/30">
             {children}
         </main>
       </SidebarInset>

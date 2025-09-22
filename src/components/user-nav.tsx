@@ -35,7 +35,7 @@ export default function UserNav() {
     if (storedUserStr) {
         const storedUser = JSON.parse(storedUserStr);
         if (storedUser.role === 'admin') {
-            setUser(storedUser);
+            setUser({...storedUser, name: 'Johan Alexandra', role: 'HR'}); // As per image
         } else {
             // Fetch the latest user data to get the profile picture URL
             getMemberByIdAction(storedUser.id).then(member => {
@@ -80,15 +80,13 @@ export default function UserNav() {
   }
   
   const fallback = user.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
-  const imageSrc = user.role === 'admin' 
-    ? `https://picsum.photos/seed/${user.email}/100/100` 
-    : user.profile_picture_url;
-
+  const imageSrc = `https://i.pravatar.cc/150?u=johan-alexandra`;
+  
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-          <Avatar className="h-9 w-9">
+        <div className="flex items-center gap-3 cursor-pointer">
+           <Avatar className="h-9 w-9">
             <AvatarImage
               key={imageSrc} // Using key to force re-render on src change
               src={imageSrc ?? undefined}
@@ -97,7 +95,13 @@ export default function UserNav() {
             />
             <AvatarFallback>{fallback}</AvatarFallback>
           </Avatar>
-        </Button>
+           <div className="hidden md:flex flex-col items-start">
+            <p className="text-sm font-medium leading-none">{user.name}</p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {user.role}
+            </p>
+          </div>
+        </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
@@ -130,3 +134,4 @@ export default function UserNav() {
     </DropdownMenu>
   );
 }
+
