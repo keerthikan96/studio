@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, LogIn } from 'lucide-react';
+import { Member } from '@/lib/mock-data';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
@@ -49,6 +50,7 @@ export default function LoginForm() {
     if (urlParams.get('new_user') === 'true') {
         const email = urlParams.get('email');
         if (email) {
+            // A real app would fetch the user's name from the DB here
             handleLogin({ name: 'New Member', email, role: 'staff'});
         }
     }
@@ -71,31 +73,16 @@ export default function LoginForm() {
           router.push('/admin/dashboard');
           return;
         }
-        if (data.email === 'alex.doe@staffsync.com') {
-            handleLogin({ name: 'Alex Doe', email: 'alex.doe@staffsync.com', role: 'staff' });
-           toast({
+
+        // For staff, we assume any valid email with the password "password" is a successful login
+        // A real application would have a database check here.
+        handleLogin({ name: 'Staff Member', email: data.email, role: 'staff' });
+        toast({
             title: 'Login Successful',
             description: 'Redirecting to your profile...',
-          });
-          router.push('/profile');
-          return;
-        }
-        
-        // Check if it's a newly created member from our localStorage list
-        const savedMembersString = localStorage.getItem('members');
-        if (savedMembersString) {
-            const savedMembers = JSON.parse(savedMembersString);
-            const member = savedMembers.find((m: any) => m.email === data.email);
-            if (member) {
-                 handleLogin({ name: member.name, email: member.email, role: 'staff' });
-                 toast({
-                    title: 'Login Successful',
-                    description: 'Redirecting to your profile...',
-                });
-                router.push('/profile');
-                return;
-            }
-        }
+        });
+        router.push('/profile');
+        return;
       }
       
       toast({

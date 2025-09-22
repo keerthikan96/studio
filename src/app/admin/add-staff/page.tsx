@@ -1,26 +1,25 @@
 
 'use client';
+import { useRouter } from "next/navigation";
+import { addStaffAction } from "@/app/actions/staff";
 import AddStaffForm from "@/components/add-staff-form";
 import { Member } from "@/lib/mock-data";
-import { useRouter } from "next/navigation";
 
 export default function AddStaffPage() {
     const router = useRouter();
 
-    const handleAddStaff = (newStaff: Omit<Member, 'id' | 'status'>) => {
-        const savedMembersString = localStorage.getItem('members');
-        const savedMembers: Member[] = savedMembersString ? JSON.parse(savedMembersString) : [];
+    const handleAddStaff = async (newStaff: Omit<Member, 'id' | 'status'>) => {
+        const result = await addStaffAction(newStaff);
 
-        const newMember: Member = {
-            id: `m_${savedMembers.length + 1}`,
-            status: 'pending',
-            ...newStaff,
-        };
-        
-        const updatedMembers = [...savedMembers, newMember];
-        localStorage.setItem('members', JSON.stringify(updatedMembers));
-        
-        // No redirect here, dialog is handled in the form
+        if ('error' in result) {
+            // The form will show the toast with the error
+            return false;
+        } else {
+            // On success, the form shows a confirmation and asks about sending an invite.
+            // We can optionally redirect from here if needed.
+            // router.push('/admin/members');
+            return true;
+        }
     };
     
     return (

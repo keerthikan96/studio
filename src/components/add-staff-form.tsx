@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { parseResumeAction } from '@/app/actions/staff';
+import { parseResumeAction, addStaffAction } from '@/app/actions/staff';
 import { Loader2, PlusCircle, Trash, UploadCloud, UserPlus, Save, X as XIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Member } from '@/lib/mock-data';
@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { useRouter } from 'next/navigation';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
@@ -75,7 +76,7 @@ const formSchema = z.object({
 type StaffFormValues = z.infer<typeof formSchema>;
 
 type AddStaffFormProps = {
-    onAddStaff: (staff: Omit<Member, 'id' | 'status'>) => void;
+    onAddStaff: (staff: Omit<Member, 'id' | 'status'>) => Promise<boolean>;
 };
 
 function generateSecureToken() {
@@ -90,6 +91,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
   const [formData, setFormData] = useState<StaffFormValues | null>(null);
   const [skillInput, setSkillInput] = useState('');
   const { toast } = useToast();
+  const router = useRouter();
 
   const form = useForm<StaffFormValues>({
     resolver: zodResolver(formSchema),
@@ -175,13 +177,21 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
   
   function onSubmit(data: StaffFormValues) {
     setFormData(data);
-    startTransition(() => {
-        onAddStaff(data);
-        toast({
-            title: 'Member Saved',
-            description: `${data.name} has been added to the member list.`,
-        });
-        setShowInviteDialog(true);
+    startTransition(async () => {
+        const success = await onAddStaff(data);
+        if (success) {
+            toast({
+                title: 'Member Saved',
+                description: `${data.name} has been added to the member list.`,
+            });
+            setShowInviteDialog(true);
+        } else {
+             toast({
+                title: 'Error Saving Member',
+                description: 'A member with this email might already exist.',
+                variant: 'destructive',
+            });
+        }
     });
   }
 
@@ -203,7 +213,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
         description: `An invitation has been sent to ${formData.name} at ${formData.email}.`,
       });
       setShowInviteDialog(false);
-      form.reset();
+      router.push('/admin/members');
   }
 
   const handleSkillKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -558,7 +568,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => form.reset()}>No, Later</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => router.push('/admin/members')}>No, Later</AlertDialogCancel>
             <AlertDialogAction onClick={handleSendInvite}>Yes, Send Invite</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

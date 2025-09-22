@@ -4,9 +4,9 @@
 import Link from "next/link";
 import { MemberList } from "@/components/member-list";
 import { Button } from "@/components/ui/button";
-import { mockMembers, Member } from "@/lib/mock-data";
+import { Member } from "@/lib/mock-data";
 import { PlusCircle } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +18,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { getMembersAction } from "@/app/actions/staff";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function generateSecureToken() {
     // In a real app, use a crypto library for this.
@@ -27,25 +29,15 @@ function generateSecureToken() {
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [memberToInvite, setMemberToInvite] = useState<Member | null>(null);
+  const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
   useEffect(() => {
-    // On mount, check if there's saved data in localStorage
-    const savedMembers = localStorage.getItem('members');
-    if (savedMembers) {
-      setMembers(JSON.parse(savedMembers));
-    } else {
-      // Otherwise, initialize with mock data
-      setMembers(mockMembers);
-    }
+    startTransition(() => {
+        getMembersAction().then(setMembers);
+    });
   }, []);
 
-  // Persist members to localStorage whenever they change
-  useEffect(() => {
-    if (members.length > 0) {
-      localStorage.setItem('members', JSON.stringify(members));
-    }
-  }, [members]);
 
   const onInviteConfirm = () => {
     if (!memberToInvite) return;
@@ -86,7 +78,15 @@ export default function MembersPage() {
               </Button>
           </Link>
         </div>
-        <MemberList data={members} setMembers={setMembers} onSendInvite={setMemberToInvite} />
+        {isPending ? (
+            <div className="w-full space-y-2">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-64 w-full" />
+                <Skeleton className="h-12 w-full" />
+            </div>
+        ) : (
+            <MemberList data={members} setMembers={setMembers} onSendInvite={setMemberToInvite} />
+        )}
       </div>
 
       <AlertDialog open={!!memberToInvite} onOpenChange={() => setMemberToInvite(null)}>

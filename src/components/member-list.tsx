@@ -52,6 +52,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
+import { deleteMemberAction, updateMemberStatusAction } from '@/app/actions/staff';
+import { useToast } from '@/hooks/use-toast';
 
 const statusStyles: { [key: string]: string } = {
   active: 'bg-green-100 text-green-800 border-green-200 hover:bg-green-100',
@@ -198,15 +200,33 @@ export function MemberList({ data, setMembers, onSendInvite }: MemberListProps) 
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
   const [memberToDelete, setMemberToDelete] = React.useState<Member | null>(null);
+  const [isPending, startTransition] = React.useTransition();
+  const { toast } = useToast();
 
   const handleStatusChange = (member: Member, status: Member['status']) => {
-    setMembers(current => current.map(m => m.id === member.id ? {...m, status} : m));
+    startTransition(async () => {
+        const { success } = await updateMemberStatusAction(member.id, status);
+        if (success) {
+            setMembers(current => current.map(m => m.id === member.id ? {...m, status} : m));
+            toast({ title: 'Status Updated', description: `${member.name}'s status is now ${status}.`});
+        } else {
+            toast({ title: 'Error', description: 'Failed to update member status.', variant: 'destructive' });
+        }
+    });
   };
   
   const handleDeleteConfirm = () => {
     if (memberToDelete) {
-        setMembers(current => current.filter(m => m.id !== memberToDelete.id));
-        setMemberToDelete(null);
+        startTransition(async () => {
+            const { success } = await deleteMemberAction(memberToDelete.id);
+            if (success) {
+                setMembers(current => current.filter(m => m.id !== memberToDelete.id));
+                toast({ title: 'Member Deleted', description: `${memberToDelete.name} has been removed.`});
+                setMemberToDelete(null);
+            } else {
+                toast({ title: 'Error', description: 'Failed to delete member.', variant: 'destructive' });
+            }
+        });
     }
   }
 
@@ -430,7 +450,10 @@ export function MemberList({ data, setMembers, onSendInvite }: MemberListProps) 
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className={buttonVariants({ variant: "destructive" })}>Yes, Delete Member</AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteConfirm} disabled={isPending} className={buttonVariants({ variant: "destructive" })}>
+                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Yes, Delete Member
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

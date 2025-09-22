@@ -25,6 +25,7 @@ import { Member } from '@/lib/mock-data';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getMemberByIdAction, updateMemberAction } from '@/app/actions/staff';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
@@ -53,6 +54,7 @@ const profileSchema = z.object({
   experience: z.array(workExperienceSchema).optional(),
   education: z.array(educationSchema).optional(),
   skills: z.array(z.string()).optional(),
+  status: z.enum(['active', 'pending', 'inactive']),
 }).refine(data => {
     if (data.country === 'Sri Lanka') {
         return sriLankanBranches.includes(data.branch);
@@ -87,22 +89,23 @@ export default function MemberProfilePage() {
   });
 
   useEffect(() => {
-    const savedMembersString = localStorage.getItem('members');
-    if (savedMembersString) {
-      const savedMembers: Member[] = JSON.parse(savedMembersString);
-      const currentMember = savedMembers.find(m => m.id === memberId);
-      if (currentMember) {
-        setMember(currentMember);
-        form.reset({
-            ...currentMember,
-            experience: currentMember.experience || [],
-            education: currentMember.education || [],
-            skills: currentMember.skills || [],
+    if (memberId) {
+        startTransition(() => {
+            getMemberByIdAction(memberId).then(currentMember => {
+                if (currentMember) {
+                    setMember(currentMember);
+                    form.reset({
+                        ...currentMember,
+                        experience: currentMember.experience || [],
+                        education: currentMember.education || [],
+                        skills: currentMember.skills || [],
+                    });
+                } else {
+                    toast({ title: "Member not found", variant: "destructive" });
+                    router.push('/admin/members');
+                }
+            });
         });
-      } else {
-        toast({ title: "Member not found", variant: "destructive" });
-        router.push('/admin/members');
-      }
     }
   }, [memberId, form, toast, router]);
 
@@ -124,21 +127,20 @@ export default function MemberProfilePage() {
   const watchedCountry = form.watch('country');
   
   function onSubmit(data: ProfileFormValues) {
-    startTransition(() => {
-        const savedMembersString = localStorage.getItem('members');
-        if (savedMembersString) {
-            let savedMembers: Member[] = JSON.parse(savedMembersString);
-            const memberIndex = savedMembers.findIndex(m => m.id === memberId);
-
-            if (memberIndex !== -1) {
-                savedMembers[memberIndex] = { ...savedMembers[memberIndex], ...data };
-                localStorage.setItem('members', JSON.stringify(savedMembers));
-                toast({
-                    title: 'Profile Updated!',
-                    description: `${data.name}'s information has been successfully saved.`,
-                });
-                router.push('/admin/members');
-            }
+    startTransition(async () => {
+        const result = await updateMemberAction(memberId, data);
+        if ('error' in result) {
+            toast({
+                title: 'Update Failed',
+                description: result.error,
+                variant: 'destructive',
+            });
+        } else {
+            toast({
+                title: 'Profile Updated!',
+                description: `${data.name}'s information has been successfully saved.`,
+            });
+            router.push('/admin/members');
         }
     });
   }
