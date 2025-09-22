@@ -19,7 +19,6 @@ import {
   CheckCircle,
   ChevronDown,
   CircleSlash,
-  Eye,
   Mail,
   MoreHorizontal,
   Pencil,
@@ -138,12 +137,6 @@ const getColumns = (
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <Link href={`/admin/members/${member.id}`}>
-              <DropdownMenuItem>
-                <Eye className="mr-2 h-4 w-4" />
-                View
-              </DropdownMenuItem>
-            </Link>
             <Link href={`/admin/members/${member.id}`}>
               <DropdownMenuItem>
                 <Pencil className="mr-2 h-4 w-4" />
@@ -491,3 +484,5 @@ export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberL
     </div>
   );
 }
+
+    

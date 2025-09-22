@@ -46,12 +46,6 @@ export function MemberCard({ member, onStatusChange, onDelete, onSendInvite }: M
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                         <Link href={`/admin/members/${member.id}`}>
-                          <DropdownMenuItem>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View
-                          </DropdownMenuItem>
-                        </Link>
                         <Link href={`/admin/members/${member.id}`}>
                           <DropdownMenuItem>
                             <Pencil className="mr-2 h-4 w-4" />
@@ -96,3 +90,5 @@ export function MemberCard({ member, onStatusChange, onDelete, onSendInvite }: M
     </Card>
   );
 }
+
+    
