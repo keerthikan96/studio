@@ -24,7 +24,6 @@ import {
   MoreHorizontal,
   Pencil,
   Trash2,
-  XCircle,
 } from 'lucide-react';
 
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -54,6 +53,7 @@ import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { deleteMemberAction, updateMemberStatusAction } from '@/app/actions/staff';
 import { useToast } from '@/hooks/use-toast';
+import { MemberCard } from './member-card';
 
 const statusStyles: { [key: string]: string } = {
   active: 'bg-green-100 text-green-800 border-green-200 hover:bg-green-100',
@@ -186,6 +186,7 @@ type MemberListProps = {
     data: Member[];
     setMembers: React.Dispatch<React.SetStateAction<Member[]>>;
     onSendInvite: (member: Member) => void;
+    viewMode: 'grid' | 'list';
 }
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
@@ -193,7 +194,7 @@ const statuses = ['active', 'pending', 'inactive'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
 
 
-export function MemberList({ data, setMembers, onSendInvite }: MemberListProps) {
+export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberListProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] =
@@ -250,6 +251,10 @@ export function MemberList({ data, setMembers, onSendInvite }: MemberListProps) 
       rowSelection,
     },
   });
+
+  const page = table.getState().pagination.pageIndex;
+  const pageSize = table.getState().pagination.pageSize;
+  const pagedData = table.getRowModel().rows.map(row => row.original);
 
   return (
     <div className="w-full">
@@ -346,56 +351,78 @@ export function MemberList({ data, setMembers, onSendInvite }: MemberListProps) 
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
+
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {pagedData.length > 0 ? (
+            pagedData.map(member => (
+              <MemberCard
+                key={member.id}
+                member={member}
+                onStatusChange={handleStatusChange}
+                onDelete={setMemberToDelete}
+                onSendInvite={onSendInvite}
+              />
+            ))
+          ) : (
+            <div className="col-span-full text-center py-10">
+              No results.
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <TableHead key={header.id}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    );
+                  })}
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && 'selected'}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
+                    No results.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
           {table.getFilteredSelectedRowModel().rows.length} of{' '}
@@ -413,13 +440,17 @@ export function MemberList({ data, setMembers, onSendInvite }: MemberListProps) 
                 <SelectValue placeholder={table.getState().pagination.pageSize} />
             </SelectTrigger>
             <SelectContent side="top">
-                {[10, 25, 50].map((pageSize) => (
+                {[10, 25, 50, 100].map((pageSize) => (
                 <SelectItem key={pageSize} value={`${pageSize}`}>
                     {pageSize}
                 </SelectItem>
                 ))}
             </SelectContent>
             </Select>
+        </div>
+        <div className="text-sm font-medium">
+            Page {table.getState().pagination.pageIndex + 1} of{' '}
+            {table.getPageCount()}
         </div>
         <div className="space-x-2">
           <Button

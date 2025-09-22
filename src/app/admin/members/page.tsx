@@ -5,7 +5,7 @@ import Link from "next/link";
 import { MemberList } from "@/components/member-list";
 import { Button } from "@/components/ui/button";
 import { Member } from "@/lib/mock-data";
-import { PlusCircle } from "lucide-react";
+import { List, PlusCircle, LayoutGrid } from "lucide-react";
 import { useState, useEffect, useTransition } from "react";
 import {
   AlertDialog,
@@ -20,16 +20,20 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { getMembersAction } from "@/app/actions/staff";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 function generateSecureToken() {
     // In a real app, use a crypto library for this.
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
 
+type ViewMode = 'grid' | 'list';
+
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [memberToInvite, setMemberToInvite] = useState<Member | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -63,7 +67,7 @@ export default function MembersPage() {
 
   return (
     <>
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Member List</h1>
@@ -71,12 +75,37 @@ export default function MembersPage() {
               View and manage all staff members in the system.
             </p>
           </div>
-          <Link href="/admin/add-staff">
-              <Button>
-                  <PlusCircle className="mr-2"/>
-                  Add Member
-              </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('grid')}>
+                            <LayoutGrid className="h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Grid View</p>
+                    </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')}>
+                            <List className="h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>List View</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+
+            <Link href="/admin/add-staff">
+                <Button>
+                    <PlusCircle className="mr-2"/>
+                    Add Member
+                </Button>
+            </Link>
+          </div>
         </div>
         {isPending ? (
             <div className="w-full space-y-2">
@@ -85,7 +114,7 @@ export default function MembersPage() {
                 <Skeleton className="h-12 w-full" />
             </div>
         ) : (
-            <MemberList data={members} setMembers={setMembers} onSendInvite={setMemberToInvite} />
+            <MemberList data={members} setMembers={setMembers} onSendInvite={setMemberToInvite} viewMode={viewMode} />
         )}
       </div>
 
