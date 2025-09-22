@@ -164,7 +164,7 @@ export default function MemberProfilePage() {
   }
 
   return (
-    <div>
+    <>
         <Button variant="outline" asChild className="mb-4">
             <Link href="/admin/members">
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -488,6 +488,6 @@ export default function MemberProfilePage() {
             </Form>
         </CardContent>
         </Card>
-    </div>
+    </>
   );
 }
