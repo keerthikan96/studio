@@ -105,25 +105,30 @@ export default function MemberProfilePage() {
     },
   });
 
+  const fetchMember = () => {
+    startTransition(() => {
+        getMemberByIdAction(memberId).then(currentMember => {
+            if (currentMember) {
+                setMember(currentMember);
+                form.reset({
+                    ...currentMember,
+                    experience: currentMember.experience || [],
+                    education: currentMember.education || [],
+                    skills: currentMember.skills || [],
+                });
+            } else {
+                toast({ title: "Member not found", variant: "destructive" });
+                router.push('/admin/members');
+            }
+        });
+    });
+  }
+
   useEffect(() => {
     if (memberId) {
-        startTransition(() => {
-            getMemberByIdAction(memberId).then(currentMember => {
-                if (currentMember) {
-                    setMember(currentMember);
-                    form.reset({
-                        ...currentMember,
-                        experience: currentMember.experience || [],
-                        education: currentMember.education || [],
-                        skills: currentMember.skills || [],
-                    });
-                } else {
-                    toast({ title: "Member not found", variant: "destructive" });
-                    router.push('/admin/members');
-                }
-            });
-        });
+        fetchMember();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memberId, form, toast, router]);
 
   const { fields: expFields, append: appendExp, remove: removeExp } = useFieldArray({
@@ -173,16 +178,7 @@ export default function MemberProfilePage() {
                 description: `${data.name}'s information has been successfully saved.`,
             });
             // Re-fetch data to show the latest state and reset form dirty state
-            const updatedMember = await getMemberByIdAction(memberId);
-            if (updatedMember) {
-                setMember(updatedMember);
-                form.reset({
-                    ...updatedMember,
-                    experience: updatedMember.experience || [],
-                    education: updatedMember.education || [],
-                    skills: updatedMember.skills || [],
-                });
-            }
+            fetchMember();
         }
     });
   }
@@ -202,7 +198,17 @@ export default function MemberProfilePage() {
   const handleUploadSuccess = (newUrl: string) => {
     form.setValue('profile_picture_url', newUrl, { shouldDirty: false });
     if (member) {
-      setMember({ ...member, profile_picture_url: newUrl });
+      const updatedMember = { ...member, profile_picture_url: newUrl };
+      setMember(updatedMember);
+      
+      const storedUser = sessionStorage.getItem('loggedInUser');
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        if (user.id === member.id) {
+          user.profile_picture_url = newUrl;
+          sessionStorage.setItem('loggedInUser', JSON.stringify(user));
+        }
+      }
     }
   };
 

@@ -30,8 +30,7 @@ export default function UserNav() {
   const [user, setUser] = useState<UserData | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    // This is a client-side only effect.
+  const loadUser = () => {
     const storedUserStr = sessionStorage.getItem('loggedInUser');
     if (storedUserStr) {
         const storedUser = JSON.parse(storedUserStr);
@@ -45,10 +44,29 @@ export default function UserNav() {
                     setUser(fullUserData);
                     // Update session storage with the latest data
                     sessionStorage.setItem('loggedInUser', JSON.stringify(fullUserData));
+                } else {
+                    setUser(storedUser); // fallback to stored user if fetch fails
                 }
             });
         }
     }
+  }
+
+  useEffect(() => {
+    loadUser();
+
+    // Listen for custom event to update profile picture
+    const handleProfileUpdate = () => {
+        console.log("Profile picture updated event received!");
+        loadUser();
+    };
+
+    window.addEventListener('profile-picture-updated', handleProfileUpdate);
+
+    // Cleanup listener on component unmount
+    return () => {
+        window.removeEventListener('profile-picture-updated', handleProfileUpdate);
+    };
   }, []);
 
   const handleLogout = () => {
@@ -72,7 +90,7 @@ export default function UserNav() {
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-9 w-9">
             <AvatarImage
-              key={imageSrc}
+              key={imageSrc} // Using key to force re-render on src change
               src={imageSrc ?? undefined}
               alt="User avatar"
               data-ai-hint="person portrait"

@@ -75,7 +75,8 @@ export default function ProfilePictureUploader({
         
         // The API returns the new public URL
         onUploadSuccess(result.url);
-        // We don't need to update the preview again, as onUploadSuccess will trigger a state update in the parent.
+        // The parent component will update session storage, then we notify other components.
+        window.dispatchEvent(new CustomEvent('profile-picture-updated', { detail: { url: result.url } }));
 
     } catch (error: any) {
         toast({
@@ -106,7 +107,7 @@ export default function ProfilePictureUploader({
         className="w-32 h-32 text-4xl cursor-pointer"
         onClick={handleAvatarClick}
       >
-        <AvatarImage src={imagePreview} alt={`${userName}'s avatar`} />
+        <AvatarImage src={imagePreview ?? currentImageUrl ?? undefined} alt={`${userName}'s avatar`} />
         <AvatarFallback>{fallback}</AvatarFallback>
       </Avatar>
       <div 

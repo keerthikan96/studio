@@ -149,7 +149,17 @@ export default function ProfilePage() {
   const handleUploadSuccess = (newUrl: string) => {
     form.setValue('profile_picture_url', newUrl, { shouldDirty: false });
      if (member) {
-      setMember({ ...member, profile_picture_url: newUrl });
+      const updatedMember = { ...member, profile_picture_url: newUrl };
+      setMember(updatedMember);
+      // Also update session storage so other components can see the change
+      const storedUser = sessionStorage.getItem('loggedInUser');
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        if (user.id === member.id) {
+          user.profile_picture_url = newUrl;
+          sessionStorage.setItem('loggedInUser', JSON.stringify(user));
+        }
+      }
     }
   };
 
