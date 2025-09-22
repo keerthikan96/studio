@@ -375,7 +375,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                 <FormItem>
                   <FormLabel>Skills</FormLabel>
                   <FormControl>
-                    <>
+                    <div>
                       <Input 
                         placeholder="Type a skill and press Enter"
                         value={skillInput}
@@ -393,7 +393,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                           </Badge>
                         ))}
                       </div>
-                    </>
+                    </div>
                   </FormControl>
                   <FormDescription>Press Enter or comma to add a skill.</FormDescription>
                   <FormMessage />

@@ -173,7 +173,7 @@ export default function ProfilePage() {
                <FormItem>
                   <FormLabel>Skills</FormLabel>
                   <FormControl>
-                    <>
+                    <div>
                       <Input 
                         placeholder="Type a skill and press Enter"
                         value={skillInput}
@@ -191,7 +191,7 @@ export default function ProfilePage() {
                           </Badge>
                         ))}
                       </div>
-                    </>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
