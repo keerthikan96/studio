@@ -4,7 +4,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useFieldArray, useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useState, useTransition, KeyboardEvent } from 'react';
+import { useState, useTransition, KeyboardEvent, useEffect } from 'react';
 import {
   Form,
   FormControl,
@@ -19,8 +19,10 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, PlusCircle, Save, Trash, X as XIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Member } from '@/lib/mock-data';
+import { getMemberByIdAction, updateMemberAction } from '../actions/staff';
+import ProfilePictureUploader from '@/components/profile-picture-uploader';
 
 const workExperienceSchema = z.object({
   companyName: z.string().min(1, 'Company name is required.'),
@@ -42,37 +44,53 @@ const profileSchema = z.object({
   experience: z.array(workExperienceSchema).optional(),
   education: z.array(educationSchema).optional(),
   skills: z.array(z.string()).optional(),
+  profile_picture_url: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-const mockStaffData: ProfileFormValues = {
-    name: "Alex Doe",
-    email: "alex.doe@staffsync.com",
-    phone: "(555) 123-4567",
-    skills: ["React", "TypeScript", "Node.js", "Leadership"],
-    experience: [{
-        companyName: "TechCorp",
-        role: "Senior Software Engineer",
-        years: "2018 - 2023",
-        keyResponsibilities: "Led a team of 5 engineers to deliver a major product redesign. Specialized in front-end architecture and performance optimization."
-    }],
-    education: [{
-        institution: "University of Technology",
-        degree: "B.S. in Computer Science",
-        years: "2014 - 2018"
-    }],
-};
-
 export default function ProfilePage() {
   const [isPending, startTransition] = useTransition();
   const [skillInput, setSkillInput] = useState('');
+  const [member, setMember] = useState<Member | null>(null);
   const { toast } = useToast();
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: mockStaffData,
+    defaultValues: {
+      name: '',
+      email: '',
+      phone: '',
+      experience: [],
+      education: [],
+      skills: [],
+      profile_picture_url: '',
+    },
   });
+
+  useEffect(() => {
+    const storedUser = sessionStorage.getItem('loggedInUser');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      // In a real app, you would fetch the full user profile from the DB using an ID.
+      // For this demo, we'll assume the member list from local storage has the data.
+      startTransition(() => {
+        getMemberByIdAction(user.id).then(currentMember => {
+            if (currentMember) {
+              setMember(currentMember);
+              form.reset({
+                ...currentMember,
+                experience: currentMember.experience || [],
+                education: currentMember.education || [],
+                skills: currentMember.skills || [],
+                profile_picture_url: currentMember.profile_picture_url || '',
+              });
+            }
+        });
+      });
+    }
+  }, [form]);
+
 
   const { fields: expFields, append: appendExp, remove: removeExp } = useFieldArray({
     control: form.control,
@@ -90,13 +108,22 @@ export default function ProfilePage() {
   });
   
   function onSubmit(data: ProfileFormValues) {
-    startTransition(() => {
-      // API call to update profile would go here
-      console.log('Updating profile with data:', data);
-      toast({
-        title: 'Profile Updated!',
-        description: 'Your information has been successfully saved.',
-      });
+    if (!member) return;
+
+    startTransition(async () => {
+      const result = await updateMemberAction(member.id, data);
+      if ('error' in result) {
+         toast({
+            title: 'Update Failed',
+            description: result.error,
+            variant: 'destructive',
+         });
+      } else {
+        toast({
+          title: 'Profile Updated!',
+          description: 'Your information has been successfully saved.',
+        });
+      }
     });
   }
 
@@ -111,14 +138,20 @@ export default function ProfilePage() {
     }
   };
 
+  if (!member) {
+      return <div className='flex justify-center items-center h-full'><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
+
+
   return (
     <Card className="max-w-4xl mx-auto">
       <CardHeader>
-        <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
-                <AvatarImage src="https://picsum.photos/seed/user-avatar/100/100" alt="User avatar" data-ai-hint="person portrait" />
-                <AvatarFallback>AD</AvatarFallback>
-            </Avatar>
+        <div className="flex flex-col items-center gap-4 text-center">
+            <ProfilePictureUploader
+                currentImage={form.watch('profile_picture_url')}
+                onImageSelect={(dataUri) => form.setValue('profile_picture_url', dataUri, { shouldDirty: true })}
+                userName={member.name}
+            />
             <div>
                 <CardTitle className="text-2xl">Your Profile</CardTitle>
                 <CardDescription>
@@ -183,8 +216,7 @@ export default function ProfilePage() {
                       <div className="flex flex-wrap gap-2 mt-2">
                         {skillFields.map((field, index) => (
                           <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
-                            {/* @ts-ignore */}
-                            {field.value}
+                            {form.getValues('skills')?.[index]}
                             <button type="button" onClick={() => removeSkill(index)}>
                               <XIcon className="h-3 w-3" />
                             </button>

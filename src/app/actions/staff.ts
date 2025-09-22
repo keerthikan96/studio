@@ -61,16 +61,40 @@ export async function getMemberByIdAction(id: string): Promise<Member | null> {
 }
 
 export async function updateMemberAction(id: string, data: Partial<Member>): Promise<Member | { error: string }> {
-    const { name, email, phone, domain, country, branch, experience, education, skills, status } = data;
+    const { name, email, phone, domain, country, branch, experience, education, skills, status, profile_picture_url } = data;
     try {
-        const result = await db.query(
-            `UPDATE members
-             SET name = $1, email = $2, phone = $3, domain = $4, country = $5, branch = $6,
-                 experience = $7, education = $8, skills = $9, status = $10, updated_at = NOW()
-             WHERE id = $11
-             RETURNING *;`,
-            [name, email, phone, domain, country, branch, JSON.stringify(experience), JSON.stringify(education), JSON.stringify(skills), status, id]
-        );
+        // Build the update query dynamically to avoid updating all fields
+        const fields: string[] = [];
+        const values: any[] = [];
+        let fieldIndex = 1;
+
+        if (name !== undefined) { fields.push(`name = $${fieldIndex++}`); values.push(name); }
+        if (email !== undefined) { fields.push(`email = $${fieldIndex++}`); values.push(email); }
+        if (phone !== undefined) { fields.push(`phone = $${fieldIndex++}`); values.push(phone); }
+        if (domain !== undefined) { fields.push(`domain = $${fieldIndex++}`); values.push(domain); }
+        if (country !== undefined) { fields.push(`country = $${fieldIndex++}`); values.push(country); }
+        if (branch !== undefined) { fields.push(`branch = $${fieldIndex++}`); values.push(branch); }
+        if (experience !== undefined) { fields.push(`experience = $${fieldIndex++}`); values.push(JSON.stringify(experience)); }
+        if (education !== undefined) { fields.push(`education = $${fieldIndex++}`); values.push(JSON.stringify(education)); }
+        if (skills !== undefined) { fields.push(`skills = $${fieldIndex++}`); values.push(JSON.stringify(skills)); }
+        if (status !== undefined) { fields.push(`status = $${fieldIndex++}`); values.push(status); }
+        if (profile_picture_url !== undefined) { fields.push(`profile_picture_url = $${fieldIndex++}`); values.push(profile_picture_url); }
+        
+        if (fields.length === 0) {
+            return { error: "No fields to update." };
+        }
+
+        fields.push(`updated_at = NOW()`);
+        values.push(id);
+
+        const queryString = `
+            UPDATE members
+            SET ${fields.join(', ')}
+            WHERE id = $${fieldIndex}
+            RETURNING *;
+        `;
+
+        const result = await db.query(queryString, values);
         return result.rows[0];
     } catch (error) {
         console.error(`Error updating member with id ${id}:`, error);

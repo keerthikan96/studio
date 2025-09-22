@@ -19,13 +19,13 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, PlusCircle, Save, Trash, X as XIcon, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Member } from '@/lib/mock-data';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getMemberByIdAction, updateMemberAction } from '@/app/actions/staff';
+import ProfilePictureUploader from '@/components/profile-picture-uploader';
+import { Badge } from '@/components/ui/badge';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
@@ -55,6 +55,7 @@ const profileSchema = z.object({
   education: z.array(educationSchema).optional(),
   skills: z.array(z.string()).optional(),
   status: z.enum(['active', 'pending', 'inactive']),
+  profile_picture_url: z.string().optional(),
 }).refine(data => {
     if (data.country === 'Sri Lanka') {
         return sriLankanBranches.includes(data.branch);
@@ -85,6 +86,7 @@ export default function MemberProfilePage() {
         experience: [],
         education: [],
         skills: [],
+        profile_picture_url: '',
     },
   });
 
@@ -99,6 +101,7 @@ export default function MemberProfilePage() {
                         experience: currentMember.experience || [],
                         education: currentMember.education || [],
                         skills: currentMember.skills || [],
+                        profile_picture_url: currentMember.profile_picture_url || '',
                     });
                 } else {
                     toast({ title: "Member not found", variant: "destructive" });
@@ -160,8 +163,6 @@ export default function MemberProfilePage() {
       return <div className='flex justify-center items-center h-full'><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
-  const fallback = member.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
-
   return (
     <div>
         <Button variant="outline" asChild className="mb-4">
@@ -172,11 +173,12 @@ export default function MemberProfilePage() {
         </Button>
         <Card className="max-w-4xl mx-auto">
         <CardHeader>
-            <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16">
-                    <AvatarImage src={`https://picsum.photos/seed/${member.email}/100/100`} alt="User avatar" data-ai-hint="person portrait" />
-                    <AvatarFallback>{fallback}</AvatarFallback>
-                </Avatar>
+            <div className="flex flex-col items-center gap-4 text-center">
+                 <ProfilePictureUploader
+                    currentImage={form.watch('profile_picture_url')}
+                    onImageSelect={(dataUri) => form.setValue('profile_picture_url', dataUri, { shouldDirty: true })}
+                    userName={member.name}
+                 />
                 <div>
                     <CardTitle className="text-2xl">Edit Profile</CardTitle>
                     <CardDescription>
@@ -282,7 +284,7 @@ export default function MemberProfilePage() {
                                 <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a branch in Sri Lanka" />
-                                    </SelectTrigger>
+                                    </Trigger>
                                 </FormControl>
                                 <SelectContent>
                                     {sriLankanBranches.map(branch => <SelectItem key={branch} value={branch}>{branch}</SelectItem>)}

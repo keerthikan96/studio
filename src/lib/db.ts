@@ -66,6 +66,7 @@ export async function setupDatabase() {
                 experience JSONB,
                 education JSONB,
                 skills JSONB,
+                profile_picture_url TEXT,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );

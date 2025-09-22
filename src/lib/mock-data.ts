@@ -24,6 +24,7 @@ export type Member = {
     experience?: WorkExperience[];
     education?: Education[];
     skills?: string[];
+    profile_picture_url?: string;
 };
   
 // This mock data is now only used as a fallback or for initial setup,
