@@ -132,23 +132,28 @@ export default function MemberProfilePage() {
   function onSubmit(data: ProfileFormValues) {
     startTransition(async () => {
         let hasError = false;
-
-        const { profile_picture_url, ...otherData } = data;
         const dirtyFields = form.formState.dirtyFields;
 
-        // Update profile picture only if it has changed
-        if (dirtyFields.profile_picture_url && profile_picture_url) {
-            const pictureResult = await updateMemberProfilePictureAction(memberId, profile_picture_url);
+        // 1. Handle profile picture update separately if it changed
+        if (dirtyFields.profile_picture_url && data.profile_picture_url) {
+            const pictureResult = await updateMemberProfilePictureAction(memberId, data.profile_picture_url);
             if ('error' in pictureResult) {
                 toast({ title: 'Update Failed', description: pictureResult.error, variant: 'destructive' });
                 hasError = true;
             }
         }
 
-        // Check if any other field is dirty before updating
-        const otherFieldsDirty = Object.keys(dirtyFields).some(field => field !== 'profile_picture_url');
-        if (otherFieldsDirty) {
-            const result = await updateMemberAction(memberId, otherData);
+        // 2. Collect other dirty fields for a separate update
+        const otherDirtyFields = Object.keys(dirtyFields).filter(field => field !== 'profile_picture_url');
+        
+        if (otherDirtyFields.length > 0 && !hasError) {
+            const dataToUpdate: Partial<ProfileFormValues> = {};
+            for (const field of otherDirtyFields) {
+                // @ts-ignore
+                dataToUpdate[field] = data[field];
+            }
+
+            const result = await updateMemberAction(memberId, dataToUpdate);
             if ('error' in result) {
                 toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });
                 hasError = true;

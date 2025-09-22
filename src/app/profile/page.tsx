@@ -110,36 +110,54 @@ export default function ProfilePage() {
 
     startTransition(async () => {
       let hasError = false;
-
-      const { profile_picture_url, ...otherData } = data;
       const dirtyFields = form.formState.dirtyFields;
 
-      // Update profile picture only if it has changed
-      if (dirtyFields.profile_picture_url && profile_picture_url) {
-          const pictureResult = await updateMemberProfilePictureAction(member.id, profile_picture_url);
+      // 1. Handle profile picture update separately
+      if (dirtyFields.profile_picture_url && data.profile_picture_url) {
+          const pictureResult = await updateMemberProfilePictureAction(member.id, data.profile_picture_url);
           if ('error' in pictureResult) {
               toast({ title: 'Update Failed', description: pictureResult.error, variant: 'destructive' });
               hasError = true;
           }
       }
 
-      // Check if any other field is dirty before updating
-      const otherFieldsDirty = Object.keys(dirtyFields).some(field => field !== 'profile_picture_url');
-      if (otherFieldsDirty) {
-          const result = await updateMemberAction(member.id, otherData);
+      // 2. Handle other fields
+      const otherDirtyFields = Object.keys(dirtyFields).filter(field => field !== 'profile_picture_url');
+      if (otherDirtyFields.length > 0 && !hasError) {
+          const dataToUpdate: Partial<ProfileFormValues> = {};
+          for (const field of otherDirtyFields) {
+              // @ts-ignore
+              dataToUpdate[field] = data[field];
+          }
+
+          const result = await updateMemberAction(member.id, dataToUpdate);
           if ('error' in result) {
               toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });
               hasError = true;
           }
       }
       
-      if (!hasError) {
+      if (!hasError && Object.keys(dirtyFields).length > 0) {
         toast({
           title: 'Profile Updated!',
           description: 'Your information has been successfully saved.',
         });
-        // Optionally re-fetch data or reset form dirty state
-        form.reset(data);
+        // Re-fetch data and reset form to reflect the new state and clear dirty status
+        const updatedMember = await getMemberByIdAction(member.id);
+        if (updatedMember) {
+          form.reset({
+            ...updatedMember,
+            experience: updatedMember.experience || [],
+            education: updatedMember.education || [],
+            skills: updatedMember.skills || [],
+            profile_picture_url: updatedMember.profile_picture_url || '',
+          });
+        }
+      } else if (Object.keys(dirtyFields).length === 0) {
+        toast({
+            title: 'No Changes',
+            description: 'No changes were detected to save.',
+        });
       }
     });
   }

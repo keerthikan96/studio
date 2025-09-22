@@ -60,7 +60,7 @@ export async function getMemberByIdAction(id: string): Promise<Member | null> {
     }
 }
 
-export async function updateMemberAction(id: string, data: Omit<Partial<Member>, 'profile_picture_url'>): Promise<Member | { error: string }> {
+export async function updateMemberAction(id: string, data: Omit<Partial<Member>, 'id' | 'profile_picture_url' | 'created_at' | 'updated_at'>): Promise<Member | { error: string }> {
     const { name, email, phone, domain, country, branch, experience, education, skills, status } = data;
     try {
         const fields: string[] = [];
@@ -79,7 +79,6 @@ export async function updateMemberAction(id: string, data: Omit<Partial<Member>,
         if (status !== undefined) { fields.push(`status = $${fieldIndex++}`); values.push(status); }
         
         if (fields.length === 0) {
-            // If no other fields are updated, we can just return the current user data
             const member = await getMemberByIdAction(id);
             if (!member) return { error: "Member not found." };
             return member;
