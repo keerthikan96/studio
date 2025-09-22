@@ -14,7 +14,7 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, UserPlus, Users } from "lucide-react";
+import { LayoutDashboard, Users } from "lucide-react";
 import Logo from "@/components/logo";
 import UserNav from "@/components/user-nav";
 
@@ -45,20 +45,9 @@ export default function AdminLayout({
               </Link>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <Link href="/admin/add-staff">
-                <SidebarMenuButton
-                  isActive={pathname === "/admin/add-staff"}
-                  tooltip={{ children: "Add Staff" }}
-                >
-                  <UserPlus />
-                  <span>Add Staff</span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
                 <Link href="/admin/members">
                     <SidebarMenuButton
-                        isActive={pathname === "/admin/members"}
+                        isActive={pathname.startsWith("/admin/members") || pathname === "/admin/add-staff"}
                         tooltip={{ children: "Members" }}
                     >
                         <Users />
