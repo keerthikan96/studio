@@ -66,11 +66,21 @@ export async function setupDatabase() {
                 experience JSONB,
                 education JSONB,
                 skills JSONB,
-                profile_picture BYTEA,
+                profile_picture_url VARCHAR(2048),
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
+        // Add profile_picture_url column if it doesn't exist for backward compatibility
+        const { rows } = await client.query(`
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name='members' AND column_name='profile_picture_url';
+        `);
+        if (rows.length === 0) {
+            await client.query('ALTER TABLE members ADD COLUMN profile_picture_url VARCHAR(2048);');
+        }
+
         console.log('`members` table is ready.');
     } catch (err) {
         console.error('Error setting up the database table:', err);

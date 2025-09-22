@@ -21,7 +21,7 @@ export async function parseResumeAction(
   }
 }
 
-export async function addStaffAction(staffData: Omit<Member, 'id' | 'status'>): Promise<Member | { error: string }> {
+export async function addStaffAction(staffData: Omit<Member, 'id' | 'status' | 'profile_picture_url'>): Promise<Member | { error: string }> {
   await setupDatabase();
   const { name, email, phone, domain, country, branch, experience, education, skills } = staffData;
   try {
@@ -41,7 +41,7 @@ export async function addStaffAction(staffData: Omit<Member, 'id' | 'status'>): 
 export async function getMembersAction(): Promise<Member[]> {
     await setupDatabase();
     try {
-        const result = await db.query('SELECT id, name, email, phone, domain, country, branch, status FROM members ORDER BY created_at DESC');
+        const result = await db.query('SELECT id, name, email, phone, domain, country, branch, status, profile_picture_url FROM members ORDER BY created_at DESC');
         return result.rows;
     } catch (error) {
         console.error('Error fetching members:', error);
@@ -51,7 +51,7 @@ export async function getMembersAction(): Promise<Member[]> {
 
 export async function getMemberByIdAction(id: string): Promise<Member | null> {
     try {
-        const result = await db.query('SELECT id, name, email, phone, domain, country, branch, status, experience, education, skills FROM members WHERE id = $1', [id]);
+        const result = await db.query('SELECT id, name, email, phone, domain, country, branch, status, experience, education, skills, profile_picture_url FROM members WHERE id = $1', [id]);
         if (result.rows.length === 0) return null;
         return result.rows[0];
     } catch (error) {
@@ -60,8 +60,8 @@ export async function getMemberByIdAction(id: string): Promise<Member | null> {
     }
 }
 
-export async function updateMemberAction(id: string, data: Omit<Partial<Member>, 'id' | 'profile_picture_url' | 'created_at' | 'updated_at'>): Promise<Member | { error: string }> {
-    const { name, email, phone, domain, country, branch, experience, education, skills, status } = data;
+export async function updateMemberAction(id: string, data: Omit<Partial<Member>, 'id' | 'created_at' | 'updated_at'>): Promise<Member | { error: string }> {
+    const { name, email, phone, domain, country, branch, experience, education, skills, status, profile_picture_url } = data;
     try {
         const fields: string[] = [];
         const values: any[] = [];
@@ -77,6 +77,7 @@ export async function updateMemberAction(id: string, data: Omit<Partial<Member>,
         if (education !== undefined) { fields.push(`education = $${fieldIndex++}`); values.push(JSON.stringify(education)); }
         if (skills !== undefined) { fields.push(`skills = $${fieldIndex++}`); values.push(JSON.stringify(skills)); }
         if (status !== undefined) { fields.push(`status = $${fieldIndex++}`); values.push(status); }
+        if (profile_picture_url !== undefined) { fields.push(`profile_picture_url = $${fieldIndex++}`); values.push(profile_picture_url); }
         
         if (fields.length === 0) {
             const member = await getMemberByIdAction(id);

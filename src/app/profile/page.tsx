@@ -44,6 +44,7 @@ const profileSchema = z.object({
   experience: z.array(workExperienceSchema).optional(),
   education: z.array(educationSchema).optional(),
   skills: z.array(z.string()).optional(),
+  profile_picture_url: z.string().url().optional().nullable(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -53,8 +54,6 @@ export default function ProfilePage() {
   const [skillInput, setSkillInput] = useState('');
   const [member, setMember] = useState<Member | null>(null);
   const { toast } = useToast();
-  const [imageVersion, setImageVersion] = useState(Date.now());
-
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -65,6 +64,7 @@ export default function ProfilePage() {
       experience: [],
       education: [],
       skills: [],
+      profile_picture_url: null,
     },
   });
 
@@ -109,13 +109,16 @@ export default function ProfilePage() {
 
     startTransition(async () => {
       const dirtyFields = form.formState.dirtyFields;
-      if (Object.keys(dirtyFields).length === 0) {
+      // The profile picture is handled separately by its component, so we ignore it here.
+      const { profile_picture_url, ...otherDirtyFields } = dirtyFields;
+
+      if (Object.keys(otherDirtyFields).length === 0) {
         toast({ title: 'No Changes', description: 'No changes were detected to save.' });
         return;
       }
       
-      const dataToUpdate: Partial<ProfileFormValues> = {};
-      for (const field of Object.keys(dirtyFields)) {
+      const dataToUpdate: Partial<Omit<ProfileFormValues, 'profile_picture_url'>> = {};
+      for (const field of Object.keys(otherDirtyFields)) {
           // @ts-ignore
           dataToUpdate[field] = data[field];
       }
@@ -143,6 +146,13 @@ export default function ProfilePage() {
     });
   }
 
+  const handleUploadSuccess = (newUrl: string) => {
+    form.setValue('profile_picture_url', newUrl, { shouldDirty: false });
+     if (member) {
+      setMember({ ...member, profile_picture_url: newUrl });
+    }
+  };
+
   const handleSkillKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
@@ -165,8 +175,8 @@ export default function ProfilePage() {
         <div className="flex flex-col items-center gap-4 text-center">
             <ProfilePictureUploader
                 memberId={member.id}
-                currentImageVersion={imageVersion}
-                onUploadSuccess={() => setImageVersion(Date.now())}
+                currentImageUrl={member.profile_picture_url}
+                onUploadSuccess={handleUploadSuccess}
                 userName={member.name}
             />
             <div>

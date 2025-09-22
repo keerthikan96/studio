@@ -2,46 +2,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import sharp from 'sharp';
+import { uploadFileToGCS } from "@/lib/gcs";
+import { updateMemberAction } from "@/app/actions/staff";
 
 const MIME_TYPES: { [key: string]: string } = {
-  'image/jpeg': 'image/jpeg',
-  'image/png': 'image/png',
-  'image/gif': 'image/gif',
-  'image/webp': 'image/webp',
+  'image/jpeg': 'jpeg',
+  'image/png': 'png',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
 };
-
-// GET /api/staff/[id]/profile-picture
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const { rows } = await db.query(
-      "SELECT profile_picture FROM members WHERE id = $1",
-      [params.id]
-    );
-
-    if (!rows[0] || !rows[0].profile_picture) {
-      return new NextResponse("Not found", { status: 404 });
-    }
-
-    const buffer: Buffer = rows[0].profile_picture;
-    const metadata = await sharp(buffer).metadata();
-    const contentType = metadata.format ? `image/${metadata.format}` : 'application/octet-stream';
-
-
-    return new NextResponse(buffer, {
-      headers: {
-        "Content-Type": contentType,
-        "Content-Length": buffer.length.toString(),
-        "Cache-Control": "public, max-age=604800, immutable", // Cache for 7 days
-      },
-    });
-  } catch (error) {
-    console.error(`Failed to retrieve profile picture for member ${params.id}:`, error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
 
 // POST /api/staff/[id]/profile-picture
 export async function POST(
@@ -62,21 +31,27 @@ export async function POST(
 
     const originalBuffer = Buffer.from(await file.arrayBuffer());
 
-    // Resize and convert image to a consistent format (e.g., PNG)
+    // Resize and convert image to a consistent format (e.g., WebP for efficiency)
     const processedBuffer = await sharp(originalBuffer)
       .resize(256, 256, { fit: 'cover' }) // Resize to a 256x256 square
-      .png() // Convert to PNG for consistency
+      .webp({ quality: 80 }) // Convert to WebP with 80% quality
       .toBuffer();
 
-    await db.query(
-      "UPDATE members SET profile_picture = $1, updated_at = NOW() WHERE id = $2",
-      [processedBuffer, params.id]
-    );
+    const destination = `profile-pictures/${params.id}-${Date.now()}.webp`;
+    const publicUrl = await uploadFileToGCS(processedBuffer, destination);
 
-    return NextResponse.json({ message: "Profile picture saved" });
+    // Update the member's profile_picture_url in the database
+    const result = await updateMemberAction(params.id, { profile_picture_url: publicUrl });
+
+    if ('error' in result) {
+      throw new Error(result.error);
+    }
+
+    return NextResponse.json({ message: "Profile picture saved", url: publicUrl });
 
   } catch (error) {
     console.error(`Failed to upload profile picture for member ${params.id}:`, error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

@@ -58,6 +58,7 @@ const profileSchema = z.object({
   education: z.array(educationSchema).optional(),
   skills: z.array(z.string()).optional(),
   status: z.enum(['active', 'pending', 'inactive']),
+  profile_picture_url: z.string().url().optional().nullable(),
 }).refine(data => {
     if (data.country === 'Sri Lanka') {
         return sriLankanBranches.includes(data.branch);
@@ -90,8 +91,6 @@ export default function MemberProfilePage() {
   const params = useParams();
   const memberId = params.id as string;
   const [member, setMember] = useState<Member | null>(null);
-  const [imageVersion, setImageVersion] = useState(Date.now());
-
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -102,6 +101,7 @@ export default function MemberProfilePage() {
         experience: [],
         education: [],
         skills: [],
+        profile_picture_url: null,
     },
   });
 
@@ -146,7 +146,10 @@ export default function MemberProfilePage() {
   function onSubmit(data: ProfileFormValues) {
     startTransition(async () => {
         const dirtyFields = form.formState.dirtyFields;
-        if (Object.keys(dirtyFields).length === 0) {
+        // The profile picture is handled separately by its component, so we ignore it here.
+        const { profile_picture_url, ...otherDirtyFields } = dirtyFields;
+
+        if (Object.keys(otherDirtyFields).length === 0) {
             toast({
                 title: 'No Changes Detected',
                 description: 'You haven\'t made any changes to save.',
@@ -154,8 +157,8 @@ export default function MemberProfilePage() {
             return;
         }
 
-        const dataToUpdate: Partial<ProfileFormValues> = {};
-        for (const field in dirtyFields) {
+        const dataToUpdate: Partial<Omit<ProfileFormValues, 'profile_picture_url'>> = {};
+        for (const field in otherDirtyFields) {
             // @ts-ignore
             dataToUpdate[field] = data[field];
         }
@@ -195,6 +198,13 @@ export default function MemberProfilePage() {
         }
     });
   }
+  
+  const handleUploadSuccess = (newUrl: string) => {
+    form.setValue('profile_picture_url', newUrl, { shouldDirty: false });
+    if (member) {
+      setMember({ ...member, profile_picture_url: newUrl });
+    }
+  };
 
   const handleSkillKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
@@ -228,7 +238,7 @@ export default function MemberProfilePage() {
                 <div className="flex items-start justify-between gap-4">
                     <div className='flex items-center gap-4'>
                         <Avatar className="h-20 w-20 text-3xl">
-                            <AvatarImage key={imageVersion} src={`/api/staff/${member.id}/profile-picture?v=${imageVersion}`} alt={`${member.name}'s avatar`} />
+                            <AvatarImage src={member.profile_picture_url ?? undefined} alt={`${member.name}'s avatar`} />
                             <AvatarFallback>{fallback}</AvatarFallback>
                         </Avatar>
                         <div>
@@ -283,8 +293,8 @@ export default function MemberProfilePage() {
                              <div className="flex flex-col items-center gap-4 text-center mb-8">
                                 <ProfilePictureUploader
                                     memberId={member.id}
-                                    currentImageVersion={imageVersion}
-                                    onUploadSuccess={() => setImageVersion(Date.now())}
+                                    currentImageUrl={member.profile_picture_url}
+                                    onUploadSuccess={handleUploadSuccess}
                                     userName={member.name}
                                 />
                             </div>

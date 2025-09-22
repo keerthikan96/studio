@@ -16,12 +16,14 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CreditCard, LogOut, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { getMemberByIdAction } from '@/app/actions/staff';
 
 type UserData = {
     id: string;
     name: string;
     email: string;
     role: 'admin' | 'staff';
+    profile_picture_url?: string | null;
 }
 
 export default function UserNav() {
@@ -30,9 +32,22 @@ export default function UserNav() {
 
   useEffect(() => {
     // This is a client-side only effect.
-    const storedUser = sessionStorage.getItem('loggedInUser');
-    if (storedUser) {
-        setUser(JSON.parse(storedUser));
+    const storedUserStr = sessionStorage.getItem('loggedInUser');
+    if (storedUserStr) {
+        const storedUser = JSON.parse(storedUserStr);
+        if (storedUser.role === 'admin') {
+            setUser(storedUser);
+        } else {
+            // Fetch the latest user data to get the profile picture URL
+            getMemberByIdAction(storedUser.id).then(member => {
+                if (member) {
+                    const fullUserData = { ...storedUser, profile_picture_url: member.profile_picture_url };
+                    setUser(fullUserData);
+                    // Update session storage with the latest data
+                    sessionStorage.setItem('loggedInUser', JSON.stringify(fullUserData));
+                }
+            });
+        }
     }
   }, []);
 
@@ -49,7 +64,7 @@ export default function UserNav() {
   const fallback = user.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
   const imageSrc = user.role === 'admin' 
     ? `https://picsum.photos/seed/${user.email}/100/100` 
-    : `/api/staff/${user.id}/profile-picture`;
+    : user.profile_picture_url;
 
   return (
     <DropdownMenu>
@@ -58,7 +73,7 @@ export default function UserNav() {
           <Avatar className="h-9 w-9">
             <AvatarImage
               key={imageSrc}
-              src={imageSrc}
+              src={imageSrc ?? undefined}
               alt="User avatar"
               data-ai-hint="person portrait"
             />
