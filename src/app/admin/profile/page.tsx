@@ -75,9 +75,9 @@ export default function AdminProfilePage() {
     const storedUser = sessionStorage.getItem('loggedInUser');
     if (storedUser) {
       const user = JSON.parse(storedUser);
-      if (user.role === 'admin' || user.email === 'admin@gmail.com') {
+      if (user.id === 'admin-user-001') {
          const adminAsMember: Member = {
-           id: user.id || 'admin-user',
+           id: user.id,
            name: user.name,
            email: user.email,
            status: 'active',
@@ -127,8 +127,9 @@ export default function AdminProfilePage() {
     if (!member) return;
 
     // Special handling for the admin user who is not in the database
-    if (member.email === 'admin@gmail.com') {
-        const updatedAdmin = { ...JSON.parse(sessionStorage.getItem('loggedInUser')!), ...data };
+    if (member.id === 'admin-user-001') {
+        const currentUser = JSON.parse(sessionStorage.getItem('loggedInUser') || '{}');
+        const updatedAdmin = { ...currentUser, ...data };
         sessionStorage.setItem('loggedInUser', JSON.stringify(updatedAdmin));
         
         setMember(prev => ({...prev, ...updatedAdmin}));
@@ -142,46 +143,47 @@ export default function AdminProfilePage() {
         // Notify other components like UserNav to update
         window.dispatchEvent(new CustomEvent('profile-picture-updated'));
         window.dispatchEvent(new CustomEvent('cover-photo-updated'));
-    } else {
-        // Standard update logic for regular members
-        startTransition(async () => {
-            const dirtyFields = form.formState.dirtyFields;
-            // Image URLs are handled separately by their uploader components and don't need to be in this submission
-            const { profile_picture_url, cover_photo_url, ...otherDirtyFields } = dirtyFields;
+        return; // Important: exit after handling admin
+    } 
+    
+    // Standard update logic for regular members
+    startTransition(async () => {
+        const dirtyFields = form.formState.dirtyFields;
+        // Image URLs are handled separately by their uploader components and don't need to be in this submission
+        const { profile_picture_url, cover_photo_url, ...otherDirtyFields } = dirtyFields;
 
-            if (Object.keys(otherDirtyFields).length === 0) {
-                toast({ title: 'No Changes', description: 'No changes were detected to save.' });
-                return;
-            }
-            
-            const dataToUpdate: Partial<Omit<ProfileFormValues, 'profile_picture_url' | 'cover_photo_url'>> = {};
-            for (const field of Object.keys(otherDirtyFields)) {
+        if (Object.keys(otherDirtyFields).length === 0) {
+            toast({ title: 'No Changes', description: 'No changes were detected to save.' });
+            return;
+        }
+        
+        const dataToUpdate: Partial<Omit<ProfileFormValues, 'profile_picture_url' | 'cover_photo_url'>> = {};
+        for (const field of Object.keys(otherDirtyFields)) {
+            // @ts-ignore
+            if(Object.prototype.hasOwnProperty.call(data, field)) {
                 // @ts-ignore
-                if(Object.prototype.hasOwnProperty.call(data, field)) {
-                    // @ts-ignore
-                    dataToUpdate[field] = data[field];
-                }
+                dataToUpdate[field] = data[field];
             }
-            
-            const result = await updateMemberAction(member.id, dataToUpdate);
+        }
+        
+        const result = await updateMemberAction(member.id, dataToUpdate);
 
-            if ('error' in result) {
-                toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });
-            } else {
-                toast({
-                    title: 'Profile Updated!',
-                    description: 'Your information has been successfully saved.',
-                });
-                setMember(result as Member);
-                form.reset({
-                    ...(result as Member),
-                    experience: (result as Member).experience || [],
-                    education: (result as Member).education || [],
-                    skills: (result as Member).skills || [],
-                }, { keepDirty: false });
-            }
-        });
-    }
+        if ('error' in result) {
+            toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });
+        } else {
+            toast({
+                title: 'Profile Updated!',
+                description: 'Your information has been successfully saved.',
+            });
+            setMember(result as Member);
+            form.reset({
+                ...(result as Member),
+                experience: (result as Member).experience || [],
+                education: (result as Member).education || [],
+                skills: (result as Member).skills || [],
+            }, { keepDirty: false });
+        }
+    });
   }
 
   const handleProfileUploadSuccess = (newUrl: string) => {
@@ -192,7 +194,7 @@ export default function AdminProfilePage() {
     const storedUser = sessionStorage.getItem('loggedInUser');
     if (storedUser) {
         const user = JSON.parse(storedUser);
-        if (user.id === member.id || user.email === 'admin@gmail.com') {
+        if (user.id === member.id) {
             user.profile_picture_url = newUrl;
             sessionStorage.setItem('loggedInUser', JSON.stringify(user));
             window.dispatchEvent(new CustomEvent('profile-picture-updated'));
@@ -208,7 +210,7 @@ export default function AdminProfilePage() {
       const storedUser = sessionStorage.getItem('loggedInUser');
       if (storedUser) {
         const user = JSON.parse(storedUser);
-        if (user.id === member.id || user.email === 'admin@gmail.com') {
+        if (user.id === member.id) {
           user.cover_photo_url = newUrl;
           sessionStorage.setItem('loggedInUser', JSON.stringify(user));
            window.dispatchEvent(new CustomEvent('cover-photo-updated'));

@@ -69,7 +69,7 @@ export default function LoginForm() {
       if (data.password === 'password') { // Simple password check for demo
         if (data.email === 'admin@gmail.com') {
           // Admin login doesn't need a real DB record for this demo
-          handleLogin({ id: 'admin-user', name: 'Admin', email: 'admin@gmail.com', role: 'admin' });
+          handleLogin({ id: 'admin-user-001', name: 'Admin', email: 'admin@gmail.com', role: 'admin' });
           toast({
             title: 'Login Successful',
             description: 'Redirecting to admin dashboard...',

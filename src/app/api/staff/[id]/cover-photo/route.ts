@@ -33,11 +33,12 @@ export async function POST(
     const destination = `cover-photos/${params.id}-${Date.now()}.webp`;
     const publicUrl = await uploadFileToGCS(processedBuffer, destination);
 
-    // Update the member's cover_photo_url in the database
-    const result = await updateMemberAction(params.id, { cover_photo_url: publicUrl });
-
-    if ('error' in result) {
-      throw new Error(result.error);
+    // If it's the admin user, skip database update
+    if (params.id !== 'admin-user-001') {
+        const result = await updateMemberAction(params.id, { cover_photo_url: publicUrl });
+        if ('error' in result) {
+            throw new Error(result.error);
+        }
     }
 
     return NextResponse.json({ message: "Cover photo saved", url: publicUrl });

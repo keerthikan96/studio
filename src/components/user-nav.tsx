@@ -35,7 +35,7 @@ export default function UserNav() {
     const storedUserStr = sessionStorage.getItem('loggedInUser');
     if (storedUserStr) {
         const storedUser = JSON.parse(storedUserStr);
-        if (storedUser.role === 'admin' || storedUser.email === 'admin@gmail.com') {
+        if (storedUser.id === 'admin-user-001') {
              setUser({...storedUser, name: storedUser.name || 'Admin', role: 'HR'});
         } else {
             // Fetch the latest user data to get the profile picture URL
