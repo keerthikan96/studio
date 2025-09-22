@@ -1,6 +1,6 @@
 
+import 'dotenv/config';
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
 import sharp from 'sharp';
 import { uploadFileToGCS } from "@/lib/gcs";
 import { updateMemberAction } from "@/app/actions/staff";
