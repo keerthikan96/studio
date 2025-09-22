@@ -6,20 +6,23 @@ let storage: Storage | null = null;
 
 const getStorage = () => {
     if (!storage) {
+        const privateKey = process.env.GCP_PRIVATE_KEY?.replace(/\\n/g, '\n');
+
+        if (!process.env.GCP_PROJECT_ID || !process.env.GCP_CLIENT_EMAIL || !privateKey) {
+            throw new Error('One or more Google Cloud Storage environment variables are not set.');
+        }
+
         try {
-            if (!process.env.GCS_SERVICE_ACCOUNT_KEY_JSON) {
-                throw new Error('Google Cloud Storage service account key JSON is not set in environment variables.');
-            }
-            const credentials = JSON.parse(process.env.GCS_SERVICE_ACCOUNT_KEY_JSON);
             storage = new Storage({
-                projectId: credentials.project_id,
-                credentials,
+                projectId: process.env.GCP_PROJECT_ID,
+                credentials: {
+                    client_email: process.env.GCP_CLIENT_EMAIL,
+                    private_key: privateKey,
+                },
             });
             console.log('Google Cloud Storage client initialized successfully.');
         } catch (error) {
             console.error('Failed to initialize Google Cloud Storage client:', error);
-            // In case of failure, we'll let it throw so we can see the error in the logs.
-            // A proxy would hide the real issue.
             throw new Error('Could not initialize Google Cloud Storage client.');
         }
     }
@@ -37,7 +40,7 @@ export const uploadFileToGCS = (buffer: Buffer, destination: string): Promise<st
         let bucket;
         try {
             const storageClient = getStorage();
-            const bucketName = process.env.GCS_BUCKET_NAME;
+            const bucketName = process.env.GCP_BUCKET_NAME;
 
             if (!bucketName) {
                 throw new Error('Google Cloud Storage bucket name is not set in environment variables.');
