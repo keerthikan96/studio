@@ -25,6 +25,23 @@ const mockPosts = [
     ],
   },
   {
+    id: 'post3',
+    author: {
+        id: 'admin-user-001',
+        name: 'Admin',
+        email: 'admin@example.com',
+        role: 'HR',
+        profile_picture_url: 'https://i.pravatar.cc/40?u=admin-bot',
+    },
+    content: "Happy Birthday, Jessica Singh! Wishing you a fantastic day! 🎂",
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8), // 8 hours ago
+    imageUrl: 'https://storage.googleapis.com/gemini-studio-assets-dev/workfeed-birthday-2.png',
+    likes: 28,
+    comments: [
+       { authorName: 'Emily Carter', text: 'Happy Birthday, Alex!' },
+    ],
+  },
+  {
     id: 'post2',
      author: {
         id: 'm_1',
@@ -36,22 +53,6 @@ const mockPosts = [
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
     likes: 42,
     comments: [],
-  },
-    {
-    id: 'post3',
-    author: {
-        id: 'admin-user-001',
-        name: 'Admin',
-        email: 'admin@example.com',
-        role: 'HR',
-        profile_picture_url: 'https://i.pravatar.cc/40?u=admin',
-    },
-    content: "🎂 Happy Birthday to Alex! Wishing you a fantastic day filled with joy and celebration. May the year ahead be your best one yet! 🎈",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8), // 8 hours ago
-    likes: 28,
-    comments: [
-       { authorName: 'Emily Carter', text: 'Happy Birthday, Alex!' },
-    ],
   },
 ];
 

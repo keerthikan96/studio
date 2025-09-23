@@ -8,6 +8,7 @@ import { Heart, MessageSquare, Share2 } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { Member } from '@/lib/mock-data';
 import { formatDistanceToNow } from 'date-fns';
+import Image from 'next/image';
 
 type PostAuthor = Partial<Member> & {
     name: string;
@@ -22,6 +23,7 @@ type Post = {
     timestamp: Date;
     likes: number;
     comments: { authorName: string; text: string }[];
+    imageUrl?: string;
 };
 
 type WorkfeedPostProps = {
@@ -48,7 +50,16 @@ export default function WorkfeedPost({ post }: WorkfeedPostProps) {
                 </div>
             </CardHeader>
             <CardContent className="px-4 pb-2">
-                <p className="whitespace-pre-wrap">{post.content}</p>
+                {post.imageUrl ? (
+                    <div className="relative aspect-square w-full rounded-lg overflow-hidden border">
+                         <Image src={post.imageUrl} alt="Post image" fill className="object-cover" />
+                         <div className="absolute inset-0 bg-black/20 flex items-end p-4">
+                            <p className="text-white text-lg font-semibold">{post.content}</p>
+                         </div>
+                    </div>
+                ) : (
+                    <p className="whitespace-pre-wrap">{post.content}</p>
+                )}
             </CardContent>
             <CardContent className="px-4 pb-2">
                  {(post.likes > 0 || post.comments.length > 0) && (
