@@ -16,7 +16,7 @@ import {
   SidebarInput,
   SidebarGroup,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, Briefcase, Award, Calendar, User, FileText, Search, Bell } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, Award, Calendar, User, FileText, Search, Bell, Newspaper } from "lucide-react";
 import Logo from "@/components/logo";
 import UserNav from "@/components/user-nav";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,7 @@ export default function AdminLayout({
 
   const menuItems = [
     { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/admin/workfeed", label: "Workfeed", icon: Newspaper },
     { href: "/admin/attendance", label: "Attendance", icon: Calendar },
     { href: "/admin/department", label: "Department", icon: Briefcase },
     { href: "/admin/members", label: "Members", icon: Users },
