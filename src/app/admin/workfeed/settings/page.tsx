@@ -2,6 +2,7 @@
 'use client';
 
 import AutomatedPostSetting from "@/components/automated-post-setting";
+import BirthdayCardPreview from "@/components/birthday-card-preview";
 
 export default function WorkfeedSettingsPage() {
     
@@ -17,28 +18,37 @@ export default function WorkfeedSettingsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <AutomatedPostSetting
                     title="Automatic Birthday Posts"
-                    description="Automatically post a message on a member's birthday."
+                    description="This post will be automatically generated on a member's birthday using their name and profile picture."
                     toggleId="birthday-toggle"
                     toggleLabel="Enable Birthday Posts"
                     templateId="birthday-template"
                     templateLabel="Birthday Message Template"
                     defaultTemplate="Happy Birthday, {name}! Wishing you a fantastic day and a wonderful year ahead! 🎉🎂"
-                    imageUploadDescription="This image will be attached to all birthday posts. (Recommended size: 1200x800)"
-                    imageHint="celebration birthday"
-                    placeHolderImageUrl="https://picsum.photos/seed/birthday/1200/800"
+                    previewContent={
+                        <BirthdayCardPreview 
+                            name="Jessica Singh" 
+                            imageUrl="/placeholder.svg" 
+                            type="birthday" 
+                        />
+                    }
                 />
 
                 <AutomatedPostSetting
                     title="Automatic Anniversary Posts"
-                    description="Celebrate members' work anniversaries with an automated post."
+                    description="This post will be automatically generated on a member's work anniversary, celebrating their years of service."
                     toggleId="anniversary-toggle"
                     toggleLabel="Enable Anniversary Posts"
                     templateId="anniversary-template"
                     templateLabel="Anniversary Message Template"
                     defaultTemplate="Congratulations, {name}, on your {years}-year work anniversary! Thank you for your dedication and hard work. Here's to many more successful years! 🥂"
-                    imageUploadDescription="This image will be attached to all anniversary posts. (Recommended size: 1200x800)"
-                    imageHint="work anniversary"
-                    placeHolderImageUrl="https://picsum.photos/seed/anniversary/1200/800"
+                    previewContent={
+                         <BirthdayCardPreview 
+                            name="Jessica Singh" 
+                            imageUrl="/placeholder.svg" 
+                            type="anniversary" 
+                            years={5}
+                        />
+                    }
                 />
             </div>
         </div>
