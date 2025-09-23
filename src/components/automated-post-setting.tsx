@@ -7,6 +7,7 @@ import { Switch } from "./ui/switch";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
+import BirthdayCardPreview from './birthday-card-preview';
 
 type AutomatedPostSettingProps = {
     title: string;
@@ -16,7 +17,10 @@ type AutomatedPostSettingProps = {
     templateId: string;
     templateLabel: string;
     defaultTemplate: string;
-    previewContent: React.ReactNode;
+    previewName: string;
+    previewAvatarUrl: string;
+    previewYears?: number;
+    previewType: 'birthday' | 'anniversary';
 };
 
 export default function AutomatedPostSetting({
@@ -27,9 +31,21 @@ export default function AutomatedPostSetting({
     templateId,
     templateLabel,
     defaultTemplate,
-    previewContent,
+    previewName,
+    previewAvatarUrl,
+    previewYears,
+    previewType,
 }: AutomatedPostSettingProps) {
     const [template, setTemplate] = useState(defaultTemplate);
+    const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+
+    const handleImageUpload = (file: File) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            setBackgroundImage(e.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+    };
 
     return (
         <Card>
@@ -59,9 +75,14 @@ export default function AutomatedPostSetting({
                 
                 <div className="space-y-2">
                     <Label>Post Image Preview</Label>
-                    <div className="relative w-full rounded-lg border border-muted flex flex-col justify-center items-center text-center group bg-gray-900 overflow-hidden">
-                       {previewContent}
-                    </div>
+                    <BirthdayCardPreview 
+                        name={previewName}
+                        imageUrl={previewAvatarUrl}
+                        type={previewType}
+                        years={previewYears}
+                        onImageUpload={handleImageUpload}
+                        backgroundImageUrl={backgroundImage}
+                    />
                 </div>
 
 

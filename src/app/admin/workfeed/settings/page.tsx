@@ -2,7 +2,6 @@
 'use client';
 
 import AutomatedPostSetting from "@/components/automated-post-setting";
-import BirthdayCardPreview from "@/components/birthday-card-preview";
 
 export default function WorkfeedSettingsPage() {
     
@@ -24,13 +23,9 @@ export default function WorkfeedSettingsPage() {
                     templateId="birthday-template"
                     templateLabel="Birthday Message Template"
                     defaultTemplate="Happy Birthday, {name}! Wishing you a fantastic day and a wonderful year ahead! 🎉🎂"
-                    previewContent={
-                        <BirthdayCardPreview 
-                            name="Jessica Singh" 
-                            imageUrl="/placeholder.svg" 
-                            type="birthday" 
-                        />
-                    }
+                    previewName="Jessica Singh"
+                    previewAvatarUrl="/placeholder.svg"
+                    previewType="birthday"
                 />
 
                 <AutomatedPostSetting
@@ -41,14 +36,10 @@ export default function WorkfeedSettingsPage() {
                     templateId="anniversary-template"
                     templateLabel="Anniversary Message Template"
                     defaultTemplate="Congratulations, {name}, on your {years}-year work anniversary! Thank you for your dedication and hard work. Here's to many more successful years! 🥂"
-                    previewContent={
-                         <BirthdayCardPreview 
-                            name="Jessica Singh" 
-                            imageUrl="/placeholder.svg" 
-                            type="anniversary" 
-                            years={5}
-                        />
-                    }
+                    previewName="John Doe"
+                    previewAvatarUrl="/placeholder.svg"
+                    previewType="anniversary"
+                    previewYears={5}
                 />
             </div>
         </div>
