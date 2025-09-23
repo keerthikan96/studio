@@ -15,12 +15,16 @@ import {
   SidebarTrigger,
   SidebarInput,
   SidebarGroup,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubContent,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, Briefcase, Award, Calendar, User, FileText, Search, Bell, Newspaper, Settings } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, Award, Calendar, User, FileText, Search, Bell, Newspaper, Settings, ChevronDown } from "lucide-react";
 import Logo from "@/components/logo";
 import UserNav from "@/components/user-nav";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export default function AdminLayout({
   children,
@@ -28,22 +32,28 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [isClient, setIsClient] = useState(false)
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true)
-  }, [])
+    setIsClient(true);
+  }, []);
 
   const menuItems = [
     { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/admin/workfeed", label: "Workfeed", icon: Newspaper },
+    { 
+      label: "Workfeed", 
+      icon: Newspaper,
+      subItems: [
+        { href: "/admin/workfeed", label: "Posts" },
+        { href: "/admin/workfeed/settings", label: "Settings" }
+      ]
+    },
     { href: "/admin/attendance", label: "Attendance", icon: Calendar },
     { href: "/admin/department", label: "Department", icon: Briefcase },
     { href: "/admin/members", label: "Members", icon: Users },
     { href: "/admin/award", label: "Award", icon: Award },
     { href: "/admin/leave", label: "Leave", icon: Calendar },
     { href: "/admin/notice", label: "Notice", icon: FileText },
-    { href: "/admin/settings", label: "Settings", icon: Settings },
     { href: "/admin/profile", label: "Profile", icon: User },
   ];
 
@@ -51,11 +61,16 @@ export default function AdminLayout({
      if (href === '/admin/members') {
         return pathname.startsWith("/admin/members") || pathname === "/admin/add-staff";
      }
-     if (href === '/admin/settings') {
-        return pathname.startsWith('/admin/settings');
+     if (href === '/admin/workfeed/settings') {
+        return pathname.startsWith('/admin/workfeed/settings');
+     }
+     if (href === '/admin/workfeed') {
+        return pathname === '/admin/workfeed';
      }
      return pathname === href;
   }
+  
+  const isWorkfeedActive = pathname.startsWith('/admin/workfeed');
 
   return (
     <SidebarProvider>
@@ -71,17 +86,48 @@ export default function AdminLayout({
             </div>
            </SidebarGroup>
           <SidebarMenu>
-            {isClient && menuItems.map(item => (
-                <SidebarMenuItem key={item.href}>
-                <Link href={item.href}>
-                    <SidebarMenuButton
-                    isActive={getIsActive(item.href)}
-                    tooltip={{ children: item.label }}
-                    >
-                    <item.icon />
-                    <span>{item.label}</span>
-                    </SidebarMenuButton>
-                </Link>
+            {isClient && menuItems.map((item, index) => (
+                <SidebarMenuItem key={index}>
+                {item.subItems ? (
+                  <Collapsible defaultOpen={isWorkfeedActive}>
+                    <CollapsibleTrigger asChild>
+                       <SidebarMenuButton
+                          isActive={isWorkfeedActive}
+                          tooltip={{ children: item.label }}
+                          className="justify-between"
+                        >
+                          <div className="flex items-center gap-2">
+                             <item.icon />
+                             <span>{item.label}</span>
+                          </div>
+                          <ChevronDown className="h-4 w-4 transition-transform [&[data-state=open]]:rotate-180" />
+                        </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {item.subItems.map(subItem => (
+                             <SidebarMenuItem key={subItem.href}>
+                                <Link href={subItem.href}>
+                                  <SidebarMenuSubButton isActive={pathname === subItem.href}>
+                                    {subItem.label}
+                                  </SidebarMenuSubButton>
+                                </Link>
+                              </SidebarMenuItem>
+                          ))}
+                        </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ) : (
+                    <Link href={item.href!}>
+                        <SidebarMenuButton
+                        isActive={getIsActive(item.href!)}
+                        tooltip={{ children: item.label }}
+                        >
+                        <item.icon />
+                        <span>{item.label}</span>
+                        </SidebarMenuButton>
+                    </Link>
+                )}
                 </SidebarMenuItem>
             ))}
           </SidebarMenu>
