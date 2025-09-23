@@ -20,6 +20,7 @@ import { LayoutDashboard, Users, Briefcase, Award, Calendar, User, FileText, Sea
 import Logo from "@/components/logo";
 import UserNav from "@/components/user-nav";
 import { Input } from "@/components/ui/input";
+import { useEffect, useState } from "react";
 
 export default function AdminLayout({
   children,
@@ -27,6 +28,11 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   const menuItems = [
     { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -65,7 +71,7 @@ export default function AdminLayout({
             </div>
            </SidebarGroup>
           <SidebarMenu>
-            {menuItems.map(item => (
+            {isClient && menuItems.map(item => (
                 <SidebarMenuItem key={item.href}>
                 <Link href={item.href}>
                     <SidebarMenuButton
