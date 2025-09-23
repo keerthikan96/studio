@@ -8,6 +8,7 @@ import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
 import BirthdayCardPreview from './birthday-card-preview';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 type AutomatedPostSettingProps = {
     title: string;
@@ -38,6 +39,8 @@ export default function AutomatedPostSetting({
 }: AutomatedPostSettingProps) {
     const [template, setTemplate] = useState(defaultTemplate);
     const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+    const [isEnabled, setIsEnabled] = useState(false);
+    const [publishTime, setPublishTime] = useState('09:00');
 
     const handleImageUpload = (file: File) => {
         const reader = new FileReader();
@@ -55,9 +58,26 @@ export default function AutomatedPostSetting({
             </CardHeader>
             <CardContent className="space-y-6">
                 <div className="flex items-center space-x-2">
-                    <Switch id={toggleId} />
+                    <Switch id={toggleId} checked={isEnabled} onCheckedChange={setIsEnabled} />
                     <Label htmlFor={toggleId}>{toggleLabel}</Label>
                 </div>
+
+                {isEnabled && (
+                     <div className="space-y-2">
+                        <Label htmlFor={`${toggleId}-time`}>Time of Publishing</Label>
+                        <Select value={publishTime} onValueChange={setPublishTime}>
+                            <SelectTrigger id={`${toggleId}-time`} className="w-[180px]">
+                                <SelectValue placeholder="Select a time" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="09:00">9:00 AM</SelectItem>
+                                <SelectItem value="10:00">10:00 AM</SelectItem>
+                                <SelectItem value="12:00">12:00 PM (Noon)</SelectItem>
+                                <SelectItem value="14:00">2:00 PM</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
 
                 <div className="space-y-2">
                     <Label htmlFor={templateId}>{templateLabel}</Label>
