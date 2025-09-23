@@ -16,7 +16,7 @@ import {
   SidebarInput,
   SidebarGroup,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, Briefcase, Award, Calendar, User, FileText, Search, Bell, Newspaper } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, Award, Calendar, User, FileText, Search, Bell, Newspaper, Settings } from "lucide-react";
 import Logo from "@/components/logo";
 import UserNav from "@/components/user-nav";
 import { Input } from "@/components/ui/input";
@@ -36,13 +36,17 @@ export default function AdminLayout({
     { href: "/admin/members", label: "Members", icon: Users },
     { href: "/admin/award", label: "Award", icon: Award },
     { href: "/admin/leave", label: "Leave", icon: Calendar },
-    { href: "/admin/profile", label: "Profile", icon: User },
     { href: "/admin/notice", label: "Notice", icon: FileText },
+    { href: "/admin/settings", label: "Settings", icon: Settings },
+    { href: "/admin/profile", label: "Profile", icon: User },
   ];
 
   const getIsActive = (href: string) => {
      if (href === '/admin/members') {
         return pathname.startsWith("/admin/members") || pathname === "/admin/add-staff";
+     }
+     if (href === '/admin/settings') {
+        return pathname.startsWith('/admin/settings');
      }
      return pathname === href;
   }
