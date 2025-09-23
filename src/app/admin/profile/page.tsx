@@ -78,7 +78,7 @@ export default function AdminProfilePage() {
       if (user.id === 'admin-user-001') {
          const adminAsMember: Member = {
            id: user.id,
-           name: user.name,
+           name: user.name || 'People and Culture office',
            email: user.email,
            status: 'active',
            experience: user.experience || [],

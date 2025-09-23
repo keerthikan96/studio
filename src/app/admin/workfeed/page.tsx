@@ -11,7 +11,7 @@ const mockPosts = [
     id: 'post1',
     author: {
         id: 'admin-user-001',
-        name: 'Admin',
+        name: 'People and Culture office',
         email: 'admin@example.com',
         role: 'HR',
         profile_picture_url: 'https://i.pravatar.cc/40?u=admin',
@@ -28,7 +28,7 @@ const mockPosts = [
     id: 'post3',
     author: {
         id: 'admin-user-001',
-        name: 'Admin',
+        name: 'People and Culture office',
         email: 'admin@example.com',
         role: 'HR',
         profile_picture_url: 'https://i.pravatar.cc/40?u=admin-bot',

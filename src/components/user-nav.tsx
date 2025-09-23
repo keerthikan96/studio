@@ -36,7 +36,7 @@ export default function UserNav() {
     if (storedUserStr) {
         const storedUser = JSON.parse(storedUserStr);
         if (storedUser.id === 'admin-user-001') {
-             setUser({...storedUser, name: storedUser.name || 'Admin', role: 'HR'});
+             setUser({...storedUser, name: storedUser.name || 'People and Culture office', role: 'HR'});
         } else {
             // Fetch the latest user data to get the profile picture URL
             getMemberByIdAction(storedUser.id).then(member => {
