@@ -1,23 +1,21 @@
 
 'use client';
 
-import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Switch } from "./ui/switch";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
-import { Button } from "./ui/button";
 import BirthdayCardPreview from './birthday-card-preview';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { AutomatedPostConfig } from "@/app/admin/workfeed/settings/page";
 
 type AutomatedPostSettingProps = {
     title: string;
     description: string;
     toggleId: string;
     toggleLabel: string;
-    templateId: string;
-    templateLabel: string;
-    defaultTemplate: string;
+    config: AutomatedPostConfig;
+    onConfigChange: (newConfig: AutomatedPostConfig) => void;
     previewName: string;
     previewAvatarUrl: string;
     previewYears?: number;
@@ -29,23 +27,23 @@ export default function AutomatedPostSetting({
     description,
     toggleId,
     toggleLabel,
-    templateId,
-    templateLabel,
-    defaultTemplate,
+    config,
+    onConfigChange,
     previewName,
     previewAvatarUrl,
     previewYears,
     previewType,
 }: AutomatedPostSettingProps) {
-    const [template, setTemplate] = useState(defaultTemplate);
-    const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
-    const [isEnabled, setIsEnabled] = useState(false);
-    const [publishTime, setPublishTime] = useState('09:00');
+    const { isEnabled, publishTime, template, backgroundImage } = config;
+
+    const handleFieldChange = (field: keyof AutomatedPostConfig, value: any) => {
+        onConfigChange({ ...config, [field]: value });
+    };
 
     const handleImageUpload = (file: File) => {
         const reader = new FileReader();
         reader.onload = (e) => {
-            setBackgroundImage(e.target?.result as string);
+            handleFieldChange('backgroundImage', e.target?.result as string);
         };
         reader.readAsDataURL(file);
     };
@@ -58,14 +56,14 @@ export default function AutomatedPostSetting({
             </CardHeader>
             <CardContent className="space-y-6">
                 <div className="flex items-center space-x-2">
-                    <Switch id={toggleId} checked={isEnabled} onCheckedChange={setIsEnabled} />
+                    <Switch id={toggleId} checked={isEnabled} onCheckedChange={(checked) => handleFieldChange('isEnabled', checked)} />
                     <Label htmlFor={toggleId}>{toggleLabel}</Label>
                 </div>
 
                 {isEnabled && (
                      <div className="space-y-2">
                         <Label htmlFor={`${toggleId}-time`}>Time of Publishing</Label>
-                        <Select value={publishTime} onValueChange={setPublishTime}>
+                        <Select value={publishTime} onValueChange={(value) => handleFieldChange('publishTime', value)}>
                             <SelectTrigger id={`${toggleId}-time`} className="w-[180px]">
                                 <SelectValue placeholder="Select a time" />
                             </SelectTrigger>
@@ -80,11 +78,11 @@ export default function AutomatedPostSetting({
                 )}
 
                 <div className="space-y-2">
-                    <Label htmlFor={templateId}>{templateLabel}</Label>
+                    <Label htmlFor={`${toggleId}-template`}>Message Template</Label>
                     <Textarea
-                        id={templateId}
+                        id={`${toggleId}-template`}
                         value={template}
-                        onChange={(e) => setTemplate(e.target.value)}
+                        onChange={(e) => handleFieldChange('template', e.target.value)}
                         rows={4}
                         placeholder="Use {name} for the member's name and {years} for anniversary years."
                     />
@@ -103,11 +101,6 @@ export default function AutomatedPostSetting({
                         onImageUpload={handleImageUpload}
                         backgroundImageUrl={backgroundImage}
                     />
-                </div>
-
-
-                <div className="flex justify-end">
-                    <Button>Save Settings</Button>
                 </div>
             </CardContent>
         </Card>
