@@ -17,7 +17,6 @@ import {
   SidebarGroup,
   SidebarMenuSub,
   SidebarMenuSubButton,
-  SidebarMenuSubContent,
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, Users, Briefcase, Award, Calendar, User, FileText, Search, Bell, Newspaper, Settings, ChevronDown } from "lucide-react";
 import Logo from "@/components/logo";
@@ -107,11 +106,11 @@ export default function AdminLayout({
                         <SidebarMenuSub>
                           {item.subItems.map(subItem => (
                              <SidebarMenuItem key={subItem.href}>
-                                <Link href={subItem.href}>
-                                  <SidebarMenuSubButton isActive={pathname === subItem.href}>
+                                <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
+                                  <Link href={subItem.href}>
                                     {subItem.label}
-                                  </SidebarMenuSubButton>
-                                </Link>
+                                  </Link>
+                                </SidebarMenuSubButton>
                               </SidebarMenuItem>
                           ))}
                         </SidebarMenuSub>
