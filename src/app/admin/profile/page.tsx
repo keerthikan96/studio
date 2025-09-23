@@ -387,9 +387,7 @@ export default function AdminProfilePage() {
                           </FormItem>
                         )}
                       />
-                      <Button type="button" variant="destructive" size="icon" onClick={() => removeExp(index)} className="absolute top-2 right-2 h-7 w-7">
-                        <Trash className="h-4 w-4" />
-                      </Button>
+                      
                   </div>
                 ))}
                 <Button
@@ -449,9 +447,7 @@ export default function AdminProfilePage() {
                         )}
                       />
                     </div>
-                      <Button type="button" variant="destructive" size="icon" onClick={() => removeEdu(index)} className="absolute top-2 right-2 h-7 w-7">
-                        <Trash className="h-4 w-4" />
-                      </Button>
+                      
                   </div>
                 ))}
                 <Button
@@ -481,3 +477,5 @@ export default function AdminProfilePage() {
     </Card>
   );
 }
+
+    

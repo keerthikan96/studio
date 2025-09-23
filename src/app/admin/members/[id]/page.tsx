@@ -386,7 +386,7 @@ const JobInfoTab = ({ form }: { form: any }) => {
                             <FormField control={form.control} name={`experience.${index}.years`} render={({ field }) => (<FormItem><FormLabel>Years</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                         </div>
                         <FormField control={form.control} name={`experience.${index}.keyResponsibilities`} render={({ field }) => (<FormItem><FormLabel>Responsibilities</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
-                        <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="absolute top-2 right-2 h-7 w-7"><Trash className="h-4 w-4" /></Button>
+                        
                     </div>
                 ))}
                 <Button type="button" variant="outline" onClick={() => append({ companyName: '', role: '', years: '', keyResponsibilities: '' })}>
@@ -417,7 +417,7 @@ const EducationTab = ({ form }: { form: any }) => {
                             <FormField control={form.control} name={`education.${index}.degree`} render={({ field }) => (<FormItem><FormLabel>Degree</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                         </div>
                         <FormField control={form.control} name={`education.${index}.years`} render={({ field }) => (<FormItem><FormLabel>Years</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                        <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} className="absolute top-2 right-2 h-7 w-7"><Trash className="h-4 w-4" /></Button>
+                        
                     </div>
                 ))}
                 <Button type="button" variant="outline" onClick={() => append({ institution: '', degree: '', years: '' })}>
@@ -733,5 +733,7 @@ export default function MemberProfilePage() {
     </div>
   );
 }
+
+    
 
     
