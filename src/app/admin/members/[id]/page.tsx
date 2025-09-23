@@ -730,19 +730,19 @@ export default function MemberProfilePage() {
     const isEditing = !!editModes[tab];
 
     const EditWrapper = ({ children }: { children: React.ReactNode }) => (
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="flex justify-end items-center gap-2">
-                    <Button onClick={() => toggleEditMode(tab)} variant="outline" disabled={isPending}>
-                        <Ban className="mr-2 h-4 w-4" /> Cancel
-                    </Button>
-                    <Button type="submit" disabled={isPending || !form.formState.isDirty}>
-                        {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Save
-                    </Button>
-                </div>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="flex justify-end items-center gap-2">
+                <Button onClick={() => toggleEditMode(tab)} variant="outline" disabled={isPending}>
+                    <Ban className="mr-2 h-4 w-4" /> Cancel
+                </Button>
+                <Button type="submit" disabled={isPending || !form.formState.isDirty}>
+                    {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Save
+                </Button>
+            </div>
+            <Form {...form}>
                 {children}
-            </form>
-        </Form>
+            </Form>
+        </form>
     );
 
      const ViewWrapper = ({ children }: { children: React.ReactNode }) => (
@@ -850,5 +850,3 @@ export default function MemberProfilePage() {
     </div>
   );
 }
-
-    
