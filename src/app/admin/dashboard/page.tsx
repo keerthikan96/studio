@@ -2,7 +2,6 @@
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -13,8 +12,6 @@ import {
   UserMinus,
   MoreHorizontal,
   Star,
-  ArrowRight,
-  ArrowLeft,
   ChevronDown,
 } from "lucide-react";
 import { DailyAttendanceChart } from "@/components/daily-attendance-chart";
@@ -25,6 +22,7 @@ import { EmployeeListDashboard } from "@/components/employee-list-dashboard";
 import { EmployeeAwardList } from "@/components/employee-award-list";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DashboardStatCard } from "@/components/dashboard-stat-card";
 
 
 const notices = [
@@ -46,6 +44,12 @@ const notices = [
     date: "07/09/2025",
     isStarred: true,
   },
+];
+
+const leaveData = [
+    { id: 'l1', name: 'John Doe', avatarUrl: 'https://i.pravatar.cc/40?u=m_1', reason: 'Sick Leave' },
+    { id: 'l2', name: 'Jane Smith', avatarUrl: 'https://i.pravatar.cc/40?u=m_2', reason: 'Personal' },
+    { id: 'l3', name: 'Peter Jones', avatarUrl: 'https://i.pravatar.cc/40?u=m_3', reason: 'Vacation' },
 ];
 
 export default function AdminDashboard() {
@@ -92,25 +96,17 @@ export default function AdminDashboard() {
             </div>
           </CardContent>
         </Card>
-         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today leave</CardTitle>
-             <Button variant="ghost" size="icon" className="h-6 w-6">
-                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
-               <div className="p-3 rounded-lg bg-orange-100">
-                <UserMinus className="h-6 w-6 text-orange-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold">13</div>
-                <p className="text-xs text-red-500">-1.9%</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <DashboardStatCard
+            title="Today leave"
+            value="13"
+            change="-1.9%"
+            changeType="negative"
+            icon={<UserMinus className="h-6 w-6 text-orange-600" />}
+            iconBgColor="bg-orange-100"
+            detailsTitle="Employees on Leave Today"
+            detailsData={leaveData}
+            detailsCta={{ href: '/admin/leave', text: 'Go to Leave Management' }}
+        />
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Today absents</CardTitle>
