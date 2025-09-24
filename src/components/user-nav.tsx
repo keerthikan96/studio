@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CreditCard, LogOut, User } from 'lucide-react';
+import { CreditCard, LogOut, User, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getMemberByIdAction } from '@/app/actions/staff';
 
@@ -136,6 +136,14 @@ export default function UserNav() {
             <CreditCard className="mr-2 h-4 w-4" />
             <span>Billing</span>
           </DropdownMenuItem>
+          {user.role === 'HR' && (
+            <Link href="/admin/settings">
+                <DropdownMenuItem>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                </DropdownMenuItem>
+            </Link>
+          )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>

@@ -55,6 +55,7 @@ export default function AdminLayout({
     { href: "/admin/leave", label: "Leave", icon: CalendarIcon },
     { href: "/admin/notice", label: "Notice", icon: FileText },
     { href: "/admin/profile", label: "Profile", icon: User },
+    { href: "/admin/settings", label: "Settings", icon: Settings },
   ];
 
   const getIsActive = (href: string) => {
