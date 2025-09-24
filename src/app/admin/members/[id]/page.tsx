@@ -182,7 +182,7 @@ const GeneralInfoTab = ({ form, isPending }: { form: any, isPending: boolean }) 
                                         </FormControl>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus />
+                                        <Calendar captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear()} mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus />
                                     </PopoverContent>
                                 </Popover>
                                 <FormMessage />
@@ -205,7 +205,7 @@ const GeneralInfoTab = ({ form, isPending }: { form: any, isPending: boolean }) 
                                         </FormControl>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                        <Calendar captionLayout="dropdown-buttons" fromYear={1990} toYear={new Date().getFullYear() + 5} mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
                                     </PopoverContent>
                                 </Popover>
                                 <FormMessage />
@@ -769,5 +769,3 @@ export default function MemberProfilePage() {
     </div>
   );
 }
-
-    

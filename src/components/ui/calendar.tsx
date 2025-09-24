@@ -27,7 +27,7 @@ function Calendar({
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4 w-full",
         caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-sm font-medium hidden",
+        caption_label: cn("text-sm font-medium", props.captionLayout === 'dropdown-buttons' && 'hidden'),
         caption_dropdowns: "flex gap-2 w-full",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
@@ -59,12 +59,8 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        IconLeft: ({ className, ...props }) => (
-          <ChevronLeft className={cn("h-4 w-4", className)} {...props} />
-        ),
-        IconRight: ({ className, ...props }) => (
-          <ChevronRight className={cn("h-4 w-4", className)} {...props} />
-        ),
+        IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
+        IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
         Dropdown: ({ value, onChange, children, ...props }: DropdownProps) => {
             const options = React.Children.toArray(
               children
@@ -83,7 +79,7 @@ function Calendar({
                   handleChange(value)
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="pr-1.5 focus:ring-0">
                   <SelectValue>{selected?.props?.children}</SelectValue>
                 </SelectTrigger>
                 <SelectContent position="popper">
