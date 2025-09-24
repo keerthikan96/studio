@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition, useEffect, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -23,6 +23,7 @@ import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
 import { Slider } from '../ui/slider';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from '../ui/alert-dialog';
+import { DateRange } from 'react-day-picker';
 
 
 const evaluationSchema = z.object({
@@ -54,6 +55,7 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
   const [userRole, setUserRole] = useState<'staff' | 'HR' | null>(null);
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   useEffect(() => {
     setIsClient(true);
@@ -85,6 +87,26 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
   };
 
   useEffect(fetchEvaluations, [memberId]);
+
+  const filteredEvaluations = useMemo(() => {
+    if (!dateRange || (!dateRange.from && !dateRange.to)) {
+      return evaluations;
+    }
+    return evaluations.filter(evaluation => {
+      const evaluationDate = new Date(evaluation.evaluation_date);
+      if (dateRange.from && evaluationDate < dateRange.from) {
+        return false;
+      }
+      if (dateRange.to) {
+        const toDate = new Date(dateRange.to);
+        toDate.setHours(23, 59, 59, 999);
+        if (evaluationDate > toDate) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [evaluations, dateRange]);
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
@@ -165,76 +187,115 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
           <CardTitle>Self-Performance Evaluation</CardTitle>
           <CardDescription>Submit and view your self-assessments.</CardDescription>
         </div>
-        {isClient && userRole !== 'HR' && (
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-                <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Evaluation</Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                <DialogTitle>Add Self-Evaluation</DialogTitle>
-                <DialogDescription>Reflect on your performance. Click save when you're done.</DialogDescription>
-                </DialogHeader>
-                <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField control={form.control} name="evaluation_date" render={({ field }) => (
-                    <FormItem className="flex flex-col"><FormLabel>Evaluation Date</FormLabel>
-                        <Popover><PopoverTrigger asChild>
+        <div className="flex items-center gap-2">
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button
+                        id="date"
+                        variant={"outline"}
+                        className={cn(
+                        "w-[300px] justify-start text-left font-normal",
+                        !dateRange && "text-muted-foreground"
+                        )}
+                    >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateRange?.from ? (
+                        dateRange.to ? (
+                            <>
+                            {format(dateRange.from, "LLL dd, y")} -{" "}
+                            {format(dateRange.to, "LLL dd, y")}
+                            </>
+                        ) : (
+                            format(dateRange.from, "LLL dd, y")
+                        )
+                        ) : (
+                        <span>Pick a date range</span>
+                        )}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                        initialFocus
+                        mode="range"
+                        defaultMonth={dateRange?.from}
+                        selected={dateRange}
+                        onSelect={setDateRange}
+                        numberOfMonths={2}
+                    />
+                </PopoverContent>
+            </Popover>
+
+            {isClient && userRole !== 'HR' && (
+                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                    <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Evaluation</Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[600px]">
+                    <DialogHeader>
+                    <DialogTitle>Add Self-Evaluation</DialogTitle>
+                    <DialogDescription>Reflect on your performance. Click save when you're done.</DialogDescription>
+                    </DialogHeader>
+                    <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <FormField control={form.control} name="evaluation_date" render={({ field }) => (
+                        <FormItem className="flex flex-col"><FormLabel>Evaluation Date</FormLabel>
+                            <Popover><PopoverTrigger asChild>
+                                <FormControl>
+                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                            </Popover><FormMessage />
+                        </FormItem>
+                        )} />
+
+                        <FormField control={form.control} name="self_rating" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Self-Rating: <span className='font-bold'>{ratingValue}%</span></FormLabel>
+                            <FormControl><Slider defaultValue={[50]} max={100} step={1} onValueChange={(val) => field.onChange(val[0])} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )} />
+
+                        <FormField control={form.control} name="comments" render={({ field }) => (
+                        <FormItem><FormLabel>Reflections/Comments</FormLabel><FormControl><Textarea {...field} rows={5} placeholder="Your thoughts on your performance, achievements, and areas for improvement..." /></FormControl><FormMessage /></FormItem>
+                        )} />
+
+                        <FormItem>
+                            <FormLabel>Tags</FormLabel>
                             <FormControl>
-                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
+                                <div>
+                                <Input placeholder="Type a tag and press Enter" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={handleTagKeyDown} />
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    {tagFields.map((field, index) => (
+                                    <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
+                                        {form.getValues('tags')?.[index]}
+                                        <button type="button" onClick={() => removeTag(index)}><XIcon className="h-3 w-3" /></button>
+                                    </Badge>
+                                    ))}
+                                </div>
+                                </div>
                             </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
-                        </Popover><FormMessage />
-                    </FormItem>
-                    )} />
+                            <FormMessage />
+                        </FormItem>
 
-                    <FormField control={form.control} name="self_rating" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Self-Rating: <span className='font-bold'>{ratingValue}%</span></FormLabel>
-                        <FormControl><Slider defaultValue={[50]} max={100} step={1} onValueChange={(val) => field.onChange(val[0])} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )} />
-
-                    <FormField control={form.control} name="comments" render={({ field }) => (
-                    <FormItem><FormLabel>Reflections/Comments</FormLabel><FormControl><Textarea {...field} rows={5} placeholder="Your thoughts on your performance, achievements, and areas for improvement..." /></FormControl><FormMessage /></FormItem>
-                    )} />
-
-                    <FormItem>
-                        <FormLabel>Tags</FormLabel>
-                        <FormControl>
-                            <div>
-                            <Input placeholder="Type a tag and press Enter" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={handleTagKeyDown} />
-                            <div className="flex flex-wrap gap-2 mt-2">
-                                {tagFields.map((field, index) => (
-                                <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
-                                    {form.getValues('tags')?.[index]}
-                                    <button type="button" onClick={() => removeTag(index)}><XIcon className="h-3 w-3" /></button>
-                                </Badge>
-                                ))}
-                            </div>
-                            </div>
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-
-                    <FormItem><FormLabel>Attachments</FormLabel><FormControl><Input type="file" multiple {...register("attachments")} /></FormControl><FormMessage /></FormItem>
-                    
-                    <DialogFooter>
-                        <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                        <Button type="submit" disabled={isPending}>
-                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Submit Evaluation
-                        </Button>
-                    </DialogFooter>
-                </form>
-                </Form>
-            </DialogContent>
-            </Dialog>
-        )}
+                        <FormItem><FormLabel>Attachments</FormLabel><FormControl><Input type="file" multiple {...register("attachments")} /></FormControl><FormMessage /></FormItem>
+                        
+                        <DialogFooter>
+                            <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                            <Button type="submit" disabled={isPending}>
+                                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Submit Evaluation
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                    </Form>
+                </DialogContent>
+                </Dialog>
+            )}
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
@@ -247,10 +308,10 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isPending && evaluations.length === 0 ? (
+            {isPending && filteredEvaluations.length === 0 ? (
                 <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" /></TableCell></TableRow>
-            ) : evaluations.length > 0 ? (
-              evaluations.map((item) => (
+            ) : filteredEvaluations.length > 0 ? (
+              filteredEvaluations.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">{format(new Date(item.evaluation_date), 'PPP')}</TableCell>
                   <TableCell>{item.self_rating !== null ? `${item.self_rating}%` : 'N/A'}</TableCell>
@@ -334,5 +395,3 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
     </Card>
   );
 }
-
-    
