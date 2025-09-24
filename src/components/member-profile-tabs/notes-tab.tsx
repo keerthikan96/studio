@@ -46,6 +46,7 @@ export function NotesTab({ memberId }: NotesTabProps) {
       note_name: '',
       description: '',
       is_confidential: false,
+      attachments: undefined,
     },
   });
 
@@ -99,6 +100,8 @@ export function NotesTab({ memberId }: NotesTabProps) {
     });
   };
 
+  const fileRef = form.register("attachments");
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -144,15 +147,14 @@ export function NotesTab({ memberId }: NotesTabProps) {
                 <FormField
                   control={form.control}
                   name="attachments"
-                  render={({ field: { onChange, ...fieldProps} }) => (
+                  render={({ field }) => (
                     <FormItem>
                       <FormLabel>Attachments</FormLabel>
                       <FormControl>
                         <Input 
                           type="file"
                           multiple
-                          onChange={(e) => onChange(e.target.files)}
-                          {...fieldProps}
+                          {...fileRef}
                         />
                       </FormControl>
                       <FormMessage />
