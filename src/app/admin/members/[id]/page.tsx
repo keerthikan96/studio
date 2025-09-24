@@ -444,6 +444,33 @@ const PlaceholderContent = ({ title }: { title: string }) => (
     </Card>
 );
 
+// Helper to safely parse date strings and avoid timezone issues
+const parseDateString = (dateString: string | Date | null | undefined): Date | null => {
+    if (!dateString) return null;
+    if (dateString instanceof Date) return dateString;
+    
+    // The `new Date(string)` constructor can be unreliable due to timezone differences.
+    // Parsing the string manually avoids this.
+    const parts = dateString.split(/[-T]/);
+    if (parts.length >= 3) {
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+        const day = parseInt(parts[2], 10);
+        
+        // Check for valid date parts
+        if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+            const date = new Date(year, month, day);
+            // Verify that the created date is valid and matches the input,
+            // as new Date() can create invalid dates from bad input.
+            if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
+                return date;
+            }
+        }
+    }
+    return null; // Return null if parsing fails
+};
+
+
 export default function MemberProfilePage() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
@@ -481,8 +508,8 @@ export default function MemberProfilePage() {
   const resetFormValues = useCallback((memberData: Member) => {
     reset({
         ...memberData,
-        date_of_birth: memberData.date_of_birth ? new Date(memberData.date_of_birth) : null,
-        start_date: memberData.start_date ? new Date(memberData.start_date) : null,
+        date_of_birth: parseDateString(memberData.date_of_birth),
+        start_date: parseDateString(memberData.start_date),
         experience: memberData.experience || [],
         education: memberData.education || [],
         skills: memberData.skills || [],
@@ -496,7 +523,7 @@ export default function MemberProfilePage() {
                 setMember(currentMember);
                 resetFormValues(currentMember);
             } else {
-                toast({ title: "Member not found", variant: "destructive" });
+                toast({ title: "Member not found", variant="destructive" });
                 router.push('/admin/members');
             }
         });
@@ -736,3 +763,5 @@ export default function MemberProfilePage() {
     </div>
   );
 }
+
+    
