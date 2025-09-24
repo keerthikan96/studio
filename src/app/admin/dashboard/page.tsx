@@ -46,6 +46,22 @@ const notices = [
   },
 ];
 
+const totalEmployeeData = [
+    { id: 'e1', name: 'Robert Fox', avatarUrl: 'https://i.pravatar.cc/40?u=e1', reason: 'Developer' },
+    { id: 'e2', name: 'Wade Warren', avatarUrl: 'https://i.pravatar.cc/40?u=e2', reason: 'Designer' },
+    { id: 'e3', name: 'Albert Flores', avatarUrl: 'https://i.pravatar.cc/40?u=e3', reason: 'Marketing' },
+];
+
+const presentEmployeeData = [
+    { id: 'p1', name: 'John Doe', avatarUrl: 'https://i.pravatar.cc/40?u=p1', reason: 'Checked in at 9:01 AM' },
+    { id: 'p2', name: 'Jane Smith', avatarUrl: 'https://i.pravatar.cc/40?u=p2', reason: 'Checked in at 8:58 AM' },
+];
+
+const absentEmployeeData = [
+    { id: 'a1', name: 'Peter Jones', avatarUrl: 'https://i.pravatar.cc/40?u=a1', reason: 'No show' },
+    { id: 'a2', name: 'Emily Carter', avatarUrl: 'https://i.pravatar.cc/40?u=a2', reason: 'No show' },
+];
+
 const leaveData = [
     { id: 'l1', name: 'John Doe', avatarUrl: 'https://i.pravatar.cc/40?u=m_1', reason: 'Sick Leave' },
     { id: 'l2', name: 'Jane Smith', avatarUrl: 'https://i.pravatar.cc/40?u=m_2', reason: 'Personal' },
@@ -56,46 +72,28 @@ export default function AdminDashboard() {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total employee</CardTitle>
-            <Button variant="ghost" size="icon" className="h-6 w-6">
-                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-blue-100">
-                <Users className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold">127</div>
-                <p className="text-xs text-green-500">+6.4%</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Today presents
-            </CardTitle>
-             <Button variant="ghost" size="icon" className="h-6 w-6">
-                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
-               <div className="p-3 rounded-lg bg-purple-100">
-                <UserCheck className="h-6 w-6 text-purple-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold">119</div>
-                <p className="text-xs text-green-500">+8.9%</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <DashboardStatCard
+            title="Total employee"
+            value="127"
+            change="+6.4%"
+            changeType="positive"
+            icon={<Users className="h-6 w-6 text-blue-600" />}
+            iconBgColor="bg-blue-100"
+            detailsTitle="All Employees"
+            detailsData={totalEmployeeData}
+            detailsCta={{ href: '/admin/members', text: 'Go to Member List' }}
+        />
+        <DashboardStatCard
+            title="Today presents"
+            value="119"
+            change="+8.9%"
+            changeType="positive"
+            icon={<UserCheck className="h-6 w-6 text-purple-600" />}
+            iconBgColor="bg-purple-100"
+            detailsTitle="Present Employees"
+            detailsData={presentEmployeeData}
+            detailsCta={{ href: '/admin/attendance', text: 'Go to Attendance' }}
+        />
         <DashboardStatCard
             title="Today leave"
             value="13"
@@ -107,25 +105,17 @@ export default function AdminDashboard() {
             detailsData={leaveData}
             detailsCta={{ href: '/admin/leave', text: 'Go to Leave Management' }}
         />
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today absents</CardTitle>
-             <Button variant="ghost" size="icon" className="h-6 w-6">
-                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-            </Button>
-          </CardHeader>
-          <CardContent>
-             <div className="flex items-center gap-4">
-               <div className="p-3 rounded-lg bg-cyan-100">
-                <UserX className="h-6 w-6 text-cyan-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold">8</div>
-                <p className="text-xs text-green-500">+7.3%</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <DashboardStatCard
+            title="Today absents"
+            value="8"
+            change="+7.3%"
+            changeType="positive"
+            icon={<UserX className="h-6 w-6 text-cyan-600" />}
+            iconBgColor="bg-cyan-100"
+            detailsTitle="Absent Employees"
+            detailsData={absentEmployeeData}
+            detailsCta={{ href: '/admin/attendance', text: 'Go to Attendance' }}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
