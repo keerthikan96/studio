@@ -119,62 +119,37 @@ export default function AdminDashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-         <div className="lg:col-span-2">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                    <CardHeader>
-                        <div className="flex justify-between items-center">
-                            <CardTitle>Daily attendance statistic</CardTitle>
-                            <Select defaultValue="department">
-                                <SelectTrigger className="w-[180px]">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="department">Department</SelectItem>
-                                    <SelectItem value="engineering">Engineering</SelectItem>
-                                    <SelectItem value="design">Design</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <DailyAttendanceChart />
-                    </CardContent>
-                </Card>
-                <DashboardEvents />
-            </div>
-         </div>
-         <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Notice</CardTitle>
-                 <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {notices.map((notice, index) => (
-                <div key={index} className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-medium text-sm">{notice.title}</p>
-                    <p className="text-xs text-muted-foreground">{notice.description}</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-xs text-muted-foreground">{notice.date}</p>
-                    {notice.isStarred && <Star className="h-4 w-4 text-yellow-400 fill-yellow-400 inline-block" />}
-                  </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="grid gap-6 lg:col-span-2 md:grid-cols-2">
+            <DashboardEvents />
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>Notice</CardTitle>
+                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                        <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                {notices.map((notice, index) => (
+                    <div key={index} className="flex items-start justify-between gap-4">
+                    <div>
+                        <p className="font-medium text-sm">{notice.title}</p>
+                        <p className="text-xs text-muted-foreground">{notice.description}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                        <p className="text-xs text-muted-foreground">{notice.date}</p>
+                        {notice.isStarred && <Star className="h-4 w-4 text-yellow-400 fill-yellow-400 inline-block" />}
+                    </div>
+                    </div>
+                ))}
+                <div className="flex justify-between items-center pt-2">
+                    <Button variant="outline">Previous</Button>
+                    <Button>See more</Button>
                 </div>
-              ))}
-               <div className="flex justify-between items-center pt-2">
-                <Button variant="outline">Previous</Button>
-                <Button>See more</Button>
-              </div>
-            </CardContent>
-        </Card>
-      </div>
-
-       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-         <Card>
+                </CardContent>
+            </Card>
+        </div>
+        <Card>
             <CardHeader>
                 <CardTitle>Loan payment received</CardTitle>
             </CardHeader>
@@ -182,7 +157,29 @@ export default function AdminDashboard() {
                 <LoanPaymentChart />
             </CardContent>
         </Card>
-        <div className="lg:col-span-2 grid grid-cols-1 gap-6">
+    </div>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2">
+            <CardHeader>
+                <div className="flex justify-between items-center">
+                    <CardTitle>Daily attendance statistic</CardTitle>
+                    <Select defaultValue="department">
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="department">Department</SelectItem>
+                            <SelectItem value="engineering">Engineering</SelectItem>
+                            <SelectItem value="design">Design</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <DailyAttendanceChart />
+            </CardContent>
+        </Card>
+        <div className="grid grid-cols-1 gap-6">
              <Card>
                 <CardHeader>
                     <div className="flex justify-between items-center">
