@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -697,7 +696,7 @@ export default function MemberProfilePage() {
     }
   }
 
-  const tabs = ["General Info", "Job", "Education", "Skills", "Leave", "Notes", "Confidential Notes", "Mentions", "Performance", "Permission", "Assets", "Documents", "Training", "To-Do", "Payslip", "Payroll", "Attendance", "Self-assesment"];
+  const tabs = ["General Info", "Job", "Education", "Skills", "Leave", "Notes", "Confidential Notes", "Performance", "Permission", "Assets", "Documents", "Training", "To-Do", "Payslip", "Payroll", "Attendance", "Self-assesment"];
 
   return (
     <div className='space-y-6'>
