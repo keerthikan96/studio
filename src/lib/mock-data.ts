@@ -21,6 +21,8 @@ export type Note = {
     description: string;
     is_confidential: boolean;
     attachments: { name: string, url: string }[];
+    tags?: string[];
+    pinned?: boolean;
     created_at: Date | string;
 };
 

@@ -12,6 +12,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const note_name = formData.get('note_name') as string;
     const description = formData.get('description') as string;
     const is_confidential = formData.get('is_confidential') === 'true';
+    const pinned = formData.get('pinned') === 'true';
+    const tags = formData.getAll('tags') as string[];
     const created_by_id = formData.get('created_by_id') as string;
     const created_by_name = formData.get('created_by_name') as string;
     const files = formData.getAll('attachments') as File[];
@@ -39,6 +41,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       description,
       is_confidential,
       attachments: uploadedAttachments,
+      tags,
+      pinned,
     };
 
     const result = await addNoteAction(noteData);

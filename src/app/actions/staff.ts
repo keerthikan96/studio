@@ -131,13 +131,13 @@ export async function updateMemberStatusAction(id: string, status: Member['statu
 }
 
 export async function addNoteAction(data: Omit<Note, 'id' | 'created_at'>): Promise<Note | { error: string }> {
-  const { member_id, created_by_id, created_by_name, note_name, description, is_confidential, attachments } = data;
+  const { member_id, created_by_id, created_by_name, note_name, description, is_confidential, attachments, tags, pinned } = data;
   try {
     const result = await db.query(
-      `INSERT INTO member_notes (member_id, created_by_id, created_by_name, note_name, description, is_confidential, attachments)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO member_notes (member_id, created_by_id, created_by_name, note_name, description, is_confidential, attachments, tags, pinned)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *;`,
-      [member_id, created_by_id, created_by_name, note_name, description, is_confidential, JSON.stringify(attachments)]
+      [member_id, created_by_id, created_by_name, note_name, description, is_confidential, JSON.stringify(attachments), tags, pinned]
     );
     return result.rows[0];
   } catch (error) {
@@ -148,7 +148,7 @@ export async function addNoteAction(data: Omit<Note, 'id' | 'created_at'>): Prom
 
 export async function getNotesAction(memberId: string): Promise<Note[]> {
   try {
-    const result = await db.query('SELECT * FROM member_notes WHERE member_id = $1 ORDER BY created_at DESC', [memberId]);
+    const result = await db.query('SELECT * FROM member_notes WHERE member_id = $1 ORDER BY pinned DESC, created_at DESC', [memberId]);
     return result.rows;
   } catch (error) {
     console.error(`Error fetching notes for member ${memberId}:`, error);

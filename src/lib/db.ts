@@ -89,6 +89,8 @@ export async function setupDatabase() {
                 description TEXT NOT NULL,
                 is_confidential BOOLEAN DEFAULT false,
                 attachments JSONB,
+                tags TEXT[],
+                pinned BOOLEAN DEFAULT false,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
@@ -111,7 +113,7 @@ export async function setupDatabase() {
         `);
         
         // Add new columns if they don't exist for backward compatibility
-        const columns = [
+        const member_columns = [
             { name: 'profile_picture_url', type: 'VARCHAR(2048)' },
             { name: 'cover_photo_url', type: 'VARCHAR(2048)' },
             { name: 'job_title', type: 'VARCHAR(255)' },
@@ -122,7 +124,7 @@ export async function setupDatabase() {
             { name: 'emergency_contact_phone', type: 'VARCHAR(50)' },
         ];
 
-        for (const col of columns) {
+        for (const col of member_columns) {
             const { rows } = await client.query(`
                 SELECT column_name
                 FROM information_schema.columns
@@ -130,6 +132,22 @@ export async function setupDatabase() {
             `, [col.name]);
             if (rows.length === 0) {
                 await client.query(`ALTER TABLE members ADD COLUMN ${col.name} ${col.type};`);
+            }
+        }
+
+        const note_columns = [
+            { name: 'tags', type: 'TEXT[]' },
+            { name: 'pinned', type: 'BOOLEAN DEFAULT false' },
+        ];
+
+        for (const col of note_columns) {
+             const { rows } = await client.query(`
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name='member_notes' AND column_name=$1;
+            `, [col.name]);
+            if (rows.length === 0) {
+                await client.query(`ALTER TABLE member_notes ADD COLUMN ${col.name} ${col.type};`);
             }
         }
         
