@@ -9,7 +9,7 @@ const currentYear = new Date().getFullYear();
 
 type DashboardCalendarProps = {
     selectedDate: Date;
-    onDateChange: (date: Date) => void;
+    onDateChange: (date: Date | undefined) => void;
 }
 
 export function DashboardCalendar({ selectedDate, onDateChange }: DashboardCalendarProps) {
@@ -44,7 +44,7 @@ export function DashboardCalendar({ selectedDate, onDateChange }: DashboardCalen
 
   const holidayStyle = { 
     backgroundColor: 'hsl(var(--accent) / 0.1)',
-    color: 'hsl(var(--accent-foreground))',
+    color: 'hsl(var(--accent))',
   };
 
   return (
@@ -52,18 +52,24 @@ export function DashboardCalendar({ selectedDate, onDateChange }: DashboardCalen
       <Calendar
         mode="single"
         selected={selectedDate}
-        onSelect={(newDate) => newDate && onDateChange(newDate)}
+        onSelect={onDateChange}
         month={month}
         onMonthChange={setMonth}
         className="w-full"
         modifiers={{ holidays }}
-        modifiersStyles={{ holidays: holidayStyle }}
+        modifiersStyles={{ 
+            holidays: holidayStyle,
+            selected: {
+                backgroundColor: 'hsl(var(--primary))',
+                color: 'hsl(var(--primary-foreground))'
+            }
+        }}
         captionLayout="dropdown-buttons"
         fromYear={1990}
         toYear={currentYear + 5}
       />
       <div className="flex items-center gap-2 text-sm mt-4 px-3">
-        <span className="w-4 h-4 rounded-full" style={{ backgroundColor: 'hsl(var(--accent) / 0.1)' }} />
+        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--accent) / 0.2)' }} />
         <span>Public Holiday</span>
       </div>
     </>
