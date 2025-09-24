@@ -28,7 +28,7 @@ const settingsModules = [
     ],
   },
     {
-    title: "User Management",
+    title: "Role Management",
     subItems: [
       { name: "Roles & Permissions", href: "/admin/settings/user-management/roles", isCritical: true },
     ],
