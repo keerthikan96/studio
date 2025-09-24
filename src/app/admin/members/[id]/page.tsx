@@ -85,25 +85,7 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 const GeneralInfoTab = ({ form, isPending }: { form: any, isPending: boolean }) => {
-  const [skillInput, setSkillInput] = useState('');
-
-  const { fields: skillFields, append: appendSkill, remove: removeSkill } = useFieldArray({
-    control: form.control,
-    name: "skills",
-  });
-
   const watchedCountry = form.watch('country');
-
-  const handleSkillKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      const newSkill = skillInput.trim();
-      if (newSkill && !form.getValues('skills')?.includes(newSkill)) {
-        appendSkill(newSkill);
-        setSkillInput('');
-      }
-    }
-  };
 
     return (
         <Card>
@@ -332,38 +314,67 @@ const GeneralInfoTab = ({ form, isPending }: { form: any, isPending: boolean }) 
                             )}
                         />
                     )}
-                    <div className="md:col-span-3">
-                        <FormItem>
-                        <FormLabel>Skills</FormLabel>
-                        <FormControl>
-                            <div>
-                            <Input 
-                                placeholder="Type a skill and press Enter"
-                                value={skillInput}
-                                onChange={(e) => setSkillInput(e.target.value)}
-                                onKeyDown={handleSkillKeyDown}
-                            />
-                            <div className="flex flex-wrap gap-2 mt-2">
-                                {skillFields.map((field, index) => (
-                                <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
-                                    {form.getValues('skills')?.[index]}
-                                    <button type="button" onClick={() => removeSkill(index)}>
-                                    <XIcon className="h-3 w-3" />
-                                    </button>
-                                </Badge>
-                                ))}
-                            </div>
-                            </div>
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    </div>
                     </div>
                 </div>
             </CardContent>
         </Card>
     );
 };
+
+const SkillsTab = ({ form }: { form: any }) => {
+  const [skillInput, setSkillInput] = useState('');
+
+  const { fields: skillFields, append: appendSkill, remove: removeSkill } = useFieldArray({
+    control: form.control,
+    name: "skills",
+  });
+
+  const handleSkillKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const newSkill = skillInput.trim();
+      if (newSkill && !form.getValues('skills')?.includes(newSkill)) {
+        appendSkill(newSkill);
+        setSkillInput('');
+      }
+    }
+  };
+
+    return (
+         <Card>
+            <CardHeader>
+                <CardTitle>Skills</CardTitle>
+                <CardDescription>Manage member's skills.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <FormItem>
+                    <FormLabel>Skills</FormLabel>
+                    <FormControl>
+                        <div>
+                        <Input 
+                            placeholder="Type a skill and press Enter"
+                            value={skillInput}
+                            onChange={(e) => setSkillInput(e.target.value)}
+                            onKeyDown={handleSkillKeyDown}
+                        />
+                        <div className="flex flex-wrap gap-2 mt-2">
+                            {skillFields.map((field, index) => (
+                            <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
+                                {form.getValues('skills')?.[index]}
+                                <button type="button" onClick={() => removeSkill(index)}>
+                                <XIcon className="h-3 w-3" />
+                                </button>
+                            </Badge>
+                            ))}
+                        </div>
+                        </div>
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+            </CardContent>
+        </Card>
+    )
+}
 
 const JobInfoTab = ({ form }: { form: any }) => {
     const { fields, append } = useFieldArray({
@@ -667,6 +678,8 @@ export default function MemberProfilePage() {
              return <FormWrapper><JobInfoTab form={form} /></FormWrapper>;
         case "Education":
              return <FormWrapper><EducationTab form={form} /></FormWrapper>;
+        case "Skills":
+             return <FormWrapper><SkillsTab form={form} /></FormWrapper>;
         case "Notes":
             return <NotesTab memberId={member.id} />;
         default:
@@ -674,7 +687,7 @@ export default function MemberProfilePage() {
     }
   }
 
-  const tabs = ["General Info", "Job", "Education", "Leave", "Notes", "Performance", "Permission", "Assets", "Documents", "Training", "To-Do", "Payslip", "Payroll", "Attendance"];
+  const tabs = ["General Info", "Job", "Education", "Skills", "Leave", "Notes", "Performance", "Permission", "Assets", "Documents", "Training", "To-Do", "Payslip", "Payroll", "Attendance", "Self-assesment"];
 
   return (
     <div className='space-y-6'>
