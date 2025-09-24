@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition, useEffect, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -24,6 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
 import { Slider } from '../ui/slider';
+import { DateRange } from 'react-day-picker';
 
 const recordSchema = z.object({
   review_date: z.date({ required_error: "A review date is required." }),
@@ -46,6 +47,7 @@ export function PerformanceTab({ memberId }: PerformanceTabProps) {
   const [isPending, startTransition] = useTransition();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [tagInput, setTagInput] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const { toast } = useToast();
 
   const form = useForm<RecordFormValues>({
@@ -78,6 +80,28 @@ export function PerformanceTab({ memberId }: PerformanceTabProps) {
   useEffect(() => {
     fetchRecords();
   }, [memberId]);
+
+  const filteredRecords = useMemo(() => {
+    if (!dateRange || (!dateRange.from && !dateRange.to)) {
+      return records;
+    }
+    return records.filter(record => {
+      const recordDate = new Date(record.review_date);
+      if (dateRange.from && recordDate < dateRange.from) {
+        return false;
+      }
+      // Set the 'to' date to the end of the day for inclusive filtering
+      if (dateRange.to) {
+        const toDate = new Date(dateRange.to);
+        toDate.setHours(23, 59, 59, 999);
+        if (recordDate > toDate) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [records, dateRange]);
+
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
@@ -137,86 +161,124 @@ export function PerformanceTab({ memberId }: PerformanceTabProps) {
           <CardTitle>Performance Records</CardTitle>
           <CardDescription>Log and view performance reviews for this member.</CardDescription>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Add Performance Record</DialogTitle>
-              <DialogDescription>Fill in the details for the performance review.</DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField control={form.control} name="review_date" render={({ field }) => (
-                  <FormItem className="flex flex-col"><FormLabel>Date of Review</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
+        <div className="flex items-center gap-2">
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button
+                        id="date"
+                        variant={"outline"}
+                        className={cn(
+                        "w-[300px] justify-start text-left font-normal",
+                        !dateRange && "text-muted-foreground"
+                        )}
+                    >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateRange?.from ? (
+                        dateRange.to ? (
+                            <>
+                            {format(dateRange.from, "LLL dd, y")} -{" "}
+                            {format(dateRange.to, "LLL dd, y")}
+                            </>
+                        ) : (
+                            format(dateRange.from, "LLL dd, y")
+                        )
+                        ) : (
+                        <span>Pick a date range</span>
+                        )}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                        initialFocus
+                        mode="range"
+                        defaultMonth={dateRange?.from}
+                        selected={dateRange}
+                        onSelect={setDateRange}
+                        numberOfMonths={2}
+                    />
+                </PopoverContent>
+            </Popover>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+                <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Record</Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                <DialogTitle>Add Performance Record</DialogTitle>
+                <DialogDescription>Fill in the details for the performance review.</DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField control={form.control} name="review_date" render={({ field }) => (
+                    <FormItem className="flex flex-col"><FormLabel>Date of Review</FormLabel>
+                        <Popover>
+                        <PopoverTrigger asChild>
+                            <FormControl>
+                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                            </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                        </Popover><FormMessage />
+                    </FormItem>
+                    )} />
+
+                    <FormField control={form.control} name="score" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Performance Score: <span className='font-bold'>{scoreValue}%</span></FormLabel>
+                        <FormControl><Slider defaultValue={[50]} max={100} step={1} onValueChange={(val) => field.onChange(val[0])} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )} />
+
+                    <FormField control={form.control} name="comments" render={({ field }) => (
+                    <FormItem><FormLabel>Comments</FormLabel><FormControl><Textarea {...field} rows={5} placeholder="Detailed feedback..." /></FormControl><FormMessage /></FormItem>
+                    )} />
+
+                    <FormItem>
+                        <FormLabel>Tags</FormLabel>
                         <FormControl>
-                          <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
+                            <div>
+                            <Input placeholder="Type a tag and press Enter" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={handleTagKeyDown} />
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                {tagFields.map((field, index) => (
+                                <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
+                                    {form.getValues('tags')?.[index]}
+                                    <button type="button" onClick={() => removeTag(index)}><XIcon className="h-3 w-3" /></button>
+                                </Badge>
+                                ))}
+                            </div>
+                            </div>
                         </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
-                    </Popover><FormMessage />
-                  </FormItem>
-                )} />
-
-                <FormField control={form.control} name="score" render={({ field }) => (
-                  <FormItem>
-                      <FormLabel>Performance Score: <span className='font-bold'>{scoreValue}%</span></FormLabel>
-                      <FormControl><Slider defaultValue={[50]} max={100} step={1} onValueChange={(val) => field.onChange(val[0])} /></FormControl>
-                      <FormMessage />
-                  </FormItem>
-                )} />
-
-                <FormField control={form.control} name="comments" render={({ field }) => (
-                  <FormItem><FormLabel>Comments</FormLabel><FormControl><Textarea {...field} rows={5} placeholder="Detailed feedback..." /></FormControl><FormMessage /></FormItem>
-                )} />
-
-                 <FormItem>
-                    <FormLabel>Tags</FormLabel>
-                     <FormControl>
-                        <div>
-                        <Input placeholder="Type a tag and press Enter" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={handleTagKeyDown} />
-                        <div className="flex flex-wrap gap-2 mt-2">
-                            {tagFields.map((field, index) => (
-                            <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
-                                {form.getValues('tags')?.[index]}
-                                <button type="button" onClick={() => removeTag(index)}><XIcon className="h-3 w-3" /></button>
-                            </Badge>
-                            ))}
-                        </div>
-                        </div>
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-
-                <FormItem><FormLabel>Attachments</FormLabel><FormControl><Input type="file" multiple {...register("attachments")} /></FormControl><FormMessage /></FormItem>
-
-                <div className="flex justify-between gap-4">
-                  <FormField control={form.control} name="is_confidential" render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm flex-1">
-                      <div className="space-y-0.5"><FormLabel>Confidential</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                        <FormMessage />
                     </FormItem>
-                  )} />
-                  <FormField control={form.control} name="pinned" render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm flex-1">
-                      <div className="space-y-0.5"><FormLabel>Pin to Top</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                    </FormItem>
-                  )} />
-                </div>
 
-                <DialogFooter>
-                  <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                  <Button type="submit" disabled={isPending}>{isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Record</Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+                    <FormItem><FormLabel>Attachments</FormLabel><FormControl><Input type="file" multiple {...register("attachments")} /></FormControl><FormMessage /></FormItem>
+
+                    <div className="flex justify-between gap-4">
+                    <FormField control={form.control} name="is_confidential" render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm flex-1">
+                        <div className="space-y-0.5"><FormLabel>Confidential</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="pinned" render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm flex-1">
+                        <div className="space-y-0.5"><FormLabel>Pin to Top</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                        </FormItem>
+                    )} />
+                    </div>
+
+                    <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                    <Button type="submit" disabled={isPending}>{isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Record</Button>
+                    </DialogFooter>
+                </form>
+                </Form>
+            </DialogContent>
+            </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
@@ -230,10 +292,10 @@ export function PerformanceTab({ memberId }: PerformanceTabProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isPending && records.length === 0 ? (
+            {isPending && filteredRecords.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" /></TableCell></TableRow>
-            ) : records.length > 0 ? (
-              records.map((record) => (
+            ) : filteredRecords.length > 0 ? (
+              filteredRecords.map((record) => (
                 <TableRow key={record.id}>
                   <TableCell className="font-medium">{format(new Date(record.review_date), 'PPP')}</TableCell>
                   <TableCell>{record.reviewer_name}</TableCell>
@@ -279,7 +341,7 @@ export function PerformanceTab({ memberId }: PerformanceTabProps) {
                 </TableRow>
               ))
             ) : (
-              <TableRow><TableCell colSpan={5} className="h-24 text-center">No performance records found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="h-24 text-center">No performance records found for the selected date range.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
@@ -287,3 +349,5 @@ export function PerformanceTab({ memberId }: PerformanceTabProps) {
     </Card>
   );
 }
+
+      
