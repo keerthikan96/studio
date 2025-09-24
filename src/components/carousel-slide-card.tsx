@@ -89,7 +89,7 @@ export function CarouselSlideCard({ slide, onUpdate, onDelete }: CarouselSlideCa
                     <Textarea id={`desc-${slide.id}`} value={slide.description} onChange={e => handleFieldChange('description', e.target.value)} rows={3} />
                 </div>
                 <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
-                    <Label htmlFor={`action-toggle-${slide.id}`}>Enable/Disable Action</Label>
+                    <Label htmlFor={`action-toggle-${slide.id}`}>Enable/Disable Action Button</Label>
                     <Switch id={`action-toggle-${slide.id}`} checked={slide.actionEnabled} onCheckedChange={value => handleFieldChange('actionEnabled', value)} />
                 </div>
                  {slide.actionEnabled && (
