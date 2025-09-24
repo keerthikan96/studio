@@ -1,4 +1,7 @@
 
+'use client';
+
+import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -7,13 +10,11 @@ import {
 } from "@/components/ui/card";
 import {
   Users,
-  UserCheck,
-  UserX,
   UserMinus,
+  Briefcase,
   MoreHorizontal,
   Star,
   ChevronDown,
-  Briefcase,
 } from "lucide-react";
 import { DailyAttendanceChart } from "@/components/daily-attendance-chart";
 import { DashboardCalendar } from "@/components/loan-payment-chart";
@@ -67,6 +68,8 @@ const leaveData = [
 ];
 
 export default function AdminDashboard() {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -106,44 +109,17 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="grid gap-6 lg:col-span-2 md:grid-cols-2">
-            <DashboardEvents />
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Notice</CardTitle>
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                        <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                {notices.map((notice, index) => (
-                    <div key={index} className="flex items-start justify-between gap-4">
-                    <div>
-                        <p className="font-medium text-sm">{notice.title}</p>
-                        <p className="text-xs text-muted-foreground">{notice.description}</p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                        <p className="text-xs text-muted-foreground">{notice.date}</p>
-                        {notice.isStarred && <Star className="h-4 w-4 text-yellow-400 fill-yellow-400 inline-block" />}
-                    </div>
-                    </div>
-                ))}
-                <div className="flex justify-between items-center pt-2">
-                    <Button variant="outline">Previous</Button>
-                    <Button>See more</Button>
-                </div>
-                </CardContent>
-            </Card>
-        </div>
-        <Card>
+        <Card className="lg:col-span-2">
             <CardHeader>
                 <CardTitle>Calendar</CardTitle>
             </CardHeader>
             <CardContent>
-                <DashboardCalendar />
+                <DashboardCalendar selectedDate={selectedDate} onDateChange={setSelectedDate} />
             </CardContent>
         </Card>
-    </div>
+        <DashboardEvents selectedDate={selectedDate} />
+      </div>
+
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2">
             <CardHeader>
@@ -165,7 +141,35 @@ export default function AdminDashboard() {
                 <DailyAttendanceChart />
             </CardContent>
         </Card>
-        <div className="grid grid-cols-1 gap-6">
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Notice</CardTitle>
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+            {notices.map((notice, index) => (
+                <div key={index} className="flex items-start justify-between gap-4">
+                <div>
+                    <p className="font-medium text-sm">{notice.title}</p>
+                    <p className="text-xs text-muted-foreground">{notice.description}</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                    <p className="text-xs text-muted-foreground">{notice.date}</p>
+                    {notice.isStarred && <Star className="h-4 w-4 text-yellow-400 fill-yellow-400 inline-block" />}
+                </div>
+                </div>
+            ))}
+            <div className="flex justify-between items-center pt-2">
+                <Button variant="outline">Previous</Button>
+                <Button>See more</Button>
+            </div>
+            </CardContent>
+        </Card>
+    </div>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:col-span-1">
              <Card>
                 <CardHeader>
                     <div className="flex justify-between items-center">
@@ -206,9 +210,7 @@ export default function AdminDashboard() {
                 </CardContent>
             </Card>
         </div>
-      </div>
-
-       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:col-span-2">
             <Card>
                  <CardHeader>
                     <div className="flex justify-between items-center">
@@ -236,7 +238,7 @@ export default function AdminDashboard() {
                 </CardContent>
             </Card>
         </div>
-
+      </div>
     </div>
   );
 }

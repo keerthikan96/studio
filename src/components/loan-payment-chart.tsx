@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { DayPicker, DropdownProps } from "react-day-picker"
+import { DayPicker } from "react-day-picker"
 import { Calendar } from "@/components/ui/calendar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { getYear, setYear, setMonth, getMonth, lastDayOfMonth } from "date-fns";
@@ -70,10 +70,18 @@ function YearMonthForm({
   );
 }
 
+type DashboardCalendarProps = {
+    selectedDate: Date;
+    onDateChange: (date: Date) => void;
+}
 
-export function DashboardCalendar() {
-  const [date, setDate] = React.useState<Date>(new Date());
-  const [month, setMonth] = React.useState<Date>(new Date());
+export function DashboardCalendar({ selectedDate, onDateChange }: DashboardCalendarProps) {
+  const [month, setMonth] = React.useState<Date>(selectedDate);
+
+  // When the selectedDate prop changes from the outside, update the month being displayed
+  React.useEffect(() => {
+    setMonth(selectedDate);
+  }, [selectedDate]);
 
   const year = month.getFullYear();
   // Placeholder for holidays. In a real app, you'd fetch this data.
@@ -108,13 +116,8 @@ export function DashboardCalendar() {
     <>
       <Calendar
         mode="single"
-        selected={date}
-        onSelect={(newDate) => {
-            if (newDate) {
-                setDate(newDate);
-                setMonth(newDate);
-            }
-        }}
+        selected={selectedDate}
+        onSelect={(newDate) => newDate && onDateChange(newDate)}
         month={month}
         onMonthChange={setMonth}
         className="w-full"
@@ -139,4 +142,3 @@ export function DashboardCalendar() {
     </>
   );
 }
-
