@@ -92,6 +92,23 @@ export async function setupDatabase() {
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
+
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS performance_records (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                reviewer_id VARCHAR(255) NOT NULL,
+                reviewer_name VARCHAR(255) NOT NULL,
+                review_date DATE NOT NULL,
+                score INTEGER,
+                comments TEXT,
+                tags TEXT[],
+                attachments JSONB,
+                is_confidential BOOLEAN DEFAULT false,
+                pinned BOOLEAN DEFAULT false,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
         
         // Add new columns if they don't exist for backward compatibility
         const columns = [

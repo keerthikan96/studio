@@ -35,6 +35,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { NotesTab } from '@/components/member-profile-tabs/notes-tab';
+import { PerformanceTab } from '@/components/member-profile-tabs/performance-tab';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
@@ -682,6 +683,8 @@ export default function MemberProfilePage() {
              return <FormWrapper><SkillsTab form={form} /></FormWrapper>;
         case "Notes":
             return <NotesTab memberId={member.id} />;
+        case "Performance":
+            return <PerformanceTab memberId={member.id} />;
         default:
             return <PlaceholderContent title={tab} />;
     }

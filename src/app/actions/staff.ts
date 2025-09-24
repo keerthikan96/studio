@@ -7,7 +7,7 @@ import {
   ParseResumeToAutofillProfileOutput,
 } from '@/ai/flows/resume-parsing-to-autofill-profile';
 import { db, setupDatabase } from '@/lib/db';
-import { Member, Note } from '@/lib/mock-data';
+import { Member, Note, PerformanceRecord } from '@/lib/mock-data';
 
 export async function parseResumeAction(
   input: ParseResumeToAutofillProfileInput
@@ -152,6 +152,32 @@ export async function getNotesAction(memberId: string): Promise<Note[]> {
     return result.rows;
   } catch (error) {
     console.error(`Error fetching notes for member ${memberId}:`, error);
+    return [];
+  }
+}
+
+export async function addPerformanceRecordAction(data: Omit<PerformanceRecord, 'id' | 'created_at'>): Promise<PerformanceRecord | { error: string }> {
+  const { member_id, reviewer_id, reviewer_name, review_date, score, comments, tags, attachments, is_confidential, pinned } = data;
+  try {
+    const result = await db.query(
+      `INSERT INTO performance_records (member_id, reviewer_id, reviewer_name, review_date, score, comments, tags, attachments, is_confidential, pinned)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING *;`,
+      [member_id, reviewer_id, reviewer_name, review_date, score, comments, tags, JSON.stringify(attachments), is_confidential, pinned]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error adding performance record:', error);
+    return { error: 'Failed to add performance record.' };
+  }
+}
+
+export async function getPerformanceRecordsAction(memberId: string): Promise<PerformanceRecord[]> {
+  try {
+    const result = await db.query('SELECT * FROM performance_records WHERE member_id = $1 ORDER BY review_date DESC', [memberId]);
+    return result.rows;
+  } catch (error) {
+    console.error(`Error fetching performance records for member ${memberId}:`, error);
     return [];
   }
 }

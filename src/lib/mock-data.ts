@@ -24,6 +24,21 @@ export type Note = {
     created_at: Date | string;
 };
 
+export type PerformanceRecord = {
+    id: string;
+    member_id: string;
+    reviewer_id: string;
+    reviewer_name: string;
+    review_date: Date | string;
+    score?: number;
+    comments?: string;
+    tags?: string[];
+    attachments?: { name: string, url: string }[];
+    is_confidential: boolean;
+    pinned: boolean;
+    created_at: Date | string;
+};
+
 export type Member = {
     id: string;
     name: string;
