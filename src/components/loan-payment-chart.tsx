@@ -5,7 +5,7 @@ import * as React from "react"
 import { DayPicker, DropdownProps } from "react-day-picker"
 import { Calendar } from "@/components/ui/calendar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { getYear, setYear, setMonth, getMonth } from "date-fns";
+import { getYear, setYear, setMonth, getMonth, lastDayOfMonth } from "date-fns";
 
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: currentYear - 1989 }, (_, i) => currentYear - i);
@@ -20,11 +20,24 @@ function YearMonthForm({
   onChange: (date: Date) => void,
 }) {
   const handleYearChange = (year: string) => {
-    onChange(setYear(date, parseInt(year)));
+    const newDate = setYear(date, parseInt(year));
+    // Prevent date from overflowing if the new month has fewer days
+    const lastDay = lastDayOfMonth(newDate);
+    if (newDate.getDate() > lastDay.getDate()) {
+        onChange(lastDay);
+    } else {
+        onChange(newDate);
+    }
   };
 
   const handleMonthChange = (month: string) => {
-    onChange(setMonth(date, parseInt(month)));
+    const newDate = setMonth(date, parseInt(month));
+    const lastDay = lastDayOfMonth(newDate);
+    if (newDate.getDate() > lastDay.getDate()) {
+        onChange(lastDay);
+    } else {
+        onChange(newDate);
+    }
   };
 
   return (
@@ -62,11 +75,28 @@ export function DashboardCalendar() {
   const [date, setDate] = React.useState<Date>(new Date());
   const [month, setMonth] = React.useState<Date>(new Date());
 
+  const year = month.getFullYear();
   // Placeholder for holidays. In a real app, you'd fetch this data.
   const holidays = [
-    new Date(date.getFullYear(), 0, 1), // New Year's Day
-    new Date(date.getFullYear(), 6, 4), // Independence Day
-    new Date(date.getFullYear(), 11, 25), // Christmas
+    // USA
+    new Date(year, 0, 1), // New Year's Day
+    new Date(year, 0, 15), // Martin Luther King, Jr. Day (example for 2024)
+    new Date(year, 6, 4), // Independence Day
+    new Date(year, 10, 28), // Thanksgiving (example for 2024)
+    new Date(year, 11, 25), // Christmas
+
+    // Canada
+    new Date(year, 4, 20), // Victoria Day (example for 2024)
+    new Date(year, 6, 1), // Canada Day
+    new Date(year, 9, 14), // Thanksgiving (example for 2024)
+    new Date(year, 10, 11), // Remembrance Day
+
+    // Sri Lanka
+    new Date(year, 0, 15), // Tamil Thai Pongal Day
+    new Date(year, 1, 4), // National Day
+    new Date(year, 3, 13), // Sinhala & Tamil New Year's Eve
+    new Date(year, 3, 14), // Sinhala & Tamil New Year's Day
+    new Date(year, 4, 1), // May Day
   ];
 
   const holidayStyle = { 
@@ -75,10 +105,16 @@ export function DashboardCalendar() {
   };
 
   return (
+    <>
       <Calendar
         mode="single"
         selected={date}
-        onSelect={(newDate) => newDate && setDate(newDate)}
+        onSelect={(newDate) => {
+            if (newDate) {
+                setDate(newDate);
+                setMonth(newDate);
+            }
+        }}
         month={month}
         onMonthChange={setMonth}
         className="w-full"
@@ -87,7 +123,7 @@ export function DashboardCalendar() {
         components={{
             Dropdown: (props) => (
               <YearMonthForm
-                date={props.date ?? new Date()}
+                date={month}
                 onChange={setMonth}
               />
             ),
@@ -96,5 +132,11 @@ export function DashboardCalendar() {
           fromYear={1990}
           toYear={currentYear}
       />
+      <div className="flex items-center gap-2 text-sm mt-4 px-3">
+        <span className="w-4 h-4 rounded-full border-2 border-primary" />
+        <span>Public Holiday</span>
+      </div>
+    </>
   );
 }
+
