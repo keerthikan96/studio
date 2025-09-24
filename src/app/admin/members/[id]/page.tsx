@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, Save, Trash, X as XIcon, ArrowLeft, Ban, CalendarIcon } from 'lucide-react';
+import { Loader2, PlusCircle, Save, X as XIcon, ArrowLeft, Ban, CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Member } from '@/lib/mock-data';
 import { useRouter, useParams } from 'next/navigation';
@@ -34,6 +34,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { NotesTab } from '@/components/member-profile-tabs/notes-tab';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
@@ -365,7 +366,7 @@ const GeneralInfoTab = ({ form, isPending }: { form: any, isPending: boolean }) 
 };
 
 const JobInfoTab = ({ form }: { form: any }) => {
-    const { fields, append, remove } = useFieldArray({
+    const { fields, append } = useFieldArray({
         control: form.control,
         name: "experience",
     });
@@ -398,7 +399,7 @@ const JobInfoTab = ({ form }: { form: any }) => {
 };
 
 const EducationTab = ({ form }: { form: any }) => {
-    const { fields, append, remove } = useFieldArray({
+    const { fields, append } = useFieldArray({
         control: form.control,
         name: "education",
     });
@@ -633,6 +634,8 @@ export default function MemberProfilePage() {
              return <FormWrapper><JobInfoTab form={form} /></FormWrapper>;
         case "Education":
              return <FormWrapper><EducationTab form={form} /></FormWrapper>;
+        case "Notes":
+            return <NotesTab memberId={member.id} />;
         default:
             return <PlaceholderContent title={tab} />;
     }
@@ -733,7 +736,3 @@ export default function MemberProfilePage() {
     </div>
   );
 }
-
-    
-
-    

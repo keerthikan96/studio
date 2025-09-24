@@ -78,6 +78,20 @@ export async function setupDatabase() {
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
+
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS member_notes (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                created_by_id VARCHAR(255) NOT NULL,
+                created_by_name VARCHAR(255) NOT NULL,
+                note_name VARCHAR(255) NOT NULL,
+                description TEXT NOT NULL,
+                is_confidential BOOLEAN DEFAULT false,
+                attachments JSONB,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
         
         // Add new columns if they don't exist for backward compatibility
         const columns = [
@@ -102,7 +116,7 @@ export async function setupDatabase() {
             }
         }
         
-        console.log('`members` table is ready.');
+        console.log('Database tables are ready.');
     } catch (err) {
         console.error('Error setting up the database table:', err);
         // Re-throw the error to be caught by the calling function

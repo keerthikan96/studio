@@ -12,6 +12,18 @@ export type Education = {
     years: string;
 };
 
+export type Note = {
+    id: string;
+    member_id: string;
+    created_by_id: string;
+    created_by_name: string;
+    note_name: string;
+    description: string;
+    is_confidential: boolean;
+    attachments: { name: string, url: string }[];
+    created_at: Date | string;
+};
+
 export type Member = {
     id: string;
     name: string;
