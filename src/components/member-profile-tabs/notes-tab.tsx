@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Loader2, PlusCircle, Paperclip, ShieldCheck, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Note } from '@/lib/mock-data';
-import { getNotesAction, addNoteAction } from '@/app/actions/staff';
+import { getNotesAction } from '@/app/actions/staff';
 import { Badge } from '../ui/badge';
 import Link from 'next/link';
 
@@ -25,7 +25,7 @@ const noteSchema = z.object({
   note_name: z.string().min(1, 'Note name is required.'),
   description: z.string().min(1, 'Description is required.'),
   is_confidential: z.boolean().default(false),
-  attachments: z.custom<FileList>().optional(),
+  attachments: z.any(),
 });
 
 type NoteFormValues = z.infer<typeof noteSchema>;
@@ -49,6 +49,8 @@ export function NotesTab({ memberId }: NotesTabProps) {
       attachments: undefined,
     },
   });
+  
+  const { register } = form;
 
   const fetchNotes = () => {
     startTransition(() => {
@@ -70,10 +72,11 @@ export function NotesTab({ memberId }: NotesTabProps) {
       formData.append('is_confidential', String(data.is_confidential));
       formData.append('created_by_id', loggedInUser.id || 'unknown_user');
       formData.append('created_by_name', loggedInUser.name || 'Unknown User');
-
-      if (data.attachments) {
-        for (let i = 0; i < data.attachments.length; i++) {
-          formData.append('attachments', data.attachments[i]);
+      
+      const fileInput = form.control._fields.attachments?._f.ref as HTMLInputElement;
+      if (fileInput && fileInput.files) {
+        for (let i = 0; i < fileInput.files.length; i++) {
+          formData.append('attachments', fileInput.files[i]);
         }
       }
 
@@ -99,8 +102,6 @@ export function NotesTab({ memberId }: NotesTabProps) {
       }
     });
   };
-
-  const fileRef = form.register("attachments");
 
   return (
     <Card>
@@ -144,23 +145,18 @@ export function NotesTab({ memberId }: NotesTabProps) {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="attachments"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Attachments</FormLabel>
-                      <FormControl>
+                <FormItem>
+                    <FormLabel>Attachments</FormLabel>
+                    <FormControl>
                         <Input 
-                          type="file"
-                          multiple
-                          {...fileRef}
+                            type="file"
+                            multiple
+                            {...register("attachments")}
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+
                 <FormField
                   control={form.control}
                   name="is_confidential"
