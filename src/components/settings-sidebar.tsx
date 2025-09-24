@@ -23,7 +23,7 @@ const settingsModules = [
   {
     title: "Home Module Management",
     subItems: [
-      { name: "Carousel Management", href: "/admin/settings/home/carousel", isCritical: false },
+      { name: "Carousel Management", href: "/admin/settings/home/carousel", isCritical: true },
       { name: "Dashboard Management", href: "/admin/settings/home/dashboard", isCritical: true },
     ],
   },
