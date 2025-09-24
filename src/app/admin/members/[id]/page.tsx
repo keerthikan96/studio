@@ -38,6 +38,7 @@ import { format } from 'date-fns';
 import { NotesTab } from '@/components/member-profile-tabs/notes-tab';
 import { PerformanceTab } from '@/components/member-profile-tabs/performance-tab';
 import { ConfidentialNotesTab } from '@/components/member-profile-tabs/confidential-notes-tab';
+import { SelfAssessmentTab } from '@/components/member-profile-tabs/self-assessment-tab';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
@@ -689,6 +690,8 @@ export default function MemberProfilePage() {
             return <ConfidentialNotesTab memberId={member.id} />;
         case "Performance":
             return <PerformanceTab memberId={member.id} />;
+        case "Self-assesment":
+            return <SelfAssessmentTab memberId={member.id} />;
         default:
             return <PlaceholderContent title={tab} />;
     }

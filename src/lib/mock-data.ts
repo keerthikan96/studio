@@ -41,6 +41,22 @@ export type PerformanceRecord = {
     created_at: Date | string;
 };
 
+export type SelfEvaluation = {
+    id: string;
+    member_id: string;
+    evaluation_date: Date | string;
+    self_rating?: number;
+    comments?: string;
+    tags?: string[];
+    attachments?: { name: string, url: string }[];
+    status: 'Pending' | 'Finalized';
+    hr_feedback?: string;
+    finalized_by_id?: string;
+    finalized_by_name?: string;
+    finalized_at?: Date | string;
+    created_at: Date | string;
+}
+
 export type Member = {
     id: string;
     name: string;

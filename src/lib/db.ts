@@ -111,6 +111,24 @@ export async function setupDatabase() {
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
+
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS self_evaluations (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                evaluation_date DATE NOT NULL,
+                self_rating INTEGER,
+                comments TEXT,
+                tags TEXT[],
+                attachments JSONB,
+                status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+                hr_feedback TEXT,
+                finalized_by_id VARCHAR(255),
+                finalized_by_name VARCHAR(255),
+                finalized_at TIMESTAMPTZ,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
         
         // Add new columns if they don't exist for backward compatibility
         const member_columns = [

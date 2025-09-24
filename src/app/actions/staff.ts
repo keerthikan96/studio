@@ -7,7 +7,7 @@ import {
   ParseResumeToAutofillProfileOutput,
 } from '@/ai/flows/resume-parsing-to-autofill-profile';
 import { db, setupDatabase } from '@/lib/db';
-import { Member, Note, PerformanceRecord } from '@/lib/mock-data';
+import { Member, Note, PerformanceRecord, SelfEvaluation } from '@/lib/mock-data';
 
 export async function parseResumeAction(
   input: ParseResumeToAutofillProfileInput
@@ -179,5 +179,48 @@ export async function getPerformanceRecordsAction(memberId: string): Promise<Per
   } catch (error) {
     console.error(`Error fetching performance records for member ${memberId}:`, error);
     return [];
+  }
+}
+
+export async function addSelfEvaluationAction(data: Omit<SelfEvaluation, 'id' | 'created_at' | 'status' | 'hr_feedback' | 'finalized_by_id' | 'finalized_by_name' | 'finalized_at'>): Promise<SelfEvaluation | { error: string }> {
+  const { member_id, evaluation_date, self_rating, comments, tags, attachments } = data;
+  try {
+    const result = await db.query(
+      `INSERT INTO self_evaluations (member_id, evaluation_date, self_rating, comments, tags, attachments)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *;`,
+      [member_id, evaluation_date, self_rating, comments, tags, JSON.stringify(attachments)]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error adding self-evaluation:', error);
+    return { error: 'Failed to add self-evaluation record.' };
+  }
+}
+
+export async function getSelfEvaluationsAction(memberId: string): Promise<SelfEvaluation[]> {
+  try {
+    const result = await db.query('SELECT * FROM self_evaluations WHERE member_id = $1 ORDER BY evaluation_date DESC', [memberId]);
+    return result.rows;
+  } catch (error) {
+    console.error(`Error fetching self-evaluations for member ${memberId}:`, error);
+    return [];
+  }
+}
+
+export async function updateSelfEvaluationAction(id: string, data: Partial<Pick<SelfEvaluation, 'hr_feedback' | 'status' | 'finalized_by_id' | 'finalized_by_name'>>): Promise<SelfEvaluation | { error: string }> {
+  const { hr_feedback, status, finalized_by_id, finalized_by_name } = data;
+  try {
+    const result = await db.query(
+      `UPDATE self_evaluations 
+       SET hr_feedback = $1, status = $2, finalized_by_id = $3, finalized_by_name = $4, finalized_at = NOW()
+       WHERE id = $5
+       RETURNING *;`,
+      [hr_feedback, status, finalized_by_id, finalized_by_name, id]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error(`Error updating self-evaluation with id ${id}:`, error);
+    return { error: 'Failed to update self-evaluation.' };
   }
 }
