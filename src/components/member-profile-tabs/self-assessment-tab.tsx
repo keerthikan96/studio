@@ -55,7 +55,7 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
   const [userRole, setUserRole] = useState<'staff' | 'HR' | null>(null);
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [date, setDate] = useState<DateRange | undefined>(undefined);
 
   useEffect(() => {
     setIsClient(true);
@@ -89,16 +89,16 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
   useEffect(fetchEvaluations, [memberId]);
 
   const filteredEvaluations = useMemo(() => {
-    if (!dateRange || (!dateRange.from && !dateRange.to)) {
+    if (!date || (!date.from && !date.to)) {
       return evaluations;
     }
     return evaluations.filter(evaluation => {
       const evaluationDate = new Date(evaluation.evaluation_date);
-      if (dateRange.from && evaluationDate < dateRange.from) {
+      if (date.from && evaluationDate < date.from) {
         return false;
       }
-      if (dateRange.to) {
-        const toDate = new Date(dateRange.to);
+      if (date.to) {
+        const toDate = new Date(date.to);
         toDate.setHours(23, 59, 59, 999);
         if (evaluationDate > toDate) {
           return false;
@@ -106,7 +106,7 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
       }
       return true;
     });
-  }, [evaluations, dateRange]);
+  }, [evaluations, date]);
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
@@ -189,40 +189,40 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
         </div>
         <div className="flex items-center gap-2">
             <Popover>
-                <PopoverTrigger asChild>
-                    <Button
-                        id="date"
-                        variant={"outline"}
-                        className={cn(
-                        "w-[300px] justify-start text-left font-normal",
-                        !dateRange && "text-muted-foreground"
-                        )}
-                    >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {dateRange?.from ? (
-                        dateRange.to ? (
-                            <>
-                            {format(dateRange.from, "LLL dd, y")} -{" "}
-                            {format(dateRange.to, "LLL dd, y")}
-                            </>
-                        ) : (
-                            format(dateRange.from, "LLL dd, y")
-                        )
-                        ) : (
-                        <span>Pick a date range</span>
-                        )}
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                    <Calendar
-                        initialFocus
-                        mode="range"
-                        defaultMonth={dateRange?.from}
-                        selected={dateRange}
-                        onSelect={setDateRange}
-                        numberOfMonths={2}
-                    />
-                </PopoverContent>
+              <PopoverTrigger asChild>
+                <Button
+                  id="date"
+                  variant={"outline"}
+                  className={cn(
+                    "w-[300px] justify-start text-left font-normal",
+                    !date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date?.from ? (
+                    date.to ? (
+                      <>
+                        {format(date.from, "LLL dd, y")} -{" "}
+                        {format(date.to, "LLL dd, y")}
+                      </>
+                    ) : (
+                      format(date.from, "LLL dd, y")
+                    )
+                  ) : (
+                    <span>Pick a date range</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={date?.from}
+                  selected={date}
+                  onSelect={setDate}
+                  numberOfMonths={2}
+                />
+              </PopoverContent>
             </Popover>
 
             {isClient && userRole !== 'HR' && (

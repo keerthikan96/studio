@@ -48,7 +48,7 @@ export function PerformanceTab({ memberId }: PerformanceTabProps) {
   const [isPending, startTransition] = useTransition();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [tagInput, setTagInput] = useState('');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [date, setDate] = useState<DateRange | undefined>(undefined);
   const { toast } = useToast();
 
   const form = useForm<RecordFormValues>({
@@ -83,17 +83,17 @@ export function PerformanceTab({ memberId }: PerformanceTabProps) {
   }, [memberId]);
 
   const filteredRecords = useMemo(() => {
-    if (!dateRange || (!dateRange.from && !dateRange.to)) {
+    if (!date || (!date.from && !date.to)) {
       return records;
     }
     return records.filter(record => {
       const recordDate = new Date(record.review_date);
-      if (dateRange.from && recordDate < dateRange.from) {
+      if (date.from && recordDate < date.from) {
         return false;
       }
       // Set the 'to' date to the end of the day for inclusive filtering
-      if (dateRange.to) {
-        const toDate = new Date(dateRange.to);
+      if (date.to) {
+        const toDate = new Date(date.to);
         toDate.setHours(23, 59, 59, 999);
         if (recordDate > toDate) {
           return false;
@@ -101,7 +101,7 @@ export function PerformanceTab({ memberId }: PerformanceTabProps) {
       }
       return true;
     });
-  }, [records, dateRange]);
+  }, [records, date]);
 
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -166,40 +166,40 @@ export function PerformanceTab({ memberId }: PerformanceTabProps) {
           </div>
           <div className="flex items-center gap-2">
               <Popover>
-                  <PopoverTrigger asChild>
-                      <Button
-                          id="date"
-                          variant={"outline"}
-                          className={cn(
-                          "w-[300px] justify-start text-left font-normal",
-                          !dateRange && "text-muted-foreground"
-                          )}
-                      >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dateRange?.from ? (
-                          dateRange.to ? (
-                              <>
-                              {format(dateRange.from, "LLL dd, y")} -{" "}
-                              {format(dateRange.to, "LLL dd, y")}
-                              </>
-                          ) : (
-                              format(dateRange.from, "LLL dd, y")
-                          )
-                          ) : (
-                          <span>Pick a date range</span>
-                          )}
-                      </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="end">
-                      <Calendar
-                          initialFocus
-                          mode="range"
-                          defaultMonth={dateRange?.from}
-                          selected={dateRange}
-                          onSelect={setDateRange}
-                          numberOfMonths={2}
-                      />
-                  </PopoverContent>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="date"
+                    variant={"outline"}
+                    className={cn(
+                      "w-[300px] justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date?.from ? (
+                      date.to ? (
+                        <>
+                          {format(date.from, "LLL dd, y")} -{" "}
+                          {format(date.to, "LLL dd, y")}
+                        </>
+                      ) : (
+                        format(date.from, "LLL dd, y")
+                      )
+                    ) : (
+                      <span>Pick a date range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={date?.from}
+                    selected={date}
+                    onSelect={setDate}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
               </Popover>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
