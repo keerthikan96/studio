@@ -1,3 +1,5 @@
+@import 'react-big-calendar/lib/css/react-big-calendar.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -77,4 +79,40 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@layer components {
+    .rbc-toolbar {
+        @apply flex items-center gap-4 mb-4;
+    }
+    .rbc-toolbar .rbc-btn-group {
+        @apply flex items-center gap-2;
+    }
+    .rbc-toolbar .rbc-btn-group button {
+        @apply px-4 py-2 rounded-md border bg-card text-card-foreground hover:bg-muted transition-colors;
+    }
+    .rbc-toolbar .rbc-btn-group button.rbc-active {
+        @apply bg-primary text-primary-foreground;
+    }
+    .rbc-toolbar-label {
+        @apply text-2xl font-bold;
+    }
+    .rbc-calendar {
+        @apply h-[calc(100%-4rem)];
+    }
+    .rbc-header {
+        @apply text-center p-2 border-b border-r;
+    }
+    .rbc-month-view, .rbc-time-view {
+        @apply border-l border-t;
+    }
+    .rbc-day-bg {
+        @apply border-b border-r;
+    }
+    .rbc-today {
+        @apply bg-accent/10;
+    }
+    .rbc-event {
+        @apply bg-primary/10 text-primary p-1 rounded-md text-xs;
+    }
 }

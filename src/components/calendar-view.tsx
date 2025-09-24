@@ -1,96 +1,112 @@
 
 'use client';
 
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+import { Calendar, dateFnsLocalizer, EventProps } from 'react-big-calendar'
+import format from 'date-fns/format'
+import parse from 'date-fns/parse'
+import startOfWeek from 'date-fns/startOfWeek'
+import getDay from 'date-fns/getDay'
+import enUS from 'date-fns/locale/en-US'
 import { cn } from '@/lib/utils';
-import {
-  eachDayOfInterval,
-  endOfMonth,
-  endOfWeek,
-  format,
-  isSameMonth,
-  isToday,
-  startOfMonth,
-  startOfWeek,
-} from 'date-fns';
+import { useMemo } from 'react';
 
-const events = [
-  { date: new Date(2023, 7, 2), time: '01:00pm', title: 'Go to...', color: 'bg-red-500' },
-  { date: new Date(2023, 7, 3), time: '01:00pm', title: 'Design C...', color: 'bg-blue-500' },
-  { date: new Date(2023, 7, 3), time: '03:30pm', title: 'Weekly...', color: 'bg-yellow-500' },
-  { date: new Date(2023, 7, 5), time: '07:30am', title: 'Lunch', color: 'bg-green-500' },
-  { date: new Date(2023, 7, 5), time: '10:30am', title: 'Meeti...', color: 'bg-blue-500' },
-  { date: new Date(2023, 7, 8), time: '07:30am', title: 'Weekly...', color: 'bg-yellow-500' },
-  { date: new Date(2023, 7, 9), time: '09:00am', title: 'Desig...', color: 'bg-blue-500' },
-  { date: new Date(2023, 7, 10), time: '07:45am', title: 'Standup...', color: 'bg-blue-500' },
-  { date: new Date(2023, 7, 11), time: '07:30am', title: 'Breakfast', color: 'bg-green-500' },
-  { date: new Date(2023, 7, 12), time: '08:45am', title: 'Prototyp...', color: 'bg-blue-500' },
-  { date: new Date(2023, 7, 15), time: '01:00pm', title: 'P2P Zoom', color: 'bg-red-500' },
-  { date: new Date(2023, 7, 16), time: '07:30am', title: 'Lunch', color: 'bg-green-500' },
-  { date: new Date(2023, 7, 17), time: '07:30am', title: 'Group-...', color: 'bg-yellow-500' },
-  { date: new Date(2023, 7, 22), time: '01:00pm', title: 'Group-W...', color: 'bg-yellow-500' },
-  { date: new Date(2023, 7, 25), time: '07:30am', title: 'Reuni...', color: 'bg-red-500' },
-  { date: new Date(2023, 7, 25), time: '10:30am', title: 'Design Cl...', color: 'bg-blue-500' },
-  { date: new Date(2023, 7, 30), time: '07:30am', title: 'Breakfast', color: 'bg-green-500' },
+const locales = {
+  'en-US': enUS,
+}
+
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  locales,
+})
+
+const placeholderEvents = [
+  { start: new Date(2023, 7, 3, 13, 30), end: new Date(2023, 7, 3, 14, 30), title: 'Design C...', resource: 'work' },
+  { start: new Date(2023, 7, 3, 15, 30), end: new Date(2023, 7, 3, 16, 30), title: 'Weekly...', resource: 'meeting' },
+  { start: new Date(2023, 7, 5, 7, 30), end: new Date(2023, 7, 5, 8, 30), title: 'Lunch', resource: 'personal' },
+  { start: new Date(2023, 7, 5, 10, 30), end: new Date(2023, 7, 5, 11, 30), title: 'Meeti...', resource: 'work' },
+  { start: new Date(2023, 7, 10, 9, 0), end: new Date(2023, 7, 10, 10, 0), title: 'Birthday Party', resource: 'birthday' },
 ];
 
-const getEventsForDate = (date: Date) => {
-    // For this example, we'll use the hardcoded 2023 events and just match the day and month.
-    return events.filter(e => 
-        e.date.getMonth() === date.getMonth() &&
-        e.date.getDate() === date.getDate()
-    );
+const eventColorMap: { [key: string]: string } = {
+  work: 'bg-blue-500',
+  meeting: 'bg-yellow-500',
+  personal: 'bg-green-500',
+  birthday: 'bg-purple-500',
+  default: 'bg-gray-500',
 }
+
+const CustomEvent = ({ event }: EventProps) => {
+    const colorClass = event.resource ? eventColorMap[event.resource] ?? eventColorMap.default : eventColorMap.default;
+    return (
+        <div className={cn('p-1 text-white rounded-md text-xs', colorClass)}>
+            {event.title}
+        </div>
+    );
+};
+
 
 type CalendarViewProps = {
   currentDate: Date;
+  onNavigate: (newDate: Date) => void;
+  view: any;
+  onView: (newView: any) => void;
 };
 
-export function CalendarView({ currentDate }: CalendarViewProps) {
-  const firstDay = startOfMonth(currentDate);
-  const lastDay = endOfMonth(currentDate);
-  const daysInMonth = eachDayOfInterval({
-    start: startOfWeek(firstDay),
-    end: endOfWeek(lastDay),
-  });
-  const weekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+export function CalendarView({ currentDate, onNavigate, view, onView }: CalendarViewProps) {
+  
+  // To make the demo work, we'll map the 2023 events to the current year and month.
+  const events = useMemo(() => {
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+
+    return placeholderEvents.map(event => {
+        const start = new Date(event.start);
+        const newStart = new Date(
+            currentYear,
+            currentMonth,
+            start.getDate(),
+            start.getHours(),
+            start.getMinutes()
+        );
+        
+        const end = new Date(event.end);
+        const newEnd = new Date(
+            currentYear,
+            currentMonth,
+            end.getDate(),
+            end.getHours(),
+            end.getMinutes()
+        );
+
+        return { ...event, start: newStart, end: newEnd };
+    });
+  }, [currentDate]);
 
   return (
-    <div className="flex flex-col flex-1 overflow-auto">
-      <div className="grid grid-cols-7 border-b">
-        {weekdays.map((day) => (
-          <div key={day} className="p-2 text-center text-sm font-semibold text-muted-foreground">
-            {day}
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 grid-rows-5 flex-1">
-        {daysInMonth.map((day, i) => (
-          <div
-            key={i}
-            className={cn('border-b border-r p-2 flex flex-col', {
-              'bg-muted/30': !isSameMonth(day, currentDate),
+    <div className="flex-1 p-4">
+        <Calendar
+            localizer={localizer}
+            events={events}
+            startAccessor="start"
+            endAccessor="end"
+            date={currentDate}
+            onNavigate={onNavigate}
+            view={view}
+            onView={onView}
+            components={{
+                event: CustomEvent
+            }}
+            eventPropGetter={(event) => ({
+                 className: cn(
+                    'p-1 text-white rounded-md text-xs',
+                    event.resource ? eventColorMap[event.resource] ?? eventColorMap.default : eventColorMap.default
+                )
             })}
-          >
-            <span
-              className={cn('font-medium', {
-                'text-muted-foreground': !isSameMonth(day, currentDate),
-                'text-primary font-bold': isToday(day),
-              })}
-            >
-              {format(day, 'd')}
-            </span>
-            <div className="mt-1 space-y-1 overflow-y-auto">
-              {getEventsForDate(day).map((event, eventIdx) => (
-                <div key={eventIdx} className="flex items-center gap-1.5 text-xs rounded p-1" style={{ backgroundColor: `${event.color.replace('bg-', 'var(--tw-color-')}/0.1`}}>
-                   <div className={cn('w-1 h-full rounded-full', event.color)} />
-                   <span className="font-medium text-gray-600">{event.time}</span>
-                   <span className="truncate">{event.title}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+        />
     </div>
   );
 }

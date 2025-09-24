@@ -1,27 +1,24 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { CalendarView } from '@/components/calendar-view';
 import { CalendarSidebar } from '@/components/calendar-sidebar';
-import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
-import { format } from 'date-fns';
+import { Filter } from 'lucide-react';
+import { Views } from 'react-big-calendar';
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [view, setView] = useState<any>(Views.MONTH);
 
   const handleDateChange = (date: Date) => {
     setCurrentDate(date);
   };
-  
-  const goToPreviousMonth = () => {
-    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
-  };
-  
-  const goToNextMonth = () => {
-    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
-  };
+
+  const handleViewChange = (newView: any) => {
+    setView(newView);
+  }
 
   const goToToday = () => {
     setCurrentDate(new Date());
@@ -32,8 +29,10 @@ export default function CalendarPage() {
       <CalendarSidebar selectedDate={currentDate} onDateChange={handleDateChange} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex items-center justify-between border-b p-4">
-            <div className="flex items-center gap-4">
-                <h2 className="text-2xl font-bold">{format(currentDate, 'MMMM yyyy')}</h2>
+            <div className="flex items-center gap-2">
+                <Button variant={view === Views.MONTH ? 'default' : 'outline'} onClick={() => handleViewChange(Views.MONTH)}>Month</Button>
+                <Button variant={view === Views.WEEK ? 'default' : 'outline'} onClick={() => handleViewChange(Views.WEEK)}>Week</Button>
+                <Button variant={view === Views.DAY ? 'default' : 'outline'} onClick={() => handleViewChange(Views.DAY)}>Day</Button>
             </div>
             <div className="flex items-center gap-2">
                 <Button variant="outline" onClick={goToToday}>Today</Button>
@@ -45,7 +44,12 @@ export default function CalendarPage() {
                 </Button>
             </div>
         </header>
-        <CalendarView currentDate={currentDate} />
+        <CalendarView 
+            currentDate={currentDate} 
+            onNavigate={useCallback((newDate: Date) => setCurrentDate(newDate), [])}
+            view={view}
+            onView={useCallback((newView: any) => setView(newView), [])}
+        />
       </div>
     </div>
   );
