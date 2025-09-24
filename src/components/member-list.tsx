@@ -53,6 +53,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { deleteMemberAction, updateMemberStatusAction } from '@/app/actions/staff';
 import { useToast } from '@/hooks/use-toast';
 import { MemberCard } from './member-card';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const statusStyles: { [key: string]: string } = {
   active: 'bg-green-100 text-green-800 border-green-200 hover:bg-green-100',
@@ -196,6 +197,15 @@ export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberL
   const [memberToDelete, setMemberToDelete] = React.useState<Member | null>(null);
   const [isPending, startTransition] = React.useTransition();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
+
+   React.useEffect(() => {
+    setColumnVisibility({
+        email: !isMobile,
+        country: !isMobile,
+        branch: !isMobile,
+    });
+  }, [isMobile]);
 
   const handleStatusChange = (member: Member, status: Member['status']) => {
     startTransition(async () => {
