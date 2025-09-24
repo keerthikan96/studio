@@ -459,10 +459,10 @@ const parseDateString = (dateString: string | Date | null | undefined): Date | n
         
         // Check for valid date parts
         if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
-            const date = new Date(year, month, day);
+            const date = new Date(Date.UTC(year, month, day));
             // Verify that the created date is valid and matches the input,
             // as new Date() can create invalid dates from bad input.
-            if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
+            if (date.getUTCFullYear() === year && date.getUTCMonth() === month && date.getUTCDate() === day) {
                 return date;
             }
         }
@@ -523,7 +523,7 @@ export default function MemberProfilePage() {
                 setMember(currentMember);
                 resetFormValues(currentMember);
             } else {
-                toast({ title: "Member not found", variant="destructive" });
+                toast({ title: "Member not found", variant:"destructive" });
                 router.push('/admin/members');
             }
         });
@@ -554,6 +554,7 @@ export default function MemberProfilePage() {
   };
 
   const onSubmit = useCallback(async (data?: Partial<ProfileFormValues>) => {
+    if (!memberId) return;
     let dataToUpdate = data;
     
     if (!dataToUpdate || Object.keys(dataToUpdate).length === 0) {
@@ -563,14 +564,19 @@ export default function MemberProfilePage() {
         }
         const fullData = form.getValues();
         const changedData: Partial<ProfileFormValues> = {};
-        for (const field in dirtyFields) {
-            // @ts-ignore
+        
+        (Object.keys(dirtyFields) as Array<keyof typeof dirtyFields>).forEach((field) => {
             if (Object.prototype.hasOwnProperty.call(fullData, field)) {
                 // @ts-ignore
                 changedData[field] = fullData[field];
             }
-        }
+        });
         dataToUpdate = changedData;
+    }
+
+    if (Object.keys(dataToUpdate).length === 0) {
+        toast({ title: 'No Changes Detected', description: 'You haven\'t made any changes to save.' });
+        return;
     }
 
     const result = await updateMemberAction(memberId, dataToUpdate);
