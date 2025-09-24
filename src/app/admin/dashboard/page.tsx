@@ -29,6 +29,7 @@ import { DashboardEvents, Event } from "@/components/dashboard-events";
 import { getMembersAction } from '@/app/actions/staff';
 import { Member } from '@/lib/mock-data';
 import { differenceInYears } from 'date-fns';
+import DashboardCarousel from '@/components/dashboard-carousel';
 
 
 const notices = [
@@ -134,6 +135,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex flex-col gap-6">
+       <DashboardCarousel />
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         <DashboardStatCard
             title="Total employee"
