@@ -53,8 +53,10 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
   const [tagInput, setTagInput] = useState('');
   const [userRole, setUserRole] = useState<'staff' | 'HR' | null>(null);
   const { toast } = useToast();
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const storedUser = JSON.parse(sessionStorage.getItem('loggedInUser') || '{}');
     setUserRole(storedUser.role === 'admin' ? 'HR' : (storedUser.role || 'staff'));
   }, []);
@@ -163,7 +165,7 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
           <CardTitle>Self-Performance Evaluation</CardTitle>
           <CardDescription>Submit and view your self-assessments.</CardDescription>
         </div>
-        {userRole !== 'HR' && (
+        {isClient && userRole !== 'HR' && (
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
                 <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Evaluation</Button>
@@ -290,7 +292,7 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
                             </div>
                         </DialogContent>
                     </Dialog>
-                    {userRole === 'HR' && item.status === 'Pending' && (
+                    {isClient && userRole === 'HR' && item.status === 'Pending' && (
                         <Button variant="default" size="sm" onClick={() => { setSelectedEvaluation(item); setIsFinalizeDialogOpen(true); }}>
                             <Edit className="mr-2 h-4 w-4"/> Finalize
                         </Button>
@@ -332,3 +334,5 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
     </Card>
   );
 }
+
+    
