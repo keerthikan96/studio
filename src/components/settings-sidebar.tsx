@@ -59,7 +59,7 @@ export function SettingsSidebar() {
   const isModuleActive = (pathSegment: string) => pathname.includes(pathSegment);
 
   return (
-    <aside className="w-80 flex-shrink-0 border-r p-4 space-y-4">
+    <aside className="w-full md:w-80 md:flex-shrink-0 md:border-r p-4 space-y-4 hidden md:block">
         <h2 className="text-xl font-bold tracking-tight mb-4 flex items-center gap-2"><Settings /> Settings</h2>
       <nav className="flex flex-col gap-1">
         <Link href="/admin/settings">
