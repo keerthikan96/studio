@@ -91,6 +91,10 @@ export default function AdminLayout({
   if (pathname === '/admin/add-staff') {
     pageTitle = 'Add Member';
   }
+   if (pathname === '/admin/dashboard') {
+    pageTitle = 'Dashboard';
+  }
+
 
   return (
     <SidebarProvider>
@@ -170,7 +174,7 @@ export default function AdminLayout({
         <main className="flex-1 p-6 bg-muted/30">
             <div className="mb-4">
               <h1 className="text-2xl font-bold tracking-tight mb-2">{pageTitle}</h1>
-               <Breadcrumbs />
+               {isClient && <Breadcrumbs />}
             </div>
             {children}
         </main>
