@@ -2,73 +2,10 @@
 "use client"
 
 import * as React from "react"
-import { DayPicker } from "react-day-picker"
 import { Calendar } from "@/components/ui/calendar"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { getYear, setYear, setMonth, getMonth, lastDayOfMonth } from "date-fns";
+import { getYear } from "date-fns";
 
 const currentYear = new Date().getFullYear();
-const years = Array.from({ length: currentYear - 1989 }, (_, i) => currentYear - i);
-const months = [ "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" ];
-
-
-function YearMonthForm({
-  date,
-  onChange,
-}: {
-  date: Date,
-  onChange: (date: Date) => void,
-}) {
-  const handleYearChange = (year: string) => {
-    const newDate = setYear(date, parseInt(year));
-    // Prevent date from overflowing if the new month has fewer days
-    const lastDay = lastDayOfMonth(newDate);
-    if (newDate.getDate() > lastDay.getDate()) {
-        onChange(lastDay);
-    } else {
-        onChange(newDate);
-    }
-  };
-
-  const handleMonthChange = (month: string) => {
-    const newDate = setMonth(date, parseInt(month));
-    const lastDay = lastDayOfMonth(newDate);
-    if (newDate.getDate() > lastDay.getDate()) {
-        onChange(lastDay);
-    } else {
-        onChange(newDate);
-    }
-  };
-
-  return (
-    <div className="flex gap-2 mb-4">
-        <Select value={getMonth(date).toString()} onValueChange={handleMonthChange}>
-            <SelectTrigger>
-                <SelectValue placeholder="Select month" />
-            </SelectTrigger>
-            <SelectContent>
-                {months.map((month, i) => (
-                    <SelectItem key={month} value={i.toString()}>
-                        {month}
-                    </SelectItem>
-                ))}
-            </SelectContent>
-        </Select>
-         <Select value={getYear(date).toString()} onValueChange={handleYearChange}>
-            <SelectTrigger>
-                <SelectValue placeholder="Select year" />
-            </SelectTrigger>
-            <SelectContent>
-                {years.map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                        {year}
-                    </SelectItem>
-                ))}
-            </SelectContent>
-        </Select>
-    </div>
-  );
-}
 
 type DashboardCalendarProps = {
     selectedDate: Date;
@@ -123,17 +60,9 @@ export function DashboardCalendar({ selectedDate, onDateChange }: DashboardCalen
         className="w-full"
         modifiers={{ holidays }}
         modifiersStyles={{ holidays: holidayStyle }}
-        components={{
-            Dropdown: (props) => (
-              <YearMonthForm
-                date={month}
-                onChange={setMonth}
-              />
-            ),
-          }}
-          captionLayout="dropdown-buttons"
-          fromYear={1990}
-          toYear={currentYear}
+        captionLayout="dropdown-buttons"
+        fromYear={1990}
+        toYear={currentYear}
       />
       <div className="flex items-center gap-2 text-sm mt-4 px-3">
         <span className="w-4 h-4 rounded-full border-2 border-primary" />
