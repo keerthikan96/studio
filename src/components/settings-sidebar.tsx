@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 const settingsModules = [
   {
     title: "Module Management",
+    isCollapsible: true,
     subItems: [
       { name: "Module List", href: "/admin/settings/module-management/list", isCritical: true },
       { name: "Module Configuration", href: "/admin/settings/module-management/configuration", isCritical: true },
@@ -21,6 +22,7 @@ const settingsModules = [
   },
   {
     title: "Home Module Management",
+    isCollapsible: true,
     subItems: [
       { name: "Carousel Management", href: "/admin/settings/home/carousel", isCritical: true },
       { name: "Dashboard Management", href: "/admin/settings/home/dashboard", isCritical: true },
@@ -28,6 +30,7 @@ const settingsModules = [
   },
     {
     title: "Role Management",
+    isCollapsible: true,
     subItems: [
       { name: "Roles & Permissions", href: "/admin/settings/user-management/roles", isCritical: true },
     ],
@@ -59,7 +62,7 @@ export function SettingsSidebar() {
   const isModuleActive = (pathSegment: string) => pathname.includes(pathSegment);
 
   return (
-    <aside className="w-full md:w-80 md:flex-shrink-0 md:border-r p-4 space-y-4 hidden md:block">
+    <aside className="w-full md:w-80 md:flex-shrink-0 md:border-r p-4 space-y-4 h-full overflow-y-auto">
         <h2 className="text-xl font-bold tracking-tight mb-4 flex items-center gap-2"><Settings /> Settings</h2>
       <nav className="flex flex-col gap-1">
         <Link href="/admin/settings">
