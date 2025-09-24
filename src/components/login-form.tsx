@@ -41,7 +41,7 @@ export default function LoginForm() {
     },
   });
 
-  const handleLogin = (user: { id: string, name: string, email: string, role: 'admin' | 'staff' }) => {
+  const handleLogin = (user: { id: string, name: string, email: string, role: 'admin' | 'staff' | 'HR' }) => {
     sessionStorage.setItem('loggedInUser', JSON.stringify(user));
   };
   
@@ -69,7 +69,7 @@ export default function LoginForm() {
       if (data.password === 'password') { // Simple password check for demo
         if (data.email === 'admin@gmail.com') {
           // Admin login doesn't need a real DB record for this demo
-          handleLogin({ id: 'admin-user-001', name: 'People and Culture office', email: 'admin@gmail.com', role: 'admin' });
+          handleLogin({ id: 'admin-user-001', name: 'People and Culture office', email: 'admin@gmail.com', role: 'HR' });
           toast({
             title: 'Login Successful',
             description: 'Redirecting to admin dashboard...',
