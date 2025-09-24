@@ -23,6 +23,7 @@ import { EmployeeAwardList } from "@/components/employee-award-list";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DashboardStatCard } from "@/components/dashboard-stat-card";
+import { DashboardEvents } from "@/components/dashboard-events";
 
 
 const notices = [
@@ -120,26 +121,29 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
          <div className="lg:col-span-2">
-            <Card>
-                <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <CardTitle>Daily attendance statistic</CardTitle>
-                         <Select defaultValue="department">
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="department">Department</SelectItem>
-                                <SelectItem value="engineering">Engineering</SelectItem>
-                                <SelectItem value="design">Design</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <DailyAttendanceChart />
-                </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader>
+                        <div className="flex justify-between items-center">
+                            <CardTitle>Daily attendance statistic</CardTitle>
+                            <Select defaultValue="department">
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="department">Department</SelectItem>
+                                    <SelectItem value="engineering">Engineering</SelectItem>
+                                    <SelectItem value="design">Design</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <DailyAttendanceChart />
+                    </CardContent>
+                </Card>
+                <DashboardEvents />
+            </div>
          </div>
          <Card>
             <CardHeader className="flex flex-row items-center justify-between">
