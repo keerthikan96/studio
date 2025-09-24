@@ -13,9 +13,10 @@ import {
   MoreHorizontal,
   Star,
   ChevronDown,
+  Briefcase,
 } from "lucide-react";
 import { DailyAttendanceChart } from "@/components/daily-attendance-chart";
-import { LoanPaymentChart } from "@/components/loan-payment-chart";
+import { DashboardCalendar } from "@/components/loan-payment-chart";
 import { PositionWiseRecruitmentChart } from "@/components/position-wise-recruitment-chart";
 import { SalesAnalyticsChart } from "@/components/sales-analytics-chart";
 import { EmployeeListDashboard } from "@/components/employee-list-dashboard";
@@ -53,15 +54,11 @@ const totalEmployeeData = [
     { id: 'e3', name: 'Albert Flores', avatarUrl: 'https://i.pravatar.cc/40?u=e3', reason: 'Marketing' },
 ];
 
-const presentEmployeeData = [
-    { id: 'p1', name: 'John Doe', avatarUrl: 'https://i.pravatar.cc/40?u=p1', reason: 'Checked in at 9:01 AM' },
-    { id: 'p2', name: 'Jane Smith', avatarUrl: 'https://i.pravatar.cc/40?u=p2', reason: 'Checked in at 8:58 AM' },
+const workFromHomeData = [
+    { id: 'wfh1', name: 'John Doe', avatarUrl: 'https://i.pravatar.cc/40?u=wfh1', reason: 'Approved for project deadline' },
+    { id: 'wfh2', name: 'Jane Smith', avatarUrl: 'https://i.pravatar.cc/40?u=wfh2', reason: 'Approved for personal reasons' },
 ];
 
-const absentEmployeeData = [
-    { id: 'a1', name: 'Peter Jones', avatarUrl: 'https://i.pravatar.cc/40?u=a1', reason: 'No show' },
-    { id: 'a2', name: 'Emily Carter', avatarUrl: 'https://i.pravatar.cc/40?u=a2', reason: 'No show' },
-];
 
 const leaveData = [
     { id: 'l1', name: 'John Doe', avatarUrl: 'https://i.pravatar.cc/40?u=m_1', reason: 'Sick Leave' },
@@ -72,7 +69,7 @@ const leaveData = [
 export default function AdminDashboard() {
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         <DashboardStatCard
             title="Total employee"
             value="127"
@@ -83,17 +80,6 @@ export default function AdminDashboard() {
             detailsTitle="All Employees"
             detailsData={totalEmployeeData}
             detailsCta={{ href: '/admin/members', text: 'Go to Member List' }}
-        />
-        <DashboardStatCard
-            title="Today presents"
-            value="119"
-            change="+8.9%"
-            changeType="positive"
-            icon={<UserCheck className="h-6 w-6 text-purple-600" />}
-            iconBgColor="bg-purple-100"
-            detailsTitle="Present Employees"
-            detailsData={presentEmployeeData}
-            detailsCta={{ href: '/admin/attendance', text: 'Go to Attendance' }}
         />
         <DashboardStatCard
             title="Today leave"
@@ -107,14 +93,14 @@ export default function AdminDashboard() {
             detailsCta={{ href: '/admin/leave', text: 'Go to Leave Management' }}
         />
         <DashboardStatCard
-            title="Today absents"
-            value="8"
-            change="+7.3%"
+            title="Work from home"
+            value="5"
+            change="+2.1%"
             changeType="positive"
-            icon={<UserX className="h-6 w-6 text-cyan-600" />}
-            iconBgColor="bg-cyan-100"
-            detailsTitle="Absent Employees"
-            detailsData={absentEmployeeData}
+            icon={<Briefcase className="h-6 w-6 text-purple-600" />}
+            iconBgColor="bg-purple-100"
+            detailsTitle="Work From Home Today"
+            detailsData={workFromHomeData}
             detailsCta={{ href: '/admin/attendance', text: 'Go to Attendance' }}
         />
       </div>
@@ -151,10 +137,10 @@ export default function AdminDashboard() {
         </div>
         <Card>
             <CardHeader>
-                <CardTitle>Loan payment received</CardTitle>
+                <CardTitle>Calendar</CardTitle>
             </CardHeader>
             <CardContent>
-                <LoanPaymentChart />
+                <DashboardCalendar />
             </CardContent>
         </Card>
     </div>
