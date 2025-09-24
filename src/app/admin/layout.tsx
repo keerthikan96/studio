@@ -18,7 +18,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, Briefcase, Award, Calendar, User, FileText, Search, Bell, Newspaper, Settings, ChevronDown } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, Award, Calendar as CalendarIcon, User, FileText, Search, Bell, Newspaper, Settings, ChevronDown } from "lucide-react";
 import Logo from "@/components/logo";
 import UserNav from "@/components/user-nav";
 import { Input } from "@/components/ui/input";
@@ -47,11 +47,12 @@ export default function AdminLayout({
         { href: "/admin/workfeed/settings", label: "Settings" }
       ]
     },
-    { href: "/admin/attendance", label: "Attendance", icon: Calendar },
+    { href: "/admin/calendar", label: "Calendar", icon: CalendarIcon },
+    { href: "/admin/attendance", label: "Attendance", icon: CalendarIcon },
     { href: "/admin/department", label: "Department", icon: Briefcase },
     { href: "/admin/members", label: "Members", icon: Users },
     { href: "/admin/award", label: "Award", icon: Award },
-    { href: "/admin/leave", label: "Leave", icon: Calendar },
+    { href: "/admin/leave", label: "Leave", icon: CalendarIcon },
     { href: "/admin/notice", label: "Notice", icon: FileText },
     { href: "/admin/profile", label: "Profile", icon: User },
   ];
@@ -65,6 +66,9 @@ export default function AdminLayout({
      }
      if (href === '/admin/workfeed') {
         return pathname === '/admin/workfeed';
+     }
+     if (href === '/admin/calendar') {
+        return pathname === '/admin/calendar';
      }
      return pathname === href;
   }
