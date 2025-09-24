@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import {
   Card,
   CardContent,
@@ -25,7 +25,10 @@ import { EmployeeAwardList } from "@/components/employee-award-list";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DashboardStatCard } from "@/components/dashboard-stat-card";
-import { DashboardEvents } from "@/components/dashboard-events";
+import { DashboardEvents, Event } from "@/components/dashboard-events";
+import { getMembersAction } from '@/app/actions/staff';
+import { Member } from '@/lib/mock-data';
+import { differenceInYears } from 'date-fns';
 
 
 const notices = [
@@ -69,6 +72,65 @@ const leaveData = [
 
 export default function AdminDashboard() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [isPending, startTransition] = useTransition();
+  const [allEvents, setAllEvents] = useState<Event[]>([]);
+
+  useEffect(() => {
+    startTransition(() => {
+        getMembersAction().then(members => {
+            const events = generateEventsFromMembers(members);
+            setAllEvents(events);
+        });
+    });
+  }, []);
+
+  const generateEventsFromMembers = (members: Member[]): Event[] => {
+    const events: Event[] = [];
+    const currentYear = new Date().getFullYear();
+
+    members.forEach(member => {
+        // Handle Birthdays
+        if (member.date_of_birth) {
+            const dob = new Date(member.date_of_birth);
+            // Ignore potential invalid dates
+            if (!isNaN(dob.getTime())) {
+                const birthdayThisYear = new Date(currentYear, dob.getMonth(), dob.getDate());
+                events.push({
+                    id: `${member.id}-bday`,
+                    type: 'birthday',
+                    name: member.name,
+                    avatar: member.profile_picture_url || `https://i.pravatar.cc/40?u=${member.id}`,
+                    date: birthdayThisYear,
+                });
+            }
+        }
+
+        // Handle Anniversaries
+        if (member.start_date) {
+            const startDate = new Date(member.start_date);
+             if (!isNaN(startDate.getTime())) {
+                const yearsOfService = differenceInYears(new Date(), startDate);
+                if (yearsOfService > 0) {
+                    const anniversaryThisYear = new Date(currentYear, startDate.getMonth(), startDate.getDate());
+                    // Only add if the anniversary is this year (or in the future, for upcoming)
+                    if (anniversaryThisYear.getFullYear() === currentYear) {
+                         events.push({
+                            id: `${member.id}-anniv-${yearsOfService}`,
+                            type: 'anniversary',
+                            name: member.name,
+                            avatar: member.profile_picture_url || `https://i.pravatar.cc/40?u=${member.id}`,
+                            date: anniversaryThisYear,
+                            yearsOfService: yearsOfService,
+                        });
+                    }
+                }
+            }
+        }
+    });
+
+    return events;
+  };
+
 
   return (
     <div className="flex flex-col gap-6">
@@ -117,7 +179,7 @@ export default function AdminDashboard() {
                 <DashboardCalendar selectedDate={selectedDate} onDateChange={setSelectedDate} />
             </CardContent>
         </Card>
-        <DashboardEvents selectedDate={selectedDate} />
+        <DashboardEvents selectedDate={selectedDate} allEvents={allEvents} />
       </div>
 
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -242,3 +304,5 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
+    

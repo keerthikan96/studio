@@ -8,7 +8,7 @@ import { Cake, Gift } from "lucide-react";
 import { isSameDay, format, isToday, isFuture, startOfToday } from 'date-fns';
 import { useMemo } from "react";
 
-type Event = {
+export type Event = {
     id: string;
     type: 'birthday' | 'anniversary';
     name: string;
@@ -16,47 +16,6 @@ type Event = {
     date: Date;
     yearsOfService?: number;
 }
-
-const allEvents: Event[] = [
-  {
-    id: "bday1",
-    type: "birthday",
-    name: "Jane Cooper",
-    avatar: "https://i.pravatar.cc/40?u=bday1",
-    date: new Date(),
-  },
-  {
-    id: "anniv1",
-    type: "anniversary",
-    name: "Robert Fox",
-    avatar: "https://i.pravatar.cc/40?u=anniv1",
-    date: new Date(),
-    yearsOfService: 5,
-  },
-  {
-    id: "bday2",
-    type: "birthday",
-    name: "Wade Warren",
-    avatar: "https://i.pravatar.cc/40?u=bday2",
-    date: new Date(new Date().setDate(new Date().getDate() + 2)),
-  },
-  {
-    id: "anniv2",
-    type: "anniversary",
-    name: "Esther Howard",
-    avatar: "https://i.pravatar.cc/40?u=anniv2",
-    date: new Date(new Date().setDate(new Date().getDate() + 5)),
-    yearsOfService: 3,
-  },
-  {
-    id: "bday3",
-    type: "birthday",
-    name: "Cameron Williamson",
-    avatar: "https://i.pravatar.cc/40?u=bday3",
-    date: new Date(new Date().setDate(new Date().getDate() + 7)),
-  },
-];
-
 
 const EventItem = ({ event, showDate = false }: { event: Event, showDate?: boolean }) => {
     const description = event.type === 'anniversary'
@@ -85,20 +44,21 @@ const EventItem = ({ event, showDate = false }: { event: Event, showDate?: boole
 
 type DashboardEventsProps = {
     selectedDate: Date;
+    allEvents: Event[];
 }
 
-export function DashboardEvents({ selectedDate }: DashboardEventsProps) {
+export function DashboardEvents({ selectedDate, allEvents }: DashboardEventsProps) {
 
     const eventsForDay = useMemo(() => {
         return allEvents.filter(event => isSameDay(event.date, selectedDate));
-    }, [selectedDate]);
+    }, [selectedDate, allEvents]);
 
     const upcomingEvents = useMemo(() => {
         const today = startOfToday();
         return allEvents
             .filter(event => isFuture(event.date) || isToday(event.date))
             .sort((a,b) => a.date.getTime() - b.date.getTime());
-    }, []);
+    }, [allEvents]);
 
     const dayTitle = isToday(selectedDate) 
         ? "Today's Events" 
@@ -153,3 +113,5 @@ export function DashboardEvents({ selectedDate }: DashboardEventsProps) {
         </Card>
     );
 }
+
+    
