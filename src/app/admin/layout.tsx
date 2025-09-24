@@ -26,6 +26,9 @@ import { useEffect, useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import Breadcrumbs from "@/components/breadcrumbs";
 
+// Helper function to capitalize the first letter of a string
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
 export default function AdminLayout({
   children,
 }: {
@@ -75,6 +78,19 @@ export default function AdminLayout({
   }
   
   const isWorkfeedActive = pathname.startsWith('/admin/workfeed');
+
+  // Logic to generate page title
+  const pathSegments = pathname.split('/').filter(Boolean);
+  let pageTitle = 'Dashboard'; // Default title
+  if (pathSegments.length > 1) {
+    const lastSegment = pathSegments[pathSegments.length - 1];
+    pageTitle = lastSegment.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+      ? 'Profile'
+      : capitalize(lastSegment.replace(/-/g, ' '));
+  }
+  if (pathname === '/admin/add-staff') {
+    pageTitle = 'Add Member';
+  }
 
   return (
     <SidebarProvider>
@@ -141,7 +157,6 @@ export default function AdminLayout({
         <header className="flex h-16 items-center justify-between border-b bg-background px-6">
           <div className="flex items-center gap-4">
             <SidebarTrigger className="lg:hidden" />
-            <h1 className="text-xl font-semibold">Dashboard</h1>
           </div>
            <div className="relative md:w-1/3 lg:w-1/4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -154,6 +169,7 @@ export default function AdminLayout({
         </header>
         <main className="flex-1 p-6 bg-muted/30">
             <div className="mb-4">
+              <h1 className="text-2xl font-bold tracking-tight mb-2">{pageTitle}</h1>
                <Breadcrumbs />
             </div>
             {children}
