@@ -23,6 +23,7 @@ export type Note = {
     attachments: { name: string, url: string }[];
     tags?: string[];
     pinned?: boolean;
+    mentions?: string;
     created_at: Date | string;
 };
 

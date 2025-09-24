@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, PlusCircle, Paperclip, ShieldCheck, Eye, Star, X as XIcon } from 'lucide-react';
+import { Loader2, PlusCircle, Paperclip, ShieldCheck, Eye, Star, X as XIcon, MessageSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Note } from '@/lib/mock-data';
 import { getNotesAction } from '@/app/actions/staff';
@@ -24,6 +24,7 @@ import Link from 'next/link';
 const noteSchema = z.object({
   note_name: z.string().min(1, 'Note name is required.'),
   description: z.string().min(1, 'Description is required.'),
+  mentions: z.string().optional(),
   is_confidential: z.boolean().default(false),
   pinned: z.boolean().default(false),
   tags: z.array(z.string()).optional(),
@@ -48,6 +49,7 @@ export function NotesTab({ memberId }: NotesTabProps) {
     defaultValues: {
       note_name: '',
       description: '',
+      mentions: '',
       is_confidential: false,
       pinned: false,
       tags: [],
@@ -90,6 +92,9 @@ export function NotesTab({ memberId }: NotesTabProps) {
       const formData = new FormData();
       formData.append('note_name', data.note_name);
       formData.append('description', data.description);
+      if (data.mentions) {
+        formData.append('mentions', data.mentions);
+      }
       formData.append('is_confidential', String(data.is_confidential));
       formData.append('pinned', String(data.pinned));
       data.tags?.forEach(tag => formData.append('tags', tag));
@@ -152,6 +157,16 @@ export function NotesTab({ memberId }: NotesTabProps) {
 
                 <FormField control={form.control} name="description" render={({ field }) => (
                     <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} rows={5} placeholder="Detailed notes..." /></FormControl><FormMessage /></FormItem>
+                )} />
+
+                <FormField control={form.control} name="mentions" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                           <MessageSquare className="h-4 w-4" /> Mentions
+                        </FormLabel>
+                        <FormControl><Textarea {...field} rows={2} placeholder="@HR please review this..." /></FormControl>
+                        <FormMessage />
+                    </FormItem>
                 )} />
 
                 <FormItem>
@@ -234,6 +249,11 @@ export function NotesTab({ memberId }: NotesTabProps) {
                             </DialogHeader>
                             <div className="space-y-4 py-4">
                                 <p className="text-sm text-muted-foreground whitespace-pre-wrap">{note.description}</p>
+                                {note.mentions && (
+                                     <div><h4 className="font-medium mb-2 flex items-center gap-2"><MessageSquare className="h-4 w-4" />Mentions</h4>
+                                        <p className="text-sm text-muted-foreground whitespace-pre-wrap bg-muted p-2 rounded-md">{note.mentions}</p>
+                                    </div>
+                                )}
                                 {note.tags && note.tags.length > 0 && (
                                     <div><h4 className="font-medium mb-2">Tags</h4>
                                         <div className="flex flex-wrap gap-2">

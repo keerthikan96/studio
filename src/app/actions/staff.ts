@@ -131,13 +131,13 @@ export async function updateMemberStatusAction(id: string, status: Member['statu
 }
 
 export async function addNoteAction(data: Omit<Note, 'id' | 'created_at'>): Promise<Note | { error: string }> {
-  const { member_id, created_by_id, created_by_name, note_name, description, is_confidential, attachments, tags, pinned } = data;
+  const { member_id, created_by_id, created_by_name, note_name, description, is_confidential, attachments, tags, pinned, mentions } = data;
   try {
     const result = await db.query(
-      `INSERT INTO member_notes (member_id, created_by_id, created_by_name, note_name, description, is_confidential, attachments, tags, pinned)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO member_notes (member_id, created_by_id, created_by_name, note_name, description, is_confidential, attachments, tags, pinned, mentions)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *;`,
-      [member_id, created_by_id, created_by_name, note_name, description, is_confidential, JSON.stringify(attachments), tags, pinned]
+      [member_id, created_by_id, created_by_name, note_name, description, is_confidential, JSON.stringify(attachments), tags, pinned, mentions]
     );
     return result.rows[0];
   } catch (error) {

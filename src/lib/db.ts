@@ -91,6 +91,7 @@ export async function setupDatabase() {
                 attachments JSONB,
                 tags TEXT[],
                 pinned BOOLEAN DEFAULT false,
+                mentions TEXT,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
@@ -156,6 +157,7 @@ export async function setupDatabase() {
         const note_columns = [
             { name: 'tags', type: 'TEXT[]' },
             { name: 'pinned', type: 'BOOLEAN DEFAULT false' },
+            { name: 'mentions', type: 'TEXT' },
         ];
 
         for (const col of note_columns) {
