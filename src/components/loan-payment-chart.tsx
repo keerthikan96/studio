@@ -27,13 +27,11 @@ export function DashboardCalendar({ selectedDate, onDateChange }: DashboardCalen
     new Date(year, 0, 1), // New Year's Day
     new Date(year, 0, 15), // Martin Luther King, Jr. Day (example for 2024)
     new Date(year, 6, 4), // Independence Day
-    new Date(year, 10, 28), // Thanksgiving (example for 2024)
     new Date(year, 11, 25), // Christmas
 
     // Canada
     new Date(year, 4, 20), // Victoria Day (example for 2024)
     new Date(year, 6, 1), // Canada Day
-    new Date(year, 9, 14), // Thanksgiving (example for 2024)
     new Date(year, 10, 11), // Remembrance Day
 
     // Sri Lanka
@@ -45,8 +43,8 @@ export function DashboardCalendar({ selectedDate, onDateChange }: DashboardCalen
   ];
 
   const holidayStyle = { 
-    border: '2px solid hsl(var(--primary))',
-    borderRadius: '50%'
+    backgroundColor: 'hsl(var(--accent) / 0.1)',
+    color: 'hsl(var(--accent-foreground))',
   };
 
   return (
@@ -62,10 +60,10 @@ export function DashboardCalendar({ selectedDate, onDateChange }: DashboardCalen
         modifiersStyles={{ holidays: holidayStyle }}
         captionLayout="dropdown-buttons"
         fromYear={1990}
-        toYear={currentYear}
+        toYear={currentYear + 5}
       />
       <div className="flex items-center gap-2 text-sm mt-4 px-3">
-        <span className="w-4 h-4 rounded-full border-2 border-primary" />
+        <span className="w-4 h-4 rounded-full" style={{ backgroundColor: 'hsl(var(--accent) / 0.1)' }} />
         <span>Public Holiday</span>
       </div>
     </>
