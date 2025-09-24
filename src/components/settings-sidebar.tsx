@@ -13,14 +13,6 @@ import { cn } from "@/lib/utils";
 
 const settingsModules = [
   {
-    title: "Module Management",
-    subItems: [
-      { name: "Module List", href: "/admin/settings/module-management/list", isCritical: true },
-      { name: "Module Configuration", href: "/admin/settings/module-management/config", isCritical: true },
-      { name: "Enable/Disable per User", href: "/admin/settings/module-management/user-access", isCritical: true },
-    ],
-  },
-  {
     title: "Home Module Management",
     subItems: [
       { name: "Carousel Management", href: "/admin/settings/home/carousel", isCritical: true },
