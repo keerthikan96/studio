@@ -24,6 +24,7 @@ import UserNav from "@/components/user-nav";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import Breadcrumbs from "@/components/breadcrumbs";
 
 export default function AdminLayout({
   children,
@@ -152,6 +153,9 @@ export default function AdminLayout({
           </div>
         </header>
         <main className="flex-1 p-6 bg-muted/30">
+            <div className="mb-4">
+               <Breadcrumbs />
+            </div>
             {children}
         </main>
       </SidebarInset>
