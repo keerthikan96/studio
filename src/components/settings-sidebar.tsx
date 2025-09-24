@@ -13,6 +13,13 @@ import { cn } from "@/lib/utils";
 
 const settingsModules = [
   {
+    title: "Module Management",
+    subItems: [
+      { name: "Module List", href: "/admin/settings/module-management/list", isCritical: true },
+      { name: "Module Configuration", href: "/admin/settings/module-management/configuration", isCritical: true },
+    ],
+  },
+  {
     title: "Home Module Management",
     subItems: [
       { name: "Carousel Management", href: "/admin/settings/home/carousel", isCritical: true },
@@ -49,6 +56,8 @@ export function SettingsSidebar() {
   const pathname = usePathname();
   const isSettingsHome = pathname === '/admin/settings';
 
+  const isModuleActive = (pathSegment: string) => pathname.includes(pathSegment);
+
   return (
     <aside className="w-80 flex-shrink-0 border-r p-4 space-y-4">
         <h2 className="text-xl font-bold tracking-tight mb-4 flex items-center gap-2"><Settings /> Settings</h2>
@@ -63,7 +72,7 @@ export function SettingsSidebar() {
         </Link>
 
         {settingsModules.map((module) => (
-          <Collapsible key={module.title} defaultOpen={pathname.includes(module.subItems[0].href.split('/')[3])}>
+          <Collapsible key={module.title} defaultOpen={isModuleActive(module.subItems[0].href.split('/')[3])}>
             <CollapsibleTrigger className="flex w-full items-center justify-between p-2 rounded-md hover:bg-muted font-semibold group">
                 {module.title}
                 <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]:rotate-90" />
