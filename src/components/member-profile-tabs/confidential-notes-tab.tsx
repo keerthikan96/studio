@@ -137,6 +137,7 @@ export function ConfidentialNotesTab({ memberId }: ConfidentialNotesTabProps) {
 
   if (userRole !== 'HR') {
     return (
+        <div className="p-4">
         <Card>
             <CardHeader>
                 <CardTitle>Confidential Notes</CardTitle>
@@ -151,10 +152,12 @@ export function ConfidentialNotesTab({ memberId }: ConfidentialNotesTabProps) {
                 </Alert>
             </CardContent>
         </Card>
+        </div>
     )
   }
 
   return (
+    <div className="p-4">
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
@@ -290,5 +293,6 @@ export function ConfidentialNotesTab({ memberId }: ConfidentialNotesTabProps) {
         </Table>
       </CardContent>
     </Card>
+    </div>
   );
 }
