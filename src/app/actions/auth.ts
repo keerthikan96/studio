@@ -85,7 +85,7 @@ export async function requestPasswordResetAction(email: string, isInvitation = f
             [email, token, otp, expires_at, type]
         );
         
-        const baseUrl = baseUrlR|| 'http://localhost:9000';
+        const baseUrl = baseUrlR || 'http://localhost:9000';
         const resetLink = `${baseUrl}/reset-password?token=${token}`;
         const invitationLink = `${baseUrl}/set-password?token=${token}&email=${encodeURIComponent(email)}`;
 
