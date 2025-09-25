@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -37,10 +36,13 @@ import { ConfidentialNotesTab } from '@/components/member-profile-tabs/confident
 import { SelfAssessmentTab } from '@/components/member-profile-tabs/self-assessment-tab';
 import { DocumentsTab } from '@/components/member-profile-tabs/documents-tab';
 import { CoursesAndCertificatesTab } from '@/components/member-profile-tabs/courses-and-certificates-tab';
+import { PayslipTab } from '@/components/member-profile-tabs/payslip-tab';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
 const sriLankanBranches = ['Nothern', 'Central', 'Eastern'];
+const employmentCategories = ['Full-time', 'Part-time', 'Contract'];
+const workLocations = ['Office', 'Work from home'];
 
 const workExperienceSchema = z.object({
   companyName: z.string().min(1, 'Company name is required.'),
@@ -73,6 +75,8 @@ const profileSchema = z.object({
   address: z.string().optional().nullable(),
   emergency_contact_name: z.string().optional().nullable(),
   emergency_contact_phone: z.string().optional().nullable(),
+  employment_category: z.enum(employmentCategories as [string, ...string[]]).optional(),
+  work_location: z.enum(workLocations as [string, ...string[]]).optional(),
 }).refine(data => {
     if (data.country === 'Sri Lanka' && data.branch) {
         return sriLankanBranches.includes(data.branch);
@@ -193,6 +197,46 @@ const GeneralInfoTab = ({ form, isPending }: { form: any, isPending: boolean }) 
                                 </Popover>
                                 <FormMessage />
                             </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="employment_category"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Employment Category</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a category" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {employmentCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="work_location"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Work Location</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a location" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {workLocations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
                         )}
                     />
                     <div className="md:col-span-3">
@@ -664,6 +708,8 @@ export default function ProfilePage() {
             return <DocumentsTab memberId={member.id} />;
         case "Certificate and Courses":
             return <CoursesAndCertificatesTab memberId={member.id} memberName={member.name} />;
+        case "Payslip":
+            return <PayslipTab />;
         default:
             return <PlaceholderContent title={tab} />;
     }
