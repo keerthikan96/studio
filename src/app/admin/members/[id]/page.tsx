@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, Save, X as XIcon, ArrowLeft, Ban, CalendarIcon, Trash, Pencil, Briefcase, MapPin, MoreHorizontal, CheckCircle, CircleSlash, PauseCircle } from 'lucide-react';
+import { Loader2, PlusCircle, Save, X as XIcon, ArrowLeft, Ban, CalendarIcon, Trash, Pencil, Briefcase, MapPin, MoreHorizontal, CheckCircle, CircleSlash, PauseCircle, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Member } from '@/lib/mock-data';
 import { useRouter, useParams } from 'next/navigation';
@@ -940,3 +940,6 @@ export default function MemberProfilePage() {
 
 
 
+
+
+    
