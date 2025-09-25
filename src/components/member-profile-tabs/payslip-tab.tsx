@@ -1,41 +1,85 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Button } from '../ui/button';
+import { History } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const mockPayslipData = {
-    paymentInfo: {
-        payDate: '2024-07-31',
-        payFrequency: 'Monthly',
-        basicSalary: 5000.00,
-        hoursWorked: 160,
-        overtimeHours: 10,
-        overtimeRate: 37.50,
-        bonuses: 500.00,
-        allowances: {
-            transport: 150.00,
-            meal: 100.00,
+    '2024-07': {
+        paymentInfo: {
+            payDate: '2024-07-31',
+            payFrequency: 'Monthly',
+            basicSalary: 5000.00,
+            hoursWorked: 160,
+            overtimeHours: 10,
+            overtimeRate: 37.50,
+            bonuses: 500.00,
+            allowances: { transport: 150.00, meal: 100.00 },
+            otherEarnings: 50.00,
         },
-        otherEarnings: 50.00,
+        deductions: {
+            incomeTax: 950.00,
+            socialSecurity: 310.00,
+            pensionFund: 400.00,
+            healthInsurance: 150.00,
+            unionDues: 25.00,
+            loanRepayment: 200.00,
+            otherDeductions: 15.00,
+        },
     },
-    deductions: {
-        incomeTax: 950.00,
-        socialSecurity: 310.00,
-        pensionFund: 400.00,
-        healthInsurance: 150.00,
-        unionDues: 25.00,
-        loanRepayment: 200.00,
-        otherDeductions: 15.00,
-    },
+    '2024-06': {
+         paymentInfo: {
+            payDate: '2024-06-30',
+            payFrequency: 'Monthly',
+            basicSalary: 5000.00,
+            hoursWorked: 160,
+            overtimeHours: 5,
+            overtimeRate: 37.50,
+            bonuses: 250.00,
+            allowances: { transport: 150.00, meal: 100.00 },
+            otherEarnings: 0,
+        },
+        deductions: {
+            incomeTax: 900.00,
+            socialSecurity: 310.00,
+            pensionFund: 400.00,
+            healthInsurance: 150.00,
+            unionDues: 25.00,
+            loanRepayment: 200.00,
+            otherDeductions: 15.00,
+        },
+    }
 };
+
+const payPeriods = [
+    { label: 'July 2024', value: '2024-07' },
+    { label: 'June 2024', value: '2024-06' },
+    { label: 'May 2024', value: '2024-05' },
+];
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 };
 
 export function PayslipTab() {
-    const { paymentInfo, deductions } = mockPayslipData;
+    const [selectedPeriod, setSelectedPeriod] = useState(payPeriods[0].value);
+    const [userRole, setUserRole] = useState<'staff' | 'HR' | null>(null);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        const storedUser = sessionStorage.getItem('loggedInUser');
+        if (storedUser) {
+            setUserRole(JSON.parse(storedUser).role);
+        }
+    }, []);
+
+    const payslipData = mockPayslipData[selectedPeriod] || mockPayslipData[payPeriods[0].value];
+    const { paymentInfo, deductions } = payslipData;
 
     const totalEarnings =
         paymentInfo.basicSalary +
@@ -55,14 +99,42 @@ export function PayslipTab() {
         deductions.otherDeductions;
     
     const netPay = totalEarnings - totalDeductions;
+    
+    const handleMaintainHistory = () => {
+        toast({
+            title: "Feature Coming Soon",
+            description: "The interface for maintaining salary history is under development.",
+        });
+    }
 
     return (
         <Card>
-            <CardHeader>
-                <CardTitle>Payslip Details</CardTitle>
-                <CardDescription>
-                    Showing a sample payslip for the period ending {paymentInfo.payDate}.
-                </CardDescription>
+            <CardHeader className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                <div className="flex-1">
+                    <CardTitle>Payslip Details</CardTitle>
+                    <CardDescription>
+                        Showing payslip for the selected period.
+                    </CardDescription>
+                </div>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+                    <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                        <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectValue placeholder="Select period" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {payPeriods.map(period => (
+                                <SelectItem key={period.value} value={period.value}>
+                                    {period.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                     {userRole === 'HR' && (
+                        <Button variant="outline" onClick={handleMaintainHistory} className="w-full sm:w-auto">
+                            <History className="mr-2 h-4 w-4" /> Maintain Salary History
+                        </Button>
+                    )}
+                </div>
             </CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-8">
                 {/* Earnings Section */}
