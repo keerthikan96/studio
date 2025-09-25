@@ -68,7 +68,7 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
   useEffect(() => {
     setIsClient(true);
     const storedUser = JSON.parse(sessionStorage.getItem('loggedInUser') || '{}');
-    setUserRole(storedUser.role === 'admin' ? 'HR' : (storedUser.role || 'staff'));
+    setUserRole(storedUser.role === 'HR' ? 'HR' : (storedUser.role || 'staff'));
   }, []);
 
   const form = useForm<EvaluationFormValues>({
@@ -361,7 +361,7 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
               filteredEvaluations.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">{format(new Date(item.evaluation_date), 'PPP')}</TableCell>
-                  <TableCell>{item.self_rating !== null ? `${item.self_rating}%` : 'N/A'}</TableCell>
+                  <TableCell>{item.self_rating !== null && item.self_rating !== undefined ? `${item.self_rating}%` : 'N/A'}</TableCell>
                   <TableCell><Badge variant="outline" className={cn(statusStyles[item.status])}>{item.status}</Badge></TableCell>
                   <TableCell className="text-right space-x-2">
                     <Dialog>
