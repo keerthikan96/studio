@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useTransition, useEffect, useMemo } from 'react';
@@ -313,11 +314,8 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
                                                                 <CommandItem
                                                                     key={category.id}
                                                                     value={category.name}
-                                                                    onSelect={(currentValue) => {
-                                                                        const cat = categories.find(c => c.name.toLowerCase() === currentValue);
-                                                                        if (cat) {
-                                                                            appendComment({ category: cat.name, comment: '' });
-                                                                        }
+                                                                    onSelect={() => {
+                                                                        appendComment({ category: category.name, comment: '' });
                                                                         setCategoryPopoverOpen(false);
                                                                     }}
                                                                 >
@@ -468,3 +466,5 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
     </Card>
   );
 }
+
+    
