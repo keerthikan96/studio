@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -743,7 +744,7 @@ export default function MemberProfilePage() {
         case "Certificate and Courses":
             return <CoursesAndCertificatesTab memberId={member.id} memberName={member.name} />;
         case "Payslip":
-            return <PayslipTab />;
+            return <PayslipTab memberId={member.id} memberName={member.name} />;
         default:
             return <PlaceholderContent title={tab} />;
     }
