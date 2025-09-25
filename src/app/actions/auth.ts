@@ -124,14 +124,16 @@ export async function resetPasswordAction(data: { token: string, newPassword: st
             return { success: false, error: 'Reset token has expired. Please request a new one.' };
         }
 
-        // We check the OTP only if it was provided (i.e., not an invitation)
-        if (otp && resetRecord.otp !== otp) {
+        const isInvitation = resetRecord.otp === 'INVITE';
+
+        // Check OTP only if it's NOT an invitation link.
+        if (!isInvitation && otp !== resetRecord.otp) {
             return { success: false, error: 'Invalid OTP.' };
         }
         
-        // For invitations, we ensure the OTP field was the 'INVITE' placeholder
-        if (!otp && resetRecord.otp !== 'INVITE') {
-            return { success: false, error: 'This is not a valid invitation link.' };
+        // If an OTP was passed for an invitation link, it's an error.
+        if (isInvitation && otp) {
+            return { success: false, error: 'Invalid invitation link.' };
         }
 
         const { email } = resetRecord;

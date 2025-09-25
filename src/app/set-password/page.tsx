@@ -20,7 +20,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import Logo from '@/components/logo';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
-import { updateMemberStatusAction } from '../actions/staff';
 import { resetPasswordAction } from '../actions/auth';
 
 const formSchema = z.object({
@@ -37,7 +36,7 @@ export default function SetPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get('email');
-  const token = searchParams.get('token'); // In a real app, we'd verify this token
+  const token = searchParams.get('token');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -53,7 +52,7 @@ export default function SetPasswordPage() {
 
         const result = await resetPasswordAction({
             token,
-            // No OTP is provided for an invitation link, only the token
+            // No OTP is provided for an invitation link
             newPassword: data.password
         });
         
