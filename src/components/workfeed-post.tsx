@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
 import { Button } from './ui/button';
 import { Heart, MessageSquare, Send, MoreHorizontal, Trash2 } from 'lucide-react';
 import { Separator } from './ui/separator';
-import { WorkfeedPost } from '@/lib/mock-data';
+import { WorkfeedComment, WorkfeedPost } from '@/lib/mock-data';
 import { formatDistanceToNow } from 'date-fns';
 import Image from 'next/image';
 import { useState } from 'react';
@@ -21,9 +21,60 @@ type WorkfeedPostProps = {
     onToggleLike: (postId: string) => void;
     onAddComment: (postId: string, commentText: string) => void;
     onDeletePost: (postId: string) => void;
+    onDeleteComment: (commentId: string) => void;
 };
 
-export default function WorkfeedPostComponent({ post, currentUser, onToggleLike, onAddComment, onDeletePost }: WorkfeedPostProps) {
+type CommentWithDeleteDialogProps = {
+    comment: WorkfeedComment;
+    canDelete: boolean;
+    onDeleteComment: (commentId: string) => void;
+}
+
+const Comment = ({ comment, canDelete, onDeleteComment }: CommentWithDeleteDialogProps) => {
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    return (
+         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <div className="flex items-start gap-2 group">
+                <Avatar className="h-8 w-8">
+                    <AvatarImage src={comment.author_avatar_url ?? undefined} />
+                    <AvatarFallback>{comment.author_name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="bg-muted p-2 rounded-lg flex-1">
+                    <p className="font-semibold text-sm">{comment.author_name}</p>
+                    <p className="text-sm">{comment.content}</p>
+                </div>
+                {canDelete && (
+                    <AlertDialogTrigger asChild>
+                         <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100">
+                            <Trash2 className="h-3 w-3 text-destructive"/>
+                        </Button>
+                    </AlertDialogTrigger>
+                )}
+            </div>
+
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this comment?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the comment.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                        className='bg-destructive hover:bg-destructive/90'
+                        onClick={() => onDeleteComment(comment.id)}
+                    >
+                        Delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    )
+}
+
+
+export default function WorkfeedPostComponent({ post, currentUser, onToggleLike, onAddComment, onDeletePost, onDeleteComment }: WorkfeedPostProps) {
     const fallback = post.author_name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
     const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true });
     const [commentText, setCommentText] = useState('');
@@ -31,7 +82,7 @@ export default function WorkfeedPostComponent({ post, currentUser, onToggleLike,
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     const hasLiked = currentUser ? post.likes.includes(currentUser.id) : false;
-    const canDelete = currentUser?.role === 'HR' || currentUser?.id === post.author_id;
+    const canDeletePost = currentUser?.role === 'HR' || currentUser?.id === post.author_id;
 
     const handleCommentSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -56,7 +107,7 @@ export default function WorkfeedPostComponent({ post, currentUser, onToggleLike,
                                 <p className="text-xs text-muted-foreground">{post.author_role || 'Member'} · {timeAgo}</p>
                             </div>
                         </div>
-                        {canDelete && (
+                        {canDeletePost && (
                              <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon" className='h-8 w-8'>
@@ -110,16 +161,12 @@ export default function WorkfeedPostComponent({ post, currentUser, onToggleLike,
                         <Separator className="mb-4" />
                         <div className="space-y-3 max-h-60 overflow-y-auto mb-4">
                             {post.comments.map(comment => (
-                                <div key={comment.id} className="flex items-start gap-2">
-                                    <Avatar className="h-8 w-8">
-                                        <AvatarImage src={comment.author_avatar_url ?? undefined} />
-                                        <AvatarFallback>{comment.author_name.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <div className="bg-muted p-2 rounded-lg flex-1">
-                                        <p className="font-semibold text-sm">{comment.author_name}</p>
-                                        <p className="text-sm">{comment.content}</p>
-                                    </div>
-                                </div>
+                                <Comment
+                                    key={comment.id}
+                                    comment={comment}
+                                    canDelete={currentUser?.role === 'HR' || currentUser?.id === comment.author_id}
+                                    onDeleteComment={onDeleteComment}
+                                />
                             ))}
                         </div>
                         <form onSubmit={handleCommentSubmit} className="flex items-center gap-2">

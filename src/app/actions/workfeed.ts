@@ -188,6 +188,40 @@ export async function deletePostAction(postId: string, userId: string, userRole:
     }
 }
 
+export async function deleteCommentAction(commentId: string, userId: string, userRole: string): Promise<{ success: boolean; error?: string }> {
+    await setupDatabase();
+    const user = await getCurrentUser(userId, userRole);
+
+    if (!user) {
+        return { success: false, error: 'You must be logged in to delete a comment.' };
+    }
+
+    try {
+        const commentResult = await db.query('SELECT author_id FROM workfeed_comments WHERE id = $1', [commentId]);
+        
+        if (commentResult.rows.length === 0) {
+            return { success: false, error: 'Comment not found.' };
+        }
+
+        const comment = commentResult.rows[0];
+
+        // Check if user is the author or has HR role
+        if (comment.author_id !== user.id && user.role !== 'HR') {
+            return { success: false, error: 'You do not have permission to delete this comment.' };
+        }
+
+        await db.query('DELETE FROM workfeed_comments WHERE id = $1', [commentId]);
+        
+        revalidatePath('/admin/workfeed');
+        revalidatePath('/dashboard/workfeed');
+        return { success: true };
+
+    } catch (error) {
+        console.error('Error deleting comment:', error);
+        return { success: false, error: 'Failed to delete comment.' };
+    }
+}
+
 
 export async function saveWorkfeedSettingsAction(settings: { birthday: any; anniversary: any; }): Promise<{ success: boolean; error?: string }> {
     await setupDatabase();

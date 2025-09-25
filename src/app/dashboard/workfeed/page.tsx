@@ -4,8 +4,8 @@
 import { useState, useEffect, useTransition } from 'react';
 import CreatePostForm from '@/components/create-post-form';
 import WorkfeedPostComponent from '@/components/workfeed-post';
-import { WorkfeedPost } from '@/lib/mock-data';
-import { getPostsAction, createPostAction, toggleLikeAction, addCommentAction, deletePostAction } from '@/app/actions/workfeed';
+import { WorkfeedComment, WorkfeedPost } from '@/lib/mock-data';
+import { getPostsAction, createPostAction, toggleLikeAction, addCommentAction, deletePostAction, deleteCommentAction } from '@/app/actions/workfeed';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -108,6 +108,20 @@ export default function EmployeeWorkfeedPage() {
         }
     };
 
+    const handleDeleteComment = async (commentId: string) => {
+        if (!currentUser) return;
+        const result = await deleteCommentAction(commentId, currentUser.id, currentUser.role);
+        if ('error' in result) {
+            toast({ title: 'Error', description: result.error, variant: 'destructive' });
+        } else {
+             setPosts(prevPosts => prevPosts.map(p => ({
+                ...p,
+                comments: p.comments.filter(c => c.id !== commentId)
+            })));
+            toast({ title: 'Comment Deleted', description: 'The comment has been removed.' });
+        }
+    };
+
 
     return (
         <div className="max-w-3xl mx-auto space-y-6">
@@ -128,6 +142,7 @@ export default function EmployeeWorkfeedPage() {
                             onToggleLike={handleToggleLike}
                             onAddComment={handleAddComment}
                             onDeletePost={handleDeletePost}
+                            onDeleteComment={handleDeleteComment}
                         />
                     ))
                 )}
