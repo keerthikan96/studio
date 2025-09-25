@@ -30,6 +30,7 @@ import {
 import { Check, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import AutomatedPostRecipientList from "@/components/automated-post-recipient-list";
 
 
 export type AutomatedPostConfig = {
@@ -42,7 +43,6 @@ export type AutomatedPostConfig = {
 export default function WorkfeedSettingsPage() {
     const { toast } = useToast();
     const [isPending, startTransition] = useTransition();
-    const [isCreatePostPending, startCreatePostTransition] = useTransition();
 
     const [members, setMembers] = useState<Member[]>([]);
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -73,12 +73,15 @@ export default function WorkfeedSettingsPage() {
         }
 
         startTransition(async () => {
-            const settings = await getWorkfeedSettingsAction();
+            const settingsPromise = getWorkfeedSettingsAction();
+            const membersPromise = getMembersAction();
+            
+            const [settings, memberList] = await Promise.all([settingsPromise, membersPromise]);
+
             if (settings) {
                 if(settings.birthday) setBirthdayConfig(settings.birthday);
                 if(settings.anniversary) setAnniversaryConfig(settings.anniversary);
             }
-            const memberList = await getMembersAction();
             setMembers(memberList);
         });
     }, []);
@@ -125,7 +128,7 @@ export default function WorkfeedSettingsPage() {
             return;
         }
 
-        startCreatePostTransition(async () => {
+        startTransition(async () => {
             // For now, we are not generating an image, just the text content.
             const result = await createPostAction(postContent, currentUser);
 
@@ -237,8 +240,8 @@ export default function WorkfeedSettingsPage() {
                                     )}
                                     <DialogFooter className="pr-6 pt-4">
                                         <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                                        <Button onClick={handleCreatePost} disabled={isCreatePostPending || !selectedMember}>
-                                            {isCreatePostPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Post to Feed'}
+                                        <Button onClick={handleCreatePost} disabled={isPending || !selectedMember}>
+                                            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Post to Feed'}
                                         </Button>
                                     </DialogFooter>
                                 </div>
@@ -251,36 +254,41 @@ export default function WorkfeedSettingsPage() {
                  </div>
             </div>
             
-            {isPending ? <Loader2 className="h-8 w-8 animate-spin" /> : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <AutomatedPostSetting
-                        title="Automatic Birthday Posts"
-                        description="This post will be automatically generated on a member's birthday using their name and profile picture."
-                        toggleId="birthday-toggle"
-                        toggleLabel="Enable Birthday Posts"
-                        config={birthdayConfig}
-                        onConfigChange={setBirthdayConfig}
-                        previewName="Jessica Singh"
-                        previewAvatarUrl="/placeholder.svg"
-                        previewType="birthday"
-                    />
+            {isPending && members.length === 0 ? <Loader2 className="h-8 w-8 animate-spin" /> : (
+                <>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <AutomatedPostSetting
+                            title="Automatic Birthday Posts"
+                            description="This post will be automatically generated on a member's birthday using their name and profile picture."
+                            toggleId="birthday-toggle"
+                            toggleLabel="Enable Birthday Posts"
+                            config={birthdayConfig}
+                            onConfigChange={setBirthdayConfig}
+                            previewName="Jessica Singh"
+                            previewAvatarUrl="/placeholder.svg"
+                            previewType="birthday"
+                        />
 
-                    <AutomatedPostSetting
-                        title="Automatic Anniversary Posts"
-                        description="This post will be automatically generated on a member's work anniversary, celebrating their years of service."
-                        toggleId="anniversary-toggle"
-                        toggleLabel="Enable Anniversary Posts"
-                        config={anniversaryConfig}
-                        onConfigChange={setAnniversaryConfig}
-                        previewName="John Doe"
-                        previewAvatarUrl="/placeholder.svg"
-                        previewType="anniversary"
-                        previewYears={5}
-                    />
-                </div>
+                        <AutomatedPostSetting
+                            title="Automatic Anniversary Posts"
+                            description="This post will be automatically generated on a member's work anniversary, celebrating their years of service."
+                            toggleId="anniversary-toggle"
+                            toggleLabel="Enable Anniversary Posts"
+                            config={anniversaryConfig}
+                            onConfigChange={setAnniversaryConfig}
+                            previewName="John Doe"
+                            previewAvatarUrl="/placeholder.svg"
+                            previewType="anniversary"
+                            previewYears={5}
+                        />
+                    </div>
+                    <AutomatedPostRecipientList members={members} />
+                </>
             )}
         </div>
     );
 }
+
+    
 
     
