@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, Save, X as XIcon, Ban, CalendarIcon } from 'lucide-react';
+import { Loader2, PlusCircle, Save, X as XIcon, Ban, CalendarIcon, Briefcase, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Member } from '@/lib/mock-data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -745,6 +746,26 @@ export default function ProfilePage() {
                     <h1 className="text-2xl font-bold">{member.name}</h1>
                     <p className="text-muted-foreground">{member.job_title || member.domain}</p>
                     <p className="text-sm text-muted-foreground">{member.email}</p>
+                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 text-sm text-muted-foreground">
+                        {member.start_date && (
+                            <div className="flex items-center gap-1.5">
+                                <CalendarIcon className="h-4 w-4" />
+                                <span>Joined {format(new Date(member.start_date), 'PPP')}</span>
+                            </div>
+                        )}
+                        {member.employment_category && (
+                            <div className="flex items-center gap-1.5">
+                                <Briefcase className="h-4 w-4" />
+                                <span>{member.employment_category}</span>
+                            </div>
+                        )}
+                        {member.work_location && (
+                             <div className="flex items-center gap-1.5">
+                                <MapPin className="h-4 w-4" />
+                                <span>{member.work_location}</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </CardHeader>
         </Card>
