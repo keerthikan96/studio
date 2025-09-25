@@ -76,8 +76,8 @@ const payPeriods = [
 ];
 
 const mockJobHistory = [
-    { position: 'Senior Software Engineer', department: 'Engineering', startDate: '2024-01-01', endDate: null, status: 'Active', manager: 'Jane Smith', reason: 'Promotion' },
-    { position: 'Software Engineer', department: 'Engineering', startDate: '2022-01-01', endDate: '2023-12-31', status: 'Ended', manager: 'Jane Smith', reason: 'Initial Hire' },
+    { position: 'Senior Software Engineer', department: 'Engineering', employmentType: 'Full-time', startDate: '2024-01-01', endDate: null, status: 'Active', manager: 'Jane Smith', reason: 'Promotion' },
+    { position: 'Software Engineer', department: 'Engineering', employmentType: 'Full-time', startDate: '2022-01-01', endDate: '2023-12-31', status: 'Ended', manager: 'Jane Smith', reason: 'Initial Hire' },
 ];
 
 
@@ -221,6 +221,7 @@ export function EmploymentHistoryTab({ memberId, memberName }: { memberId: strin
                                <TableRow>
                                    <TableHead>Position</TableHead>
                                    <TableHead>Department</TableHead>
+                                   <TableHead>Type</TableHead>
                                    <TableHead>Duration</TableHead>
                                    <TableHead>Status</TableHead>
                                </TableRow>
@@ -230,6 +231,7 @@ export function EmploymentHistoryTab({ memberId, memberName }: { memberId: strin
                                    <TableRow key={job.startDate}>
                                        <TableCell>{job.position}</TableCell>
                                        <TableCell>{job.department}</TableCell>
+                                       <TableCell>{job.employmentType}</TableCell>
                                        <TableCell>{job.startDate} - {job.endDate || 'Present'}</TableCell>
                                        <TableCell>{job.status}</TableCell>
                                    </TableRow>
@@ -416,12 +418,7 @@ export function EmploymentHistoryTab({ memberId, memberName }: { memberId: strin
                             </div>
                         </div>
                     </Section>
-
-                    <Section icon={UserCheck} title="Employment Category">
-                        <p><strong>Category:</strong> Full-time</p>
-                        <p><strong>Contract Type:</strong> Open-ended</p>
-                    </Section>
-
+                    
                     <Section icon={Building2} title="Office Locations">
                         <p><strong>Work Model:</strong> Hybrid</p>
                         <p><strong>Assigned Office:</strong> Colombo, Sri Lanka</p>
@@ -433,5 +430,3 @@ export function EmploymentHistoryTab({ memberId, memberName }: { memberId: strin
         </Card>
     );
 }
-
-  
