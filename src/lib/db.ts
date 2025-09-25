@@ -213,7 +213,7 @@ export async function setupDatabase() {
             );
         `);
         
-         await client.query(`
+        await client.query(`
             CREATE TABLE IF NOT EXISTS assessment_categories (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 name VARCHAR(255) UNIQUE NOT NULL,
@@ -221,6 +221,22 @@ export async function setupDatabase() {
             );
         `);
         
+        // Seed default assessment categories if they don't exist
+        const { rows: categoryCount } = await client.query('SELECT COUNT(*) FROM assessment_categories');
+        if (parseInt(categoryCount[0].count, 10) === 0) {
+            const defaultCategories = [
+                'Technical Skills',
+                'Soft Skills',
+                'Problem-Solving',
+                'Productivity & Time Management',
+                'Learning & Development',
+            ];
+            for (const categoryName of defaultCategories) {
+                await client.query('INSERT INTO assessment_categories (name) VALUES ($1)', [categoryName]);
+            }
+            console.log('Default assessment categories have been seeded.');
+        }
+
         const member_columns = [
             { name: 'password', type: 'TEXT' },
             { name: 'profile_picture_url', type: 'VARCHAR(2048)' },
