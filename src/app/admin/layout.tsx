@@ -58,7 +58,7 @@ export default function AdminLayout({
     { href: "/admin/award", label: "Award", icon: Award },
     { href: "/admin/leave", label: "Leave", icon: CalendarIcon },
     { href: "/admin/notice", label: "Notice", icon: FileText },
-    { href: "/admin/profile", label: "Profile", icon: User },
+    { href: "/dashboard/profile", label: "Profile", icon: User },
   ];
 
   const getIsActive = (href: string) => {
@@ -73,6 +73,9 @@ export default function AdminLayout({
      }
      if (href === '/admin/calendar') {
         return pathname === '/admin/calendar';
+     }
+      if (href === '/dashboard/profile') {
+        return pathname.startsWith('/dashboard/profile');
      }
      return pathname === href;
   }

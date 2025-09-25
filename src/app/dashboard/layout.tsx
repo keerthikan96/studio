@@ -56,6 +56,8 @@ export default function DashboardLayout({
     const lastSegment = pathSegments[pathSegments.length - 1];
     if (pathSegments[1] === 'members' && pathSegments.length > 2 && lastSegment !== 'members') {
         pageTitle = 'Member Profile';
+    } else if (pathSegments[1] === 'profile') {
+        pageTitle = 'My Profile'
     } else {
         pageTitle = capitalize(lastSegment.replace(/-/g, ' '));
     }
