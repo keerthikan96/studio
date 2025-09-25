@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, Save, X as XIcon, ArrowLeft, Ban, CalendarIcon, Trash } from 'lucide-react';
+import { Loader2, PlusCircle, Save, X as XIcon, ArrowLeft, Ban, CalendarIcon, Trash, Pencil } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Member } from '@/lib/mock-data';
 import { useRouter, useParams } from 'next/navigation';
@@ -42,6 +42,7 @@ import { DocumentsTab } from '@/components/member-profile-tabs/documents-tab';
 import { CoursesAndCertificatesTab } from '@/components/member-profile-tabs/courses-and-certificates-tab';
 import { EmploymentHistoryTab } from '@/components/member-profile-tabs/payslip-tab';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { LeaveTab } from '@/components/member-profile-tabs/leave-tab';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
@@ -712,6 +713,8 @@ export default function MemberProfilePage() {
             return <CoursesAndCertificatesTab memberId={member.id} memberName={member.name} />;
         case "Employment History":
             return <EmploymentHistoryTab memberId={member.id} memberName={member.name} />;
+        case "Leave":
+            return <LeaveTab memberId={member.id} />;
         default:
             return <PlaceholderContent title={tab} />;
     }
@@ -812,5 +815,3 @@ export default function MemberProfilePage() {
     </div>
   );
 }
-
-    
