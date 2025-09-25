@@ -133,163 +133,165 @@ export function NotesTab({ memberId }: NotesTabProps) {
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Member Notes</CardTitle>
-          <CardDescription>Log and view notes related to this member.</CardDescription>
-        </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Note</Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Add a New Note</DialogTitle>
-              <DialogDescription>
-                Fill in the details below. Click save when you're done.
-              </DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="max-h-[70vh] pr-6">
-              <div className="pr-1">
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField control={form.control} name="note_name" render={({ field }) => (
-                        <FormItem><FormLabel>Note Name</FormLabel><FormControl><Input {...field} placeholder="e.g., Performance Review Q3" /></FormControl><FormMessage /></FormItem>
-                    )} />
+    <div className="p-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Member Notes</CardTitle>
+            <CardDescription>Log and view notes related to this member.</CardDescription>
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Note</Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Add a New Note</DialogTitle>
+                <DialogDescription>
+                  Fill in the details below. Click save when you're done.
+                </DialogDescription>
+              </DialogHeader>
+              <ScrollArea className="max-h-[70vh] pr-6">
+                <div className="pr-1">
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                      <FormField control={form.control} name="note_name" render={({ field }) => (
+                          <FormItem><FormLabel>Note Name</FormLabel><FormControl><Input {...field} placeholder="e.g., Performance Review Q3" /></FormControl><FormMessage /></FormItem>
+                      )} />
 
-                    <FormField control={form.control} name="description" render={({ field }) => (
-                        <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} rows={5} placeholder="Detailed notes..." /></FormControl><FormMessage /></FormItem>
-                    )} />
+                      <FormField control={form.control} name="description" render={({ field }) => (
+                          <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} rows={5} placeholder="Detailed notes..." /></FormControl><FormMessage /></FormItem>
+                      )} />
 
-                    <FormField control={form.control} name="mentions" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <MessageSquare className="h-4 w-4" /> Mentions
-                            </FormLabel>
-                            <FormControl><Textarea {...field} rows={2} placeholder="@HR please review this..." /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
+                      <FormField control={form.control} name="mentions" render={({ field }) => (
+                          <FormItem>
+                              <FormLabel className="flex items-center gap-2">
+                                <MessageSquare className="h-4 w-4" /> Mentions
+                              </FormLabel>
+                              <FormControl><Textarea {...field} rows={2} placeholder="@HR please review this..." /></FormControl>
+                              <FormMessage />
+                          </FormItem>
+                      )} />
 
-                    <FormItem>
-                        <FormLabel>Tags</FormLabel>
-                        <FormControl>
-                            <div>
-                            <Input placeholder="Type a tag and press Enter" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={handleTagKeyDown} />
-                            <div className="flex flex-wrap gap-2 mt-2">
-                                {tagFields.map((field, index) => (
-                                <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
-                                    {form.getValues('tags')?.[index]}
-                                    <button type="button" onClick={() => removeTag(index)}><XIcon className="h-3 w-3" /></button>
-                                </Badge>
-                                ))}
-                            </div>
-                            </div>
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
+                      <FormItem>
+                          <FormLabel>Tags</FormLabel>
+                          <FormControl>
+                              <div>
+                              <Input placeholder="Type a tag and press Enter" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={handleTagKeyDown} />
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                  {tagFields.map((field, index) => (
+                                  <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
+                                      {form.getValues('tags')?.[index]}
+                                      <button type="button" onClick={() => removeTag(index)}><XIcon className="h-3 w-3" /></button>
+                                  </Badge>
+                                  ))}
+                              </div>
+                              </div>
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
 
-                    <FormItem><FormLabel>Attachments</FormLabel><FormControl><Input type="file" multiple {...register("attachments")} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>Attachments</FormLabel><FormControl><Input type="file" multiple {...register("attachments")} /></FormControl><FormMessage /></FormItem>
 
-                    <div className="flex justify-between gap-4">
-                        <FormField control={form.control} name="is_confidential" render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm flex-1">
-                                <div className="space-y-0.5"><FormLabel>Confidential</FormLabel><FormMessage>Only authorized personnel can view this note.</FormMessage></div>
-                                <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                            </FormItem>
-                        )} />
-                        <FormField control={form.control} name="pinned" render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm flex-1">
-                                <div className="space-y-0.5"><FormLabel>Pin to Top</FormLabel></div>
-                                <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                            </FormItem>
-                        )} />
-                    </div>
-                    
-                    <DialogFooter className="pr-0 pt-4">
-                        <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                        <Button type="submit" disabled={isPending}>
-                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Note
-                        </Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
-              </div>
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Note</TableHead>
-              <TableHead>Created By</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isPending && notes.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" /></TableCell></TableRow>
-            ) : notes.length > 0 ? (
-              notes.map((note) => (
-                <TableRow key={note.id}>
-                  <TableCell className="font-medium">{note.note_name}</TableCell>
-                  <TableCell>{note.created_by_name}</TableCell>
-                  <TableCell>{format(new Date(note.created_at), 'PPP')}</TableCell>
-                  <TableCell className="space-x-2">
-                    {note.pinned && <Badge variant="default" className='bg-yellow-500 hover:bg-yellow-600'><Star className="mr-1 h-3 w-3"/>Pinned</Badge>}
-                    {note.is_confidential && <Badge variant="destructive"><ShieldCheck className="mr-1 h-3 w-3"/>Confidential</Badge>}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Dialog>
-                        <DialogTrigger asChild><Button variant="outline" size="sm"><Eye className="mr-2 h-4 w-4"/>View</Button></DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>{note.note_name}</DialogTitle>
-                                <DialogDescription>Created by {note.created_by_name} on {format(new Date(note.created_at), 'PPP p')}</DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4 py-4">
-                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{note.description}</p>
-                                {note.mentions && (
-                                     <div><h4 className="font-medium mb-2 flex items-center gap-2"><MessageSquare className="h-4 w-4" />Mentions</h4>
-                                        <p className="text-sm text-muted-foreground whitespace-pre-wrap bg-muted p-2 rounded-md">{note.mentions}</p>
-                                    </div>
-                                )}
-                                {note.tags && note.tags.length > 0 && (
-                                    <div><h4 className="font-medium mb-2">Tags</h4>
-                                        <div className="flex flex-wrap gap-2">
-                                            {note.tags.map((tag, index) => <Badge key={index} variant="secondary">{tag}</Badge>)}
-                                        </div>
-                                    </div>
-                                )}
-                                {note.attachments && note.attachments.length > 0 && (
-                                    <div><h4 className="font-medium mb-2">Attachments</h4>
-                                        <ul className="space-y-2">
-                                            {note.attachments.map((file, index) => (
-                                                <li key={index} className="flex items-center text-sm">
-                                                    <Paperclip className="h-4 w-4 mr-2 text-muted-foreground"/>
-                                                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{file.name}</a>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )}
-                            </div>
-                        </DialogContent>
-                    </Dialog>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow><TableCell colSpan={5} className="h-24 text-center">No notes found.</TableCell></TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+                      <div className="flex justify-between gap-4">
+                          <FormField control={form.control} name="is_confidential" render={({ field }) => (
+                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm flex-1">
+                                  <div className="space-y-0.5"><FormLabel>Confidential</FormLabel><FormMessage>Only authorized personnel can view this note.</FormMessage></div>
+                                  <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                              </FormItem>
+                          )} />
+                          <FormField control={form.control} name="pinned" render={({ field }) => (
+                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm flex-1">
+                                  <div className="space-y-0.5"><FormLabel>Pin to Top</FormLabel></div>
+                                  <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                              </FormItem>
+                          )} />
+                      </div>
+                      
+                      <DialogFooter className="pr-0 pt-4">
+                          <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                          <Button type="submit" disabled={isPending}>
+                              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Note
+                          </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </div>
+              </ScrollArea>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Note</TableHead>
+                <TableHead>Created By</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isPending && notes.length === 0 ? (
+                  <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" /></TableCell></TableRow>
+              ) : notes.length > 0 ? (
+                notes.map((note) => (
+                  <TableRow key={note.id}>
+                    <TableCell className="font-medium">{note.note_name}</TableCell>
+                    <TableCell>{note.created_by_name}</TableCell>
+                    <TableCell>{format(new Date(note.created_at), 'PPP')}</TableCell>
+                    <TableCell className="space-x-2">
+                      {note.pinned && <Badge variant="default" className='bg-yellow-500 hover:bg-yellow-600'><Star className="mr-1 h-3 w-3"/>Pinned</Badge>}
+                      {note.is_confidential && <Badge variant="destructive"><ShieldCheck className="mr-1 h-3 w-3"/>Confidential</Badge>}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Dialog>
+                          <DialogTrigger asChild><Button variant="outline" size="sm"><Eye className="mr-2 h-4 w-4"/>View</Button></DialogTrigger>
+                          <DialogContent>
+                              <DialogHeader>
+                                  <DialogTitle>{note.note_name}</DialogTitle>
+                                  <DialogDescription>Created by {note.created_by_name} on {format(new Date(note.created_at), 'PPP p')}</DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-4 py-4">
+                                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{note.description}</p>
+                                  {note.mentions && (
+                                       <div><h4 className="font-medium mb-2 flex items-center gap-2"><MessageSquare className="h-4 w-4" />Mentions</h4>
+                                          <p className="text-sm text-muted-foreground whitespace-pre-wrap bg-muted p-2 rounded-md">{note.mentions}</p>
+                                      </div>
+                                  )}
+                                  {note.tags && note.tags.length > 0 && (
+                                      <div><h4 className="font-medium mb-2">Tags</h4>
+                                          <div className="flex flex-wrap gap-2">
+                                              {note.tags.map((tag, index) => <Badge key={index} variant="secondary">{tag}</Badge>)}
+                                          </div>
+                                      </div>
+                                  )}
+                                  {note.attachments && note.attachments.length > 0 && (
+                                      <div><h4 className="font-medium mb-2">Attachments</h4>
+                                          <ul className="space-y-2">
+                                              {note.attachments.map((file, index) => (
+                                                  <li key={index} className="flex items-center text-sm">
+                                                      <Paperclip className="h-4 w-4 mr-2 text-muted-foreground"/>
+                                                      <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{file.name}</a>
+                                                  </li>
+                                              ))}
+                                          </ul>
+                                      </div>
+                                  )}
+                              </div>
+                          </DialogContent>
+                      </Dialog>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow><TableCell colSpan={5} className="h-24 text-center">No notes found.</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
