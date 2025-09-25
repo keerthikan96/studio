@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Member } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
-import { CheckCircle, CircleSlash, Eye, Mail, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { CheckCircle, CircleSlash, Eye, Mail, MoreHorizontal, Pencil, Trash2, KeyRound } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -17,6 +17,7 @@ type MemberCardProps = {
   onStatusChange: (member: Member, status: Member['status']) => void;
   onDelete: (member: Member) => void;
   onSendInvite: (member: Member) => void;
+  onSendPasswordReset: (member: Member) => void;
 };
 
 const statusStyles: { [key: string]: string } = {
@@ -26,7 +27,7 @@ const statusStyles: { [key: string]: string } = {
 };
 
 
-export function MemberCard({ member, onStatusChange, onDelete, onSendInvite }: MemberCardProps) {
+export function MemberCard({ member, onStatusChange, onDelete, onSendInvite, onSendPasswordReset }: MemberCardProps) {
   const fallback = member.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
 
   return (
@@ -66,6 +67,10 @@ export function MemberCard({ member, onStatusChange, onDelete, onSendInvite }: M
                             Deactivate
                         </DropdownMenuItem>
                     )}
+                     <DropdownMenuItem onClick={() => onSendPasswordReset(member)}>
+                        <KeyRound className="mr-2 h-4 w-4" />
+                        Send Password Reset
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-destructive" onClick={() => onDelete(member)}>
                     <Trash2 className="mr-2 h-4 w-4" />

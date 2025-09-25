@@ -23,6 +23,8 @@ import {
   MoreHorizontal,
   Pencil,
   Trash2,
+  KeyRound,
+  Loader2,
 } from 'lucide-react';
 
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -51,6 +53,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { deleteMemberAction, updateMemberStatusAction } from '@/app/actions/staff';
+import { requestPasswordResetAction } from '@/app/actions/auth';
 import { useToast } from '@/hooks/use-toast';
 import { MemberCard } from './member-card';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -65,6 +68,7 @@ const getColumns = (
     onSendInvite: (member: Member) => void,
     onStatusChange: (member: Member, status: Member['status']) => void,
     onDelete: (member: Member) => void,
+    onSendPasswordReset: (member: Member) => void,
 ): ColumnDef<Member>[] => [
   {
     id: 'select',
@@ -163,6 +167,10 @@ const getColumns = (
                     Deactivate
                  </DropdownMenuItem>
             )}
+            <DropdownMenuItem onClick={() => onSendPasswordReset(member)}>
+                <KeyRound className="mr-2 h-4 w-4" />
+                Send Password Reset
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive" onClick={() => onDelete(member)}>
               <Trash2 className="mr-2 h-4 w-4" />
@@ -195,7 +203,9 @@ export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberL
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
   const [memberToDelete, setMemberToDelete] = React.useState<Member | null>(null);
+  const [memberToReset, setMemberToReset] = React.useState<Member | null>(null);
   const [isPending, startTransition] = React.useTransition();
+  const [isResetPending, startResetTransition] = React.useTransition();
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -234,7 +244,20 @@ export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberL
     }
   }
 
-  const columns = React.useMemo(() => getColumns(onSendInvite, handleStatusChange, setMemberToDelete), [onSendInvite]);
+  const handlePasswordResetConfirm = () => {
+    if (!memberToReset) return;
+    startResetTransition(async () => {
+        const result = await requestPasswordResetAction(memberToReset.email, false);
+        if (result.success) {
+            toast({ title: 'Password Reset Sent', description: `A reset link for ${memberToReset.name} has been logged to the server console.`});
+        } else {
+            toast({ title: 'Error', description: result.error || 'Failed to send reset link.', variant: 'destructive'});
+        }
+        setMemberToReset(null);
+    });
+  };
+
+  const columns = React.useMemo(() => getColumns(onSendInvite, handleStatusChange, setMemberToDelete, setMemberToReset), [onSendInvite]);
 
   const table = useReactTable({
     data,
@@ -367,6 +390,7 @@ export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberL
                 onStatusChange={handleStatusChange}
                 onDelete={setMemberToDelete}
                 onSendInvite={onSendInvite}
+                onSendPasswordReset={setMemberToReset}
               />
             ))
           ) : (
@@ -493,8 +517,23 @@ export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberL
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <AlertDialog open={!!memberToReset} onOpenChange={() => setMemberToReset(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send Password Reset Link?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will generate a new password reset link for {memberToReset?.name} and log it to the console.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handlePasswordResetConfirm} disabled={isResetPending}>
+                {isResetPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Yes, Send Reset Link
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
-
-    
