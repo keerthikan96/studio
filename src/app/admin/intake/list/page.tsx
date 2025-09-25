@@ -8,14 +8,14 @@ export default function IntakeListPage() {
     <div className="space-y-6">
         <Card>
             <CardHeader>
-                <CardTitle>Intake List</CardTitle>
+                <CardTitle>On-boarding List</CardTitle>
                 <CardDescription>
-                    View and manage all new hire intakes.
+                    View and manage all new hire on-boarding processes.
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <p className="text-sm text-muted-foreground">
-                    A table of all intakes will be displayed here.
+                    A table of all on-boarding processes will be displayed here.
                 </p>
             </CardContent>
         </Card>

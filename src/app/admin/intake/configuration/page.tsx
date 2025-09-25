@@ -37,17 +37,17 @@ export default function IntakeConfigurationPage() {
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Intake Configuration</CardTitle>
+                    <CardTitle>On-boarding Configuration</CardTitle>
                     <CardDescription>
-                        Configure the details and onboarding steps for a specific intake.
+                        Configure the details and onboarding steps for a specific process.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">
                      <div className="grid w-full max-w-sm items-center gap-1.5">
-                        <Label htmlFor="select-intake">Select Intake to Configure</Label>
+                        <Label htmlFor="select-intake">Select On-boarding to Configure</Label>
                         <Select onValueChange={setSelectedIntake}>
                             <SelectTrigger id="select-intake">
-                                <SelectValue placeholder="Select an intake..." />
+                                <SelectValue placeholder="Select an on-boarding..." />
                             </SelectTrigger>
                             <SelectContent>
                                 {mockIntakes.map(intake => (
@@ -94,7 +94,7 @@ export default function IntakeConfigurationPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="description">Description</Label>
-                                <Textarea id="description" placeholder="Enter a brief description for this intake." />
+                                <Textarea id="description" placeholder="Enter a brief description for this on-boarding process." />
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div className="space-y-2">
@@ -153,7 +153,7 @@ export default function IntakeConfigurationPage() {
 
                             <div className="flex justify-end gap-2">
                                 <Button variant="outline">Cancel</Button>
-                                <Button>Save/Update Intake</Button>
+                                <Button>Save/Update On-boarding</Button>
                             </div>
                         </div>
                     )}
