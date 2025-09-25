@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useTransition, useEffect, useMemo } from 'react';
@@ -315,7 +314,7 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
                                                                     key={category.id}
                                                                     value={category.name}
                                                                     onSelect={(currentValue) => {
-                                                                        const cat = categories.find(c => c.name.toLowerCase() === currentValue.toLowerCase());
+                                                                        const cat = categories.find(c => c.name.toLowerCase() === currentValue);
                                                                         if (cat) {
                                                                             appendComment({ category: cat.name, comment: '' });
                                                                         }
@@ -345,8 +344,8 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
                                             <FormMessage />
                                         </FormItem>
                                         )} />
-
-                                         <FormField control={form.control} name="other_comments" render={({ field }) => (
+                                        
+                                        <FormField control={form.control} name="other_comments" render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Other Comments</FormLabel>
                                                 <FormControl>
@@ -469,5 +468,3 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
     </Card>
   );
 }
-
-    
