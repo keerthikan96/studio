@@ -36,7 +36,7 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
         `INSERT INTO members (name, email, phone, domain, country, branch, experience, education, skills, status, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, hobbies, volunteer_work)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12, $13, $14, $15, $16, $17)
          RETURNING *;`,
-        [name, email, phone, domain, country, branch, JSON.stringify(experience), JSON.stringify(education), JSON.stringify(skills), job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, hobbies, volunteer_work]
+        [name, email, phone, domain, country, branch, JSON.stringify(experience), JSON.stringify(education), JSON.stringify(skills), job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, JSON.stringify(hobbies), JSON.stringify(volunteer_work)]
       );
       const newMember = result.rows[0];
 
@@ -122,8 +122,8 @@ export async function updateMemberAction(id: string, data: Omit<Partial<Member>,
         if (address !== undefined) { fields.push(`address = $${fieldIndex++}`); values.push(address); }
         if (emergency_contact_name !== undefined) { fields.push(`emergency_contact_name = $${fieldIndex++}`); values.push(emergency_contact_name); }
         if (emergency_contact_phone !== undefined) { fields.push(`emergency_contact_phone = $${fieldIndex++}`); values.push(emergency_contact_phone); }
-        if (hobbies !== undefined) { fields.push(`hobbies = $${fieldIndex++}`); values.push(hobbies); }
-        if (volunteer_work !== undefined) { fields.push(`volunteer_work = $${fieldIndex++}`); values.push(volunteer_work); }
+        if (hobbies !== undefined) { fields.push(`hobbies = $${fieldIndex++}`); values.push(JSON.stringify(hobbies)); }
+        if (volunteer_work !== undefined) { fields.push(`volunteer_work = $${fieldIndex++}`); values.push(JSON.stringify(volunteer_work)); }
         
         if (fields.length === 0) {
             const member = await getMemberByIdAction(id);

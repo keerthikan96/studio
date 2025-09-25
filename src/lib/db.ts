@@ -21,8 +21,6 @@ try {
     },
   });
 
-  console.log('Database connection pool created successfully.');
-
 } catch (error) {
   console.error('Failed to create database connection pool:', error);
   pool = new Proxy({} as Pool, {
@@ -66,8 +64,8 @@ export async function setupDatabase() {
                 address TEXT,
                 emergency_contact_name VARCHAR(255),
                 emergency_contact_phone VARCHAR(50),
-                hobbies TEXT,
-                volunteer_work TEXT,
+                hobbies JSONB,
+                volunteer_work JSONB,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
@@ -249,18 +247,20 @@ export async function setupDatabase() {
             { name: 'address', type: 'TEXT' },
             { name: 'emergency_contact_name', type: 'VARCHAR(255)' },
             { name: 'emergency_contact_phone', type: 'VARCHAR(50)' },
-            { name: 'hobbies', type: 'TEXT' },
-            { name: 'volunteer_work', type: 'TEXT' },
+            { name: 'hobbies', type: 'JSONB' },
+            { name: 'volunteer_work', type: 'JSONB' },
         ];
 
         for (const col of member_columns) {
             const { rows } = await client.query(`
-                SELECT column_name
+                SELECT column_name, data_type
                 FROM information_schema.columns
                 WHERE table_name='members' AND column_name=$1;
             `, [col.name]);
             if (rows.length === 0) {
                 await client.query(`ALTER TABLE members ADD COLUMN ${col.name} ${col.type};`);
+            } else if (rows[0].data_type === 'text' && col.type === 'JSONB') {
+                 await client.query(`ALTER TABLE members ALTER COLUMN ${col.name} TYPE JSONB USING ${col.name}::jsonb;`);
             }
         }
 

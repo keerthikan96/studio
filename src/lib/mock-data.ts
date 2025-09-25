@@ -89,6 +89,26 @@ export type CourseOrCertificate = {
     created_at: Date | string;
 };
 
+export type Hobby = {
+    id: string;
+    name: string;
+    category: 'Sports' | 'Arts' | 'Music' | 'Reading' | 'Travel' | 'Gaming' | 'Fitness' | 'Other';
+    skillLevel: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
+    frequency: 'Occasional' | 'Weekly' | 'Daily';
+};
+
+export type VolunteerExperience = {
+    id: string;
+    organization: string;
+    role: string;
+    cause: 'Education' | 'Environment' | 'Health' | 'Community Service' | 'Human Rights' | 'Animal Welfare' | 'Other';
+    startDate: Date | string;
+    endDate?: Date | string | null;
+    location?: string;
+    contributions?: string;
+};
+
+
 export type Member = {
     id: string;
     name: string;
@@ -109,8 +129,8 @@ export type Member = {
     address?: string | null;
     emergency_contact_name?: string | null;
     emergency_contact_phone?: string | null;
-    hobbies?: string | null;
-    volunteer_work?: string | null;
+    hobbies?: Hobby[] | null;
+    volunteer_work?: VolunteerExperience[] | null;
     created_at?: Date;
     updated_at?: Date;
 };
