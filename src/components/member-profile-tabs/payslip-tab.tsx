@@ -3,13 +3,13 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableRow, TableHeader, TableHead } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Button } from '../ui/button';
-import { History } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { History, Briefcase, DollarSign, FileText, MapPin, Building2, UserCheck } from 'lucide-react';
 import { MaintainSalaryHistoryDialog } from '../maintain-salary-history-dialog';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 
 const mockPayslipData = {
     '2024-07': {
@@ -64,16 +64,19 @@ const payPeriods = [
     { label: 'May 2024', value: '2024-05' },
 ];
 
+const mockJobHistory = [
+    { position: 'Senior Software Engineer', department: 'Engineering', startDate: '2024-01-01', endDate: null, status: 'Active', manager: 'Jane Smith', reason: 'Promotion' },
+    { position: 'Software Engineer', department: 'Engineering', startDate: '2022-01-01', endDate: '2023-12-31', status: 'Ended', manager: 'Jane Smith', reason: 'Initial Hire' },
+];
+
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 };
 
-export function PayslipTab({ memberId, memberName }: { memberId: string, memberName: string}) {
+export function EmploymentHistoryTab({ memberId, memberName }: { memberId: string, memberName: string}) {
     const [selectedPeriod, setSelectedPeriod] = useState(payPeriods[0].value);
     const [userRole, setUserRole] = useState<'staff' | 'HR' | null>(null);
-    const { toast } = useToast();
     const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
-
 
     useEffect(() => {
         const storedUser = sessionStorage.getItem('loggedInUser');
@@ -104,90 +107,128 @@ export function PayslipTab({ memberId, memberName }: { memberId: string, memberN
     
     const netPay = totalEarnings - totalDeductions;
     
+    const Section = ({ icon, title, children }: { icon: React.ElementType, title: string, children: React.ReactNode }) => (
+        <AccordionItem value={title}>
+            <AccordionTrigger>
+                <div className="flex items-center gap-3">
+                    <div className="bg-muted p-2 rounded-lg">
+                        {React.createElement(icon, { className: "h-5 w-5 text-primary" })}
+                    </div>
+                    <span className="font-semibold text-lg">{title}</span>
+                </div>
+            </AccordionTrigger>
+            <AccordionContent className="pl-12">
+                {children}
+            </AccordionContent>
+        </AccordionItem>
+    );
+    
     return (
         <>
             <Card>
-                <CardHeader className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                    <div className="flex-1">
-                        <CardTitle>Payslip Details</CardTitle>
-                        <CardDescription>
-                            Showing payslip for the selected period.
-                        </CardDescription>
-                    </div>
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
-                        <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-                            <SelectTrigger className="w-full sm:w-[180px]">
-                                <SelectValue placeholder="Select period" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {payPeriods.map(period => (
-                                    <SelectItem key={period.value} value={period.value}>
-                                        {period.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        {userRole === 'HR' && (
-                            <Button variant="outline" onClick={() => setIsHistoryDialogOpen(true)} className="w-full sm:w-auto">
-                                <History className="mr-2 h-4 w-4" /> Maintain Salary History
-                            </Button>
-                        )}
-                    </div>
+                <CardHeader>
+                    <CardTitle>Employment History</CardTitle>
+                    <CardDescription>
+                        A comprehensive overview of the member's employment journey.
+                    </CardDescription>
                 </CardHeader>
-                <CardContent className="grid md:grid-cols-2 gap-8">
-                    {/* Earnings Section */}
-                    <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-primary">Payment Information</h3>
-                        <Card>
-                            <Table>
-                                <TableBody>
-                                    <TableRow><TableCell>Pay Date</TableCell><TableCell className="text-right">{paymentInfo.payDate}</TableCell></TableRow>
-                                    <TableRow><TableCell>Pay Frequency</TableCell><TableCell className="text-right">{paymentInfo.payFrequency}</TableCell></TableRow>
-                                    <TableRow><TableCell>Basic Salary</TableCell><TableCell className="text-right">{formatCurrency(paymentInfo.basicSalary)}</TableCell></TableRow>
-                                    <TableRow><TableCell>Hours Worked</TableCell><TableCell className="text-right">{paymentInfo.hoursWorked}</TableCell></TableRow>
-                                    <TableRow><TableCell>Overtime ({paymentInfo.overtimeHours} hrs @ {formatCurrency(paymentInfo.overtimeRate)})</TableCell><TableCell className="text-right">{formatCurrency(paymentInfo.overtimeHours * paymentInfo.overtimeRate)}</TableCell></TableRow>
-                                    <TableRow><TableCell>Bonuses / Commissions</TableCell><TableCell className="text-right">{formatCurrency(paymentInfo.bonuses)}</TableCell></TableRow>
-                                    <TableRow><TableCell>Transport Allowance</TableCell><TableCell className="text-right">{formatCurrency(paymentInfo.allowances.transport)}</TableCell></TableRow>
-                                    <TableRow><TableCell>Meal Allowance</TableCell><TableCell className="text-right">{formatCurrency(paymentInfo.allowances.meal)}</TableCell></TableRow>
-                                    <TableRow><TableCell>Other Earnings</TableCell><TableCell className="text-right">{formatCurrency(paymentInfo.otherEarnings)}</TableCell></TableRow>
-                                    <TableRow className="bg-muted font-semibold"><TableCell>Total Earnings</TableCell><TableCell className="text-right">{formatCurrency(totalEarnings)}</TableCell></TableRow>
-                                </TableBody>
-                            </Table>
-                        </Card>
-                    </div>
+                <CardContent>
+                    <Accordion type="multiple" defaultValue={["Job / Employment History"]} className="w-full space-y-4">
+                        <Section icon={Briefcase} title="Job / Employment History">
+                           <Table>
+                               <TableHeader>
+                                   <TableRow>
+                                       <TableHead>Position</TableHead>
+                                       <TableHead>Department</TableHead>
+                                       <TableHead>Duration</TableHead>
+                                       <TableHead>Status</TableHead>
+                                   </TableRow>
+                               </TableHeader>
+                               <TableBody>
+                                   {mockJobHistory.map(job => (
+                                       <TableRow key={job.startDate}>
+                                           <TableCell>{job.position}</TableCell>
+                                           <TableCell>{job.department}</TableCell>
+                                           <TableCell>{job.startDate} - {job.endDate || 'Present'}</TableCell>
+                                           <TableCell>{job.status}</TableCell>
+                                       </TableRow>
+                                   ))}
+                               </TableBody>
+                           </Table>
+                        </Section>
 
-                    {/* Deductions Section */}
-                    <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-destructive">Deductions</h3>
-                        <Card>
-                            <Table>
-                                <TableBody>
-                                    <TableRow><TableCell>Income Tax (PAYE)</TableCell><TableCell className="text-right">{formatCurrency(deductions.incomeTax)}</TableCell></TableRow>
-                                    <TableRow><TableCell>Social Security</TableCell><TableCell className="text-right">{formatCurrency(deductions.socialSecurity)}</TableCell></TableRow>
-                                    <TableRow><TableCell>Pension / Retirement Fund</TableCell><TableCell className="text-right">{formatCurrency(deductions.pensionFund)}</TableCell></TableRow>
-                                    <TableRow><TableCell>Health Insurance</TableCell><TableCell className="text-right">{formatCurrency(deductions.healthInsurance)}</TableCell></TableRow>
-                                    <TableRow><TableCell>Union Dues</TableCell><TableCell className="text-right">{formatCurrency(deductions.unionDues)}</TableCell></TableRow>
-                                    <TableRow><TableCell>Loan Repayments</TableCell><TableCell className="text-right">{formatCurrency(deductions.loanRepayment)}</TableCell></TableRow>
-                                    <TableRow><TableCell>Other Deductions</TableCell><TableCell className="text-right">{formatCurrency(deductions.otherDeductions)}</TableCell></TableRow>
-                                    <TableRow className="bg-muted font-semibold"><TableCell>Total Deductions</TableCell><TableCell className="text-right">{formatCurrency(totalDeductions)}</TableCell></TableRow>
-                                </TableBody>
-                            </Table>
-                        </Card>
-                    </div>
+                        <Section icon={DollarSign} title="Salary History">
+                             <div className="flex justify-end mb-4">
+                                {userRole === 'HR' && (
+                                    <Button variant="outline" onClick={() => setIsHistoryDialogOpen(true)}>
+                                        <History className="mr-2 h-4 w-4" /> Maintain Salary History
+                                    </Button>
+                                )}
+                            </div>
+                            <p className="text-muted-foreground">Detailed salary history, including base pay, allowances, and deductions over time, can be managed here by authorized personnel.</p>
+                        </Section>
 
-                    {/* Summary Section */}
-                    <div className="md:col-span-2 space-y-4">
-                        <Separator />
-                        <div className="flex justify-end">
-                            <Table className="w-full max-w-sm">
-                                <TableBody>
-                                    <TableRow><TableCell className="font-semibold">Total Earnings</TableCell><TableCell className="text-right font-semibold">{formatCurrency(totalEarnings)}</TableCell></TableRow>
-                                    <TableRow><TableCell className="font-semibold">Total Deductions</TableCell><TableCell className="text-right font-semibold">{formatCurrency(totalDeductions)}</TableCell></TableRow>
-                                    <TableRow className="text-lg bg-primary/10 text-primary-foreground"><TableCell className="font-bold text-primary">Net Pay</TableCell><TableCell className="text-right font-bold text-primary">{formatCurrency(netPay)}</TableCell></TableRow>
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </div>
+                        <Section icon={FileText} title="Payslip">
+                            <div className="flex items-center justify-end mb-4">
+                                <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                                    <SelectTrigger className="w-full sm:w-[180px]">
+                                        <SelectValue placeholder="Select period" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {payPeriods.map(period => (
+                                            <SelectItem key={period.value} value={period.value}>
+                                                {period.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="grid md:grid-cols-2 gap-8">
+                                <div className="space-y-2">
+                                    <h4 className="font-semibold text-primary">Earnings</h4>
+                                    <Table>
+                                        <TableBody>
+                                            <TableRow><TableCell>Basic Salary</TableCell><TableCell className="text-right">{formatCurrency(paymentInfo.basicSalary)}</TableCell></TableRow>
+                                            <TableRow><TableCell>Overtime</TableCell><TableCell className="text-right">{formatCurrency(paymentInfo.overtimeHours * paymentInfo.overtimeRate)}</TableCell></TableRow>
+                                            <TableRow><TableCell>Bonuses</TableCell><TableCell className="text-right">{formatCurrency(paymentInfo.bonuses)}</TableCell></TableRow>
+                                            <TableRow><TableCell>Allowances</TableCell><TableCell className="text-right">{formatCurrency(paymentInfo.allowances.transport + paymentInfo.allowances.meal)}</TableCell></TableRow>
+                                            <TableRow className="font-bold bg-muted"><TableCell>Total Earnings</TableCell><TableCell className="text-right">{formatCurrency(totalEarnings)}</TableCell></TableRow>
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                                <div className="space-y-2">
+                                    <h4 className="font-semibold text-destructive">Deductions</h4>
+                                    <Table>
+                                        <TableBody>
+                                            <TableRow><TableCell>Income Tax</TableCell><TableCell className="text-right">{formatCurrency(deductions.incomeTax)}</TableCell></TableRow>
+                                            <TableRow><TableCell>Pension Fund</TableCell><TableCell className="text-right">{formatCurrency(deductions.pensionFund)}</TableCell></TableRow>
+                                             <TableRow><TableCell>Health Insurance</TableCell><TableCell className="text-right">{formatCurrency(deductions.healthInsurance)}</TableCell></TableRow>
+                                            <TableRow><TableCell>Loan Repayment</TableCell><TableCell className="text-right">{formatCurrency(deductions.loanRepayment)}</TableCell></TableRow>
+                                            <TableRow className="font-bold bg-muted"><TableCell>Total Deductions</TableCell><TableCell className="text-right">{formatCurrency(totalDeductions)}</TableCell></TableRow>
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                                <div className="md:col-span-2">
+                                    <Separator />
+                                    <div className="flex justify-end p-4 bg-muted rounded-b-lg">
+                                        <p className="text-lg font-bold">Net Pay: {formatCurrency(netPay)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </Section>
+
+                        <Section icon={UserCheck} title="Employment Category">
+                            <p><strong>Category:</strong> Full-time</p>
+                            <p><strong>Contract Type:</strong> Open-ended</p>
+                        </Section>
+
+                        <Section icon={Building2} title="Office Locations">
+                            <p><strong>Work Model:</strong> Hybrid</p>
+                            <p><strong>Assigned Office:</strong> Colombo, Sri Lanka</p>
+                            <p><strong>Days Onsite:</strong> Monday, Wednesday, Friday</p>
+                            <p><strong>Effective Date:</strong> 2023-01-01</p>
+                        </Section>
+                    </Accordion>
                 </CardContent>
             </Card>
             {userRole === 'HR' && (
@@ -201,3 +242,5 @@ export function PayslipTab({ memberId, memberName }: { memberId: string, memberN
         </>
     );
 }
+
+  
