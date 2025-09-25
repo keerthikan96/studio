@@ -5,14 +5,14 @@ import { useState, useEffect, useTransition } from 'react';
 import CreatePostForm from '@/components/create-post-form';
 import WorkfeedPostComponent from '@/components/workfeed-post';
 import { WorkfeedPost } from '@/lib/mock-data';
-import { getPostsAction, createPostAction, toggleLikeAction, addCommentAction } from '@/app/actions/workfeed';
+import { getPostsAction, createPostAction, toggleLikeAction, addCommentAction, deletePostAction } from '@/app/actions/workfeed';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function WorkfeedPage() {
     const [posts, setPosts] = useState<WorkfeedPost[]>([]);
     const [isPending, startTransition] = useTransition();
-    const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
+    const [currentUser, setCurrentUser] = useState<{ id: string, role: string } | null>(null);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -95,6 +95,16 @@ export default function WorkfeedPage() {
         }
     };
 
+    const handleDeletePost = async (postId: string) => {
+        const result = await deletePostAction(postId);
+        if ('error' in result) {
+            toast({ title: 'Error', description: result.error, variant: 'destructive' });
+        } else {
+            setPosts(prevPosts => prevPosts.filter(p => p.id !== postId));
+            toast({ title: 'Post Deleted', description: 'The post has been removed.' });
+        }
+    };
+
 
     return (
         <div className="max-w-3xl mx-auto space-y-6">
@@ -113,8 +123,10 @@ export default function WorkfeedPage() {
                             key={post.id} 
                             post={post}
                             currentUserId={currentUser?.id}
+                            currentUserRole={currentUser?.role}
                             onToggleLike={handleToggleLike}
                             onAddComment={handleAddComment}
+                            onDeletePost={handleDeletePost}
                         />
                     ))
                 )}

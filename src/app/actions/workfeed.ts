@@ -45,6 +45,7 @@ export async function createPostAction(content: string, imageUrl?: string): Prom
         };
 
         revalidatePath('/admin/workfeed');
+        revalidatePath('/dashboard/workfeed');
         return fullPost;
 
     } catch (error) {
@@ -119,6 +120,7 @@ export async function toggleLikeAction(postId: string): Promise<{ success: boole
         }
         
         revalidatePath('/admin/workfeed');
+        revalidatePath('/dashboard/workfeed');
         return { success: true };
 
     } catch (error) {
@@ -144,6 +146,7 @@ export async function addCommentAction(postId: string, content: string): Promise
         );
 
         revalidatePath('/admin/workfeed');
+        revalidatePath('/dashboard/workfeed');
         return result.rows[0];
 
     } catch (error) {
@@ -151,6 +154,42 @@ export async function addCommentAction(postId: string, content: string): Promise
         return { error: 'Failed to add comment.' };
     }
 }
+
+export async function deletePostAction(postId: string): Promise<{ success: boolean; error?: string }> {
+    await setupDatabase();
+    const user = await getCurrentUser();
+
+    if (!user) {
+        return { success: false, error: 'You must be logged in to delete a post.' };
+    }
+
+    try {
+        const postResult = await db.query('SELECT author_id FROM workfeed_posts WHERE id = $1', [postId]);
+        
+        if (postResult.rows.length === 0) {
+            return { success: false, error: 'Post not found.' };
+        }
+
+        const post = postResult.rows[0];
+
+        // Check if user is the author or has HR role
+        if (post.author_id !== user.id && user.role !== 'HR') {
+            return { success: false, error: 'You do not have permission to delete this post.' };
+        }
+
+        // Deletion will cascade to likes and comments due to DB constraints
+        await db.query('DELETE FROM workfeed_posts WHERE id = $1', [postId]);
+        
+        revalidatePath('/admin/workfeed');
+        revalidatePath('/dashboard/workfeed');
+        return { success: true };
+
+    } catch (error) {
+        console.error('Error deleting post:', error);
+        return { success: false, error: 'Failed to delete post.' };
+    }
+}
+
 
 export async function saveWorkfeedSettingsAction(settings: { birthday: any; anniversary: any; }): Promise<{ success: boolean; error?: string }> {
     await setupDatabase();
