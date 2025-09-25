@@ -40,19 +40,19 @@ export function ConfidentialNotesTab({ memberId }: ConfidentialNotesTabProps) {
   const [isPending, startTransition] = useTransition();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [tagInput, setTagInput] = useState('');
-  const [isClient, setIsClient] = useState(false);
   const [user, setUser] = useState<{id: string, role: string} | null>(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    setIsClient(true);
     const storedUser = sessionStorage.getItem('loggedInUser');
     if (storedUser) {
         setUser(JSON.parse(storedUser));
     }
+    setIsLoadingUser(false);
   }, []);
 
-  const hasAccess = user?.role === 'HR' || user?.id === memberId;
+  const hasAccess = !isLoadingUser && (user?.role === 'HR' || user?.id === memberId);
 
   const form = useForm<NoteFormValues>({
     resolver: zodResolver(noteSchema),
@@ -83,11 +83,11 @@ export function ConfidentialNotesTab({ memberId }: ConfidentialNotesTabProps) {
   useEffect(() => {
     if (hasAccess) {
       fetchNotes();
-    } else if (isClient) {
+    } else if (!isLoadingUser) {
        console.log(`AUDIT: Access denied for user ${user?.id} to confidential notes of member ${memberId}.`);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [memberId, hasAccess, isClient, user?.id]);
+  }, [memberId, hasAccess, isLoadingUser, user?.id]);
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
@@ -143,13 +143,12 @@ export function ConfidentialNotesTab({ memberId }: ConfidentialNotesTabProps) {
     });
   };
 
-  if (!isClient) {
+  if (isLoadingUser) {
     return <div className='p-4'><Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" /></div>;
   }
 
   if (!hasAccess) {
     return (
-        <div className="p-4">
         <Card>
             <CardHeader>
                 <CardTitle>Confidential Notes</CardTitle>
@@ -164,12 +163,10 @@ export function ConfidentialNotesTab({ memberId }: ConfidentialNotesTabProps) {
                 </Alert>
             </CardContent>
         </Card>
-        </div>
     )
   }
 
   return (
-    <div className="p-4">
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
@@ -305,6 +302,5 @@ export function ConfidentialNotesTab({ memberId }: ConfidentialNotesTabProps) {
         </Table>
       </CardContent>
     </Card>
-    </div>
   );
 }
