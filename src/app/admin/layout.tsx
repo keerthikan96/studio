@@ -52,15 +52,6 @@ export default function AdminLayout({
       ]
     },
     { href: "/admin/calendar", label: "Calendar", icon: CalendarIcon },
-    { 
-      label: "On-boarding Management",
-      icon: ClipboardList,
-      subItems: [
-        { href: "/admin/intake/list", label: "On-boarding List" },
-        { href: "/admin/intake/new", label: "New On-boarding" },
-        { href: "/admin/intake/configuration", label: "On-boarding Configuration" }
-      ]
-    },
     { href: "/admin/attendance", label: "Attendance", icon: CalendarIcon },
     { href: "/admin/department", label: "Department", icon: Briefcase },
     { href: "/admin/members", label: "Members", icon: Users },
