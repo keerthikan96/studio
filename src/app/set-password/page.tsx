@@ -46,11 +46,6 @@ export default function SetPasswordPage() {
 
   function onSubmit(data: z.infer<typeof formSchema>) {
     startTransition(async () => {
-        // In a real app, you would:
-        // 1. Verify the token against the database to ensure it's valid and not expired.
-        // 2. Hash the password before saving it.
-        // 3. Find the user by the token/email and update their password and status.
-
         if (!email || !token) {
             toast({ title: 'Error', description: 'Invalid invitation link.', variant: 'destructive'});
             return;
@@ -58,7 +53,7 @@ export default function SetPasswordPage() {
 
         const result = await resetPasswordAction({
             token,
-            otp: "000000", // This is a placeholder for invitations, where no OTP is used.
+            // No OTP is provided for an invitation link, only the token
             newPassword: data.password
         });
         

@@ -206,12 +206,17 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
     if (!formData) return;
     
     startTransition(async () => {
-        const result = await requestPasswordResetAction(formData.email);
-        if (result.success) {
+        // We request a reset, but this is for an invitation. 
+        // We will generate a link to `/set-password` instead of `/reset-password`.
+        const result = await requestPasswordResetAction(formData.email, true); // isInvitation = true
+        if (result.success && result.invitationLink) {
             toast({
                 title: 'Invitation Sent!',
                 description: `An invitation has been sent to ${formData.name}. Check the console for the link.`,
             });
+            console.log('--- INVITATION LINK (for new employee) ---');
+            console.log(result.invitationLink);
+            console.log('-------------------------------------------');
         } else {
             toast({
                 title: 'Error Sending Invitation',

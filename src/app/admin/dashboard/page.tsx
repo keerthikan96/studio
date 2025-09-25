@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useTransition } from 'react';
@@ -31,7 +30,6 @@ import { Member } from '@/lib/mock-data';
 import { differenceInYears } from 'date-fns';
 import DashboardCarousel from '@/components/dashboard-carousel';
 
-
 const notices = [
   {
     title: "Get ready for meeting at 10.30 am",
@@ -63,7 +61,6 @@ const workFromHomeData = [
     { id: 'wfh1', name: 'John Doe', avatarUrl: 'https://i.pravatar.cc/40?u=wfh1', reason: 'Approved for project deadline' },
     { id: 'wfh2', name: 'Jane Smith', avatarUrl: 'https://i.pravatar.cc/40?u=wfh2', reason: 'Approved for personal reasons' },
 ];
-
 
 const leaveData = [
     { id: 'l1', name: 'John Doe', avatarUrl: 'https://i.pravatar.cc/40?u=m_1', reason: 'Sick Leave' },
@@ -132,10 +129,12 @@ export default function AdminDashboard() {
     return events;
   };
 
-
   return (
-    <div className="flex flex-col gap-6">
-       <DashboardCarousel />
+    <div className="flex flex-col gap-8">
+      {/* Header: Dynamic Information Banner */}
+      <DashboardCarousel />
+      
+      {/* Row 1: At-a-Glance Summary - Key Metrics */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         <DashboardStatCard
             title="Total employee"
@@ -172,139 +171,164 @@ export default function AdminDashboard() {
         />
       </div>
 
+      {/* Row 2: Timely Information - Calendar & Events + Notice Board */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Left: Calendar & Events (Related Time-Sensitive Information) */}
         <Card className="lg:col-span-2">
-            <CardHeader>
-                <CardTitle>Calendar</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <CardHeader>
+            <CardTitle>Calendar & Events</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Calendar */}
+              <div className="space-y-4">
+                <h3 className="font-medium text-sm text-muted-foreground">Calendar</h3>
                 <DashboardCalendar selectedDate={selectedDate} onDateChange={setSelectedDate} />
-            </CardContent>
+              </div>
+              
+              {/* Events */}
+              <div className="space-y-4">
+                <h3 className="font-medium text-sm text-muted-foreground">Upcoming Events</h3>
+                <div className="h-[470px] overflow-auto">
+                  <DashboardEvents selectedDate={selectedDate} allEvents={allEvents} />
+                </div>
+              </div>
+            </div>
+          </CardContent>
         </Card>
-        <DashboardEvents selectedDate={selectedDate} allEvents={allEvents} />
+
+        {/* Right: Notice Board (Static Important Information) */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Notice Board</CardTitle>
+            <Button variant="ghost" size="icon" className="h-6 w-6">
+              <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-4 max-h-[320px] overflow-auto">
+              {notices.map((notice, index) => (
+                <div key={index} className="flex items-start justify-between gap-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{notice.title}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{notice.description}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-xs text-muted-foreground">{notice.date}</p>
+                    {notice.isStarred && <Star className="h-4 w-4 text-yellow-400 fill-yellow-400 inline-block mt-1" />}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between items-center pt-4 border-t">
+              <Button variant="outline" size="sm">Previous</Button>
+              <Button size="sm">See more</Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
+      {/* Row 3: Performance & Business Intelligence - Key Charts */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Left: Main Performance Chart */}
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle>Daily Attendance Statistics</CardTitle>
+              <Select defaultValue="department">
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="department">Department</SelectItem>
+                  <SelectItem value="engineering">Engineering</SelectItem>
+                  <SelectItem value="design">Design</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <DailyAttendanceChart />
+          </CardContent>
+        </Card>
+
+        {/* Right: Business Intelligence Charts */}
+        <div className="grid grid-cols-1 gap-6">
+          <Card>
             <CardHeader>
-                <div className="flex justify-between items-center">
-                    <CardTitle>Daily attendance statistic</CardTitle>
-                    <Select defaultValue="department">
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="department">Department</SelectItem>
-                            <SelectItem value="engineering">Engineering</SelectItem>
-                            <SelectItem value="design">Design</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
+              <div className="flex justify-between items-center">
+                <CardTitle>Position Wise Recruitment</CardTitle>
+                <Select defaultValue="yearly">
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="yearly">Yearly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
-                <DailyAttendanceChart />
+              <PositionWiseRecruitmentChart />
             </CardContent>
-        </Card>
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Notice</CardTitle>
-                <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                </Button>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>Sales Analytics</CardTitle>
+                <Select defaultValue="department">
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="department">Department</SelectItem>
+                    <SelectItem value="sales">Sales</SelectItem>
+                    <SelectItem value="marketing">Marketing</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-            {notices.map((notice, index) => (
-                <div key={index} className="flex items-start justify-between gap-4">
-                <div>
-                    <p className="font-medium text-sm">{notice.title}</p>
-                    <p className="text-xs text-muted-foreground">{notice.description}</p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                    <p className="text-xs text-muted-foreground">{notice.date}</p>
-                    {notice.isStarred && <Star className="h-4 w-4 text-yellow-400 fill-yellow-400 inline-block" />}
-                </div>
-                </div>
-            ))}
-            <div className="flex justify-between items-center pt-2">
-                <Button variant="outline">Previous</Button>
-                <Button>See more</Button>
-            </div>
+            <CardContent>
+              <SalesAnalyticsChart />
             </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Row 4: Detailed Information - Employee Lists */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Left: Employee List */}
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle>Employee Directory</CardTitle>
+              <Button variant="outline" size="sm">
+                New Recruitment <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <EmployeeListDashboard />
+          </CardContent>
         </Card>
-    </div>
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="grid grid-cols-1 gap-6 lg:col-span-1">
-             <Card>
-                <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <CardTitle>Position wise recruitment</CardTitle>
-                         <Select defaultValue="yearly">
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="yearly">Yearly</SelectItem>
-                                <SelectItem value="monthly">Monthly</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <PositionWiseRecruitmentChart />
-                </CardContent>
-            </Card>
-             <Card>
-                <CardHeader>
-                     <div className="flex justify-between items-center">
-                        <CardTitle>Sales analytics</CardTitle>
-                         <Select defaultValue="department">
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="department">Department</SelectItem>
-                                <SelectItem value="sales">Sales</SelectItem>
-                                <SelectItem value="marketing">Marketing</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <SalesAnalyticsChart />
-                </CardContent>
-            </Card>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:col-span-2">
-            <Card>
-                 <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <CardTitle>Employee list</CardTitle>
-                         <Button variant="outline">
-                            New recruitment <ChevronDown className="h-4 w-4 ml-2" />
-                        </Button>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <EmployeeListDashboard />
-                </CardContent>
-            </Card>
-            <Card>
-                 <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <CardTitle>Employee award list</CardTitle>
-                        <Button variant="ghost" size="icon" className="h-6 w-6">
-                            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <EmployeeAwardList />
-                </CardContent>
-            </Card>
-        </div>
+
+        {/* Right: Employee Awards */}
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle>Employee Awards & Recognition</CardTitle>
+              <Button variant="ghost" size="icon" className="h-6 w-6">
+                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <EmployeeAwardList />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
-
-    

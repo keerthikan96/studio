@@ -72,7 +72,7 @@ export default function DashboardCarousel() {
                 {slides.map((slide) => (
                     <CarouselItem key={slide.id}>
                         <Card className="overflow-hidden">
-                            <CardContent className="relative aspect-[2/1] p-0">
+                        <CardContent className="relative h-64 p-0">
                                 <Image
                                     src={slide.imageUrl}
                                     alt={slide.title}

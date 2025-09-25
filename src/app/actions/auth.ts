@@ -59,7 +59,7 @@ export async function loginAction(credentials: { email: string, password: string
     }
 }
 
-export async function requestPasswordResetAction(email: string): Promise<{ success: boolean; error?: string }> {
+export async function requestPasswordResetAction(email: string, isInvitation = false): Promise<{ success: boolean; error?: string; invitationLink?: string }> {
     await setupDatabase();
     try {
         let memberId: string | null = null;
@@ -75,15 +75,22 @@ export async function requestPasswordResetAction(email: string): Promise<{ succe
         }
 
         const token = crypto.randomBytes(32).toString('hex');
-        const otp = crypto.randomInt(100000, 999999).toString();
-        const expires_at = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+        // OTP is not needed for an invitation, so we use a placeholder. For resets, it's random.
+        const otp = isInvitation ? "INVITE" : crypto.randomInt(100000, 999999).toString();
+        const expires_at = new Date(Date.now() + (isInvitation ? 7 * 24 * 60 : 15) * 60 * 1000); // 7 days for invite, 15 mins for reset
 
         await db.query(
             'INSERT INTO password_resets (email, token, otp, expires_at) VALUES ($1, $2, $3, $4)',
             [email, token, otp, expires_at]
         );
+        
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
+        const resetLink = `${baseUrl}/reset-password?token=${token}`;
+        const invitationLink = `${baseUrl}/set-password?token=${token}&email=${encodeURIComponent(email)}`;
 
-        const resetLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/reset-password?token=${token}`;
+        if (isInvitation) {
+            return { success: true, invitationLink };
+        }
 
         // In a real app, you would send an email here. For now, log to console.
         console.log('--- PASSWORD RESET ---');
@@ -100,7 +107,7 @@ export async function requestPasswordResetAction(email: string): Promise<{ succe
     }
 }
 
-export async function resetPasswordAction(data: { token: string, otp: string, newPassword: string }): Promise<{ success: boolean, email?: string, error?: string }> {
+export async function resetPasswordAction(data: { token: string, newPassword: string, otp?: string }): Promise<{ success: boolean, email?: string, error?: string }> {
     await setupDatabase();
     try {
         const { token, otp, newPassword } = data;
@@ -117,8 +124,14 @@ export async function resetPasswordAction(data: { token: string, otp: string, ne
             return { success: false, error: 'Reset token has expired. Please request a new one.' };
         }
 
-        if (resetRecord.otp !== otp) {
+        // We check the OTP only if it was provided (i.e., not an invitation)
+        if (otp && resetRecord.otp !== otp) {
             return { success: false, error: 'Invalid OTP.' };
+        }
+        
+        // For invitations, we ensure the OTP field was the 'INVITE' placeholder
+        if (!otp && resetRecord.otp !== 'INVITE') {
+            return { success: false, error: 'This is not a valid invitation link.' };
         }
 
         const { email } = resetRecord;
