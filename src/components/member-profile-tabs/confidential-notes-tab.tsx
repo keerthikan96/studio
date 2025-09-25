@@ -41,13 +41,17 @@ export function ConfidentialNotesTab({ memberId }: ConfidentialNotesTabProps) {
   const [isPending, startTransition] = useTransition();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [tagInput, setTagInput] = useState('');
-  const [userRole, setUserRole] = useState<'staff' | 'HR' | null>(null);
+  const [isClient, setIsClient] = useState(false);
+  const [user, setUser] = useState<{id: string, role: string} | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
+    setIsClient(true);
     const storedUser = JSON.parse(sessionStorage.getItem('loggedInUser') || '{}');
-    setUserRole(storedUser.role || 'staff');
+    setUser(storedUser);
   }, []);
+
+  const hasAccess = user?.role === 'HR' || user?.id === memberId;
 
   const form = useForm<NoteFormValues>({
     resolver: zodResolver(noteSchema),
@@ -76,10 +80,12 @@ export function ConfidentialNotesTab({ memberId }: ConfidentialNotesTabProps) {
   };
 
   useEffect(() => {
-    if (userRole === 'HR') {
+    if (hasAccess) {
       fetchNotes();
+    } else if (isClient) {
+       console.log(`AUDIT: Access denied for user ${user?.id} to confidential notes of member ${memberId}.`);
     }
-  }, [memberId, userRole]);
+  }, [memberId, hasAccess, isClient, user?.id]);
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
@@ -135,7 +141,11 @@ export function ConfidentialNotesTab({ memberId }: ConfidentialNotesTabProps) {
     });
   };
 
-  if (userRole !== 'HR') {
+  if (!isClient) {
+    return <div className='p-4'><Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" /></div>;
+  }
+
+  if (!hasAccess) {
     return (
         <div className="p-4">
         <Card>
