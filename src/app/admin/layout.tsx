@@ -82,11 +82,14 @@ export default function AdminLayout({
   // Logic to generate page title
   const pathSegments = pathname.split('/').filter(Boolean);
   let pageTitle = 'Dashboard'; // Default title
+
   if (pathSegments.length > 1) {
     const lastSegment = pathSegments[pathSegments.length - 1];
-    pageTitle = lastSegment.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
-      ? 'Profile'
-      : capitalize(lastSegment.replace(/-/g, ' '));
+    if (pathSegments[1] === 'members' && pathSegments.length > 2) {
+        pageTitle = 'Profile';
+    } else {
+        pageTitle = capitalize(lastSegment.replace(/-/g, ' '));
+    }
   }
   if (pathname === '/admin/add-staff') {
     pageTitle = 'Add Member';

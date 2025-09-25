@@ -61,8 +61,9 @@ export default function Breadcrumbs() {
             {(() => {
                 const lastSegment = pathSegments[pathSegments.length - 1];
                 let segmentName = breadcrumbNameMap[lastSegment] || capitalize(lastSegment.replace(/-/g, ' '));
-
-                if (lastSegment.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+                
+                // Check if it's a members profile page
+                if (pathSegments.length > 2 && pathSegments[1] === 'members') {
                     segmentName = 'Profile';
                 }
                 
