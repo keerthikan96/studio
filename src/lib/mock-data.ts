@@ -106,7 +106,30 @@ export type Member = {
     created_at?: Date;
     updated_at?: Date;
 };
-  
+
+export type WorkfeedComment = {
+    id: string;
+    post_id: string;
+    author_id: string;
+    author_name: string;
+    author_avatar_url?: string | null;
+    content: string;
+    created_at: string;
+};
+
+export type WorkfeedPost = {
+    id: string;
+    author_id: string;
+    author_name: string;
+    author_role?: string;
+    author_avatar_url?: string | null;
+    content: string;
+    image_url?: string | null;
+    created_at: string;
+    likes: string[]; // Array of user IDs who liked the post
+    comments: WorkfeedComment[];
+};
+
 // This mock data is now only used as a fallback or for initial setup,
 // as the primary data source is the PostgreSQL database.
 export const mockMembers: Member[] = [

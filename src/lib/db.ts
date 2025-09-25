@@ -172,6 +172,46 @@ export async function setupDatabase() {
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
+
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS workfeed_posts (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                author_id VARCHAR(255) NOT NULL,
+                author_name VARCHAR(255) NOT NULL,
+                author_role VARCHAR(100),
+                author_avatar_url VARCHAR(2048),
+                content TEXT NOT NULL,
+                image_url VARCHAR(2048),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
+
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS workfeed_likes (
+                post_id UUID NOT NULL REFERENCES workfeed_posts(id) ON DELETE CASCADE,
+                user_id VARCHAR(255) NOT NULL,
+                PRIMARY KEY (post_id, user_id)
+            );
+        `);
+
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS workfeed_comments (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                post_id UUID NOT NULL REFERENCES workfeed_posts(id) ON DELETE CASCADE,
+                author_id VARCHAR(255) NOT NULL,
+                author_name VARCHAR(255) NOT NULL,
+                author_avatar_url VARCHAR(2048),
+                content TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
+
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS app_settings (
+                key VARCHAR(255) PRIMARY KEY,
+                value JSONB NOT NULL
+            );
+        `);
         
         // Add new columns if they don't exist for backward compatibility
         const member_columns = [

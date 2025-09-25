@@ -1,76 +1,123 @@
 
 'use client';
 
+import { useState, useEffect, useTransition } from 'react';
 import CreatePostForm from '@/components/create-post-form';
-import WorkfeedPost from '@/components/workfeed-post';
-import { Member } from '@/lib/mock-data';
-
-// Placeholder data for posts
-const mockPosts = [
-  {
-    id: 'post1',
-    author: {
-        id: 'admin-user-001',
-        name: 'People and Culture office',
-        email: 'admin@example.com',
-        role: 'HR',
-        profile_picture_url: 'https://i.pravatar.cc/40?u=admin',
-    },
-    content: "🎉 Big congratulations to Sarah on her 5-year work anniversary! Thank you for your dedication and hard work. Here's to many more successful years ahead! 🥂",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-    likes: 15,
-    comments: [
-      { authorName: 'John Doe', text: 'Congratulations, Sarah!' },
-      { authorName: 'Jane Smith', text: 'Well deserved! 🎉' },
-    ],
-  },
-  {
-    id: 'post3',
-    author: {
-        id: 'admin-user-001',
-        name: 'People and Culture office',
-        email: 'admin@example.com',
-        role: 'HR',
-        profile_picture_url: 'https://i.pravatar.cc/40?u=admin-bot',
-    },
-    content: "Happy Birthday, Jessica Singh! Wishing you a fantastic day! 🎂",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8), // 8 hours ago
-    imageUrl: 'https://storage.googleapis.com/gemini-studio-assets-dev/workfeed-birthday-2.png',
-    likes: 28,
-    comments: [
-       { authorName: 'Emily Carter', text: 'Happy Birthday, Alex!' },
-    ],
-  },
-  {
-    id: 'post2',
-     author: {
-        id: 'm_1',
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        profile_picture_url: 'https://i.pravatar.cc/40?u=m_1',
-    } as Member,
-    content: "Excited to share that we've just launched the new project dashboard! A huge thanks to the entire team for their hard work. Go check it out and let us know what you think!",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-    likes: 42,
-    comments: [],
-  },
-];
-
+import WorkfeedPostComponent from '@/components/workfeed-post';
+import { WorkfeedPost } from '@/lib/mock-data';
+import { getPostsAction, createPostAction, toggleLikeAction, addCommentAction } from '@/app/actions/workfeed';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function WorkfeedPage() {
-    const handleCreatePost = (content: string) => {
-        console.log('Creating post:', content);
-        // Here you would call a server action to save the post
+    const [posts, setPosts] = useState<WorkfeedPost[]>([]);
+    const [isPending, startTransition] = useTransition();
+    const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        const storedUser = sessionStorage.getItem('loggedInUser');
+        if (storedUser) {
+            setCurrentUser(JSON.parse(storedUser));
+        }
+
+        startTransition(() => {
+            getPostsAction().then(setPosts);
+        });
+    }, []);
+
+    const handleCreatePost = async (content: string, imageFile?: File) => {
+        let imageUrl: string | undefined = undefined;
+
+        if (imageFile) {
+            const formData = new FormData();
+            formData.append('file', imageFile);
+
+            try {
+                const response = await fetch('/api/workfeed/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error);
+                imageUrl = result.url;
+            } catch (error: any) {
+                toast({
+                    title: 'Image Upload Failed',
+                    description: error.message || 'Could not upload image.',
+                    variant: 'destructive',
+                });
+                return;
+            }
+        }
+        
+        startTransition(async () => {
+            const result = await createPostAction(content, imageUrl);
+            if ('error' in result) {
+                toast({ title: 'Error', description: result.error, variant: 'destructive' });
+            } else {
+                setPosts(prevPosts => [result, ...prevPosts]);
+                toast({ title: 'Post Created!', description: 'Your post is now live on the feed.' });
+            }
+        });
     };
+
+    const handleToggleLike = async (postId: string) => {
+        if (!currentUser) return;
+        
+        // Optimistic update
+        setPosts(prevPosts =>
+            prevPosts.map(post => {
+                if (post.id === postId) {
+                    const hasLiked = post.likes.includes(currentUser.id);
+                    const newLikes = hasLiked
+                        ? post.likes.filter(id => id !== currentUser.id)
+                        : [...post.likes, currentUser.id];
+                    return { ...post, likes: newLikes };
+                }
+                return post;
+            })
+        );
+        
+        // Server action
+        await toggleLikeAction(postId);
+    };
+
+    const handleAddComment = async (postId: string, commentText: string) => {
+        if (!currentUser) return;
+
+        const result = await addCommentAction(postId, commentText);
+        if ('error' in result) {
+            toast({ title: 'Error', description: result.error, variant: 'destructive' });
+        } else {
+             // Refresh posts to get new comment
+            getPostsAction().then(setPosts);
+        }
+    };
+
 
     return (
         <div className="max-w-3xl mx-auto space-y-6">
             <h1 className="text-3xl font-bold tracking-tight">Workfeed</h1>
             <CreatePostForm onCreatePost={handleCreatePost} />
             <div className="space-y-4">
-                {mockPosts.map((post) => (
-                    <WorkfeedPost key={post.id} post={post} />
-                ))}
+                {isPending && posts.length === 0 ? (
+                    <>
+                        <Skeleton className="h-48 w-full" />
+                        <Skeleton className="h-64 w-full" />
+                        <Skeleton className="h-56 w-full" />
+                    </>
+                ) : (
+                    posts.map((post) => (
+                        <WorkfeedPostComponent 
+                            key={post.id} 
+                            post={post}
+                            currentUserId={currentUser?.id}
+                            onToggleLike={handleToggleLike}
+                            onAddComment={handleAddComment}
+                        />
+                    ))
+                )}
             </div>
         </div>
     );
