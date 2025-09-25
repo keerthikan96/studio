@@ -237,7 +237,6 @@ export async function setupDatabase() {
             for (const categoryName of defaultCategories) {
                 await client.query('INSERT INTO assessment_categories (name) VALUES ($1)', [categoryName]);
             }
-            console.log('Default assessment categories have been seeded.');
         }
 
         const member_columns = [
@@ -322,8 +321,6 @@ export async function setupDatabase() {
             await client.query(`ALTER TABLE self_evaluations ADD COLUMN other_comments TEXT;`);
         }
 
-
-        console.log('Database tables are ready.');
     } catch (err) {
         console.error('Error setting up the database table:', err);
         throw err;
