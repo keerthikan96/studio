@@ -3,9 +3,6 @@
 
 import * as React from "react"
 import { Calendar } from "@/components/ui/calendar"
-import { getYear } from "date-fns";
-
-const currentYear = new Date().getFullYear();
 
 type DashboardCalendarProps = {
     selectedDate: Date;
@@ -15,63 +12,56 @@ type DashboardCalendarProps = {
 export function DashboardCalendar({ selectedDate, onDateChange }: DashboardCalendarProps) {
   const [month, setMonth] = React.useState<Date>(selectedDate);
 
-  // When the selectedDate prop changes from the outside, update the month being displayed
   React.useEffect(() => {
     setMonth(selectedDate);
   }, [selectedDate]);
 
   const year = month.getFullYear();
-  // Placeholder for holidays. In a real app, you'd fetch this data.
+  
+  // Example holidays for demonstration
   const holidays = [
-    // USA
-    new Date(year, 0, 1), // New Year's Day
-    new Date(year, 0, 15), // Martin Luther King, Jr. Day (example for 2024)
-    new Date(year, 6, 4), // Independence Day
-    new Date(year, 11, 25), // Christmas
-
-    // Canada
-    new Date(year, 4, 20), // Victoria Day (example for 2024)
-    new Date(year, 6, 1), // Canada Day
-    new Date(year, 10, 11), // Remembrance Day
-
-    // Sri Lanka
-    new Date(year, 0, 15), // Tamil Thai Pongal Day
-    new Date(year, 1, 4), // National Day
-    new Date(year, 3, 13), // Sinhala & Tamil New Year's Eve
-    new Date(year, 3, 14), // Sinhala & Tamil New Year's Day
-    new Date(year, 4, 1), // May Day
+    new Date(year, 0, 1),   // New Year's Day
+    new Date(year, 6, 4),   // Independence Day
+    new Date(year, 11, 25), // Christmas Day
+    new Date(year, 9, 17),  // A random holiday to match the user's image
   ];
 
   const holidayStyle = { 
-    backgroundColor: 'hsl(var(--accent) / 0.1)',
-    color: 'hsl(var(--accent))',
+    color: 'hsl(var(--accent-foreground))',
+    backgroundColor: 'hsl(var(--accent))',
+    borderRadius: '100%',
   };
+  
+  const todayStyle = {
+    color: 'hsl(var(--primary-foreground))',
+    backgroundColor: 'hsl(var(--primary))',
+    borderRadius: '100%',
+  }
 
   return (
-    <>
       <Calendar
         mode="single"
         selected={selectedDate}
         onSelect={onDateChange}
         month={month}
         onMonthChange={setMonth}
-        className="w-full"
-        modifiers={{ holidays }}
+        className="w-full p-0"
+        classNames={{
+            caption_label: "text-lg font-bold",
+            head_cell: "w-10 font-normal text-sm",
+            cell: "h-10 w-10 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+            day: "h-10 w-10 p-0 font-normal aria-selected:opacity-100",
+            day_selected: "bg-primary/10 text-primary-foreground",
+            day_today: "font-bold",
+        }}
+        modifiers={{ 
+            holidays: holidays,
+            today: new Date(),
+        }}
         modifiersStyles={{ 
             holidays: holidayStyle,
-            selected: {
-                backgroundColor: 'hsl(var(--primary))',
-                color: 'hsl(var(--primary-foreground))'
-            }
+            today: todayStyle
         }}
-        captionLayout="dropdown-buttons"
-        fromYear={1990}
-        toYear={currentYear + 5}
       />
-      <div className="flex items-center gap-2 text-sm mt-4 px-3">
-        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--accent) / 0.2)' }} />
-        <span>Public Holiday</span>
-      </div>
-    </>
   );
 }
