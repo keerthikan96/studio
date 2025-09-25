@@ -139,6 +139,7 @@ export async function setupDatabase() {
                 token TEXT NOT NULL,
                 otp VARCHAR(6) NOT NULL,
                 expires_at TIMESTAMPTZ NOT NULL,
+                type VARCHAR(20) NOT NULL DEFAULT 'reset',
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
@@ -182,6 +183,16 @@ export async function setupDatabase() {
             if (rows.length === 0) {
                 await client.query(`ALTER TABLE member_notes ADD COLUMN ${col.name} ${col.type};`);
             }
+        }
+
+        // Add 'type' column to password_resets if it doesn't exist
+        const { rows: resetColumns } = await client.query(`
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name='password_resets' AND column_name='type';
+        `);
+        if (resetColumns.length === 0) {
+            await client.query(`ALTER TABLE password_resets ADD COLUMN type VARCHAR(20) NOT NULL DEFAULT 'reset';`);
         }
         
         console.log('Database tables are ready.');

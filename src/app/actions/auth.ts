@@ -75,13 +75,13 @@ export async function requestPasswordResetAction(email: string, isInvitation = f
         }
 
         const token = crypto.randomBytes(32).toString('hex');
-        // OTP is not needed for an invitation, so we use a placeholder. For resets, it's random.
-        const otp = isInvitation ? "INVITE" : crypto.randomInt(100000, 999999).toString();
+        const otp = crypto.randomInt(100000, 999999).toString();
         const expires_at = new Date(Date.now() + (isInvitation ? 7 * 24 * 60 : 15) * 60 * 1000); // 7 days for invite, 15 mins for reset
+        const type = isInvitation ? 'invitation' : 'reset';
 
         await db.query(
-            'INSERT INTO password_resets (email, token, otp, expires_at) VALUES ($1, $2, $3, $4)',
-            [email, token, otp, expires_at]
+            'INSERT INTO password_resets (email, token, otp, expires_at, type) VALUES ($1, $2, $3, $4, $5)',
+            [email, token, otp, expires_at, type]
         );
         
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
@@ -112,7 +112,7 @@ export async function setNewPasswordAction(data: { token: string, newPassword: s
     try {
         const { token, newPassword } = data;
 
-        const resetRecordResult = await db.query('SELECT * FROM password_resets WHERE token = $1 AND otp = \'INVITE\'', [token]);
+        const resetRecordResult = await db.query('SELECT * FROM password_resets WHERE token = $1 AND type = \'invitation\'', [token]);
         const resetRecord = resetRecordResult.rows[0];
 
         if (!resetRecord) {
@@ -150,7 +150,7 @@ export async function resetPasswordAction(data: { token: string, newPassword: st
     try {
         const { token, otp, newPassword } = data;
 
-        const resetRecordResult = await db.query('SELECT * FROM password_resets WHERE token = $1', [token]);
+        const resetRecordResult = await db.query('SELECT * FROM password_resets WHERE token = $1 AND type = \'reset\'', [token]);
         const resetRecord = resetRecordResult.rows[0];
 
         if (!resetRecord) {
