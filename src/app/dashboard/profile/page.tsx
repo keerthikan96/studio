@@ -529,7 +529,7 @@ export default function ProfilePage() {
   const [member, setMember] = useState<Member | null>(null);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [nextTab, setNextTab] = useState<string | null>(null);
-  const [currentTab, setCurrentTab] = useState<string>("General Info");
+  const [currentTab, setCurrentTab] = useState<string>("General");
 
 
   const form = useForm<ProfileFormValues>({
@@ -695,7 +695,7 @@ export default function ProfilePage() {
     );
 
     switch(tab) {
-        case "General Info":
+        case "General":
             return <FormWrapper><GeneralInfoTab form={form} isPending={isPending} /></FormWrapper>;
         case "Job":
              return <FormWrapper><JobInfoTab form={form} /></FormWrapper>;
@@ -711,7 +711,7 @@ export default function ProfilePage() {
             return <SelfAssessmentTab memberId={member.id} />;
         case "Documents":
             return <DocumentsTab memberId={member.id} />;
-        case "Certificate and Courses":
+        case "Courses":
             return <CoursesAndCertificatesTab memberId={member.id} memberName={member.name} />;
         case "Employment History":
             return <EmploymentHistoryTab memberId={member.id} memberName={member.name} />;
@@ -720,7 +720,7 @@ export default function ProfilePage() {
     }
   }
 
-  const tabs = ["General Info", "Job", "Education", "Skills", "Leave", "Notes", "Performance", "Documents", "Certificate and Courses", "To-Do", "Employment History", "Attendance", "Self-assesment"];
+  const tabs = ["General", "Employment History", "Job", "Education", "Skills", "Leave", "Notes", "Performance", "Documents", "Courses", "Self-assesment"];
 
   return (
     <div className='space-y-6'>

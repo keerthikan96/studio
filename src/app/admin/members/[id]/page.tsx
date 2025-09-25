@@ -29,7 +29,7 @@ import { getMemberByIdAction, updateMemberAction, updateMemberStatusAction } fro
 import ProfilePictureUploader from '@/components/profile-picture-uploader';
 import CoverPhotoUploader from '@/components/cover-photo-uploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -584,7 +584,7 @@ export default function MemberProfilePage() {
   const [member, setMember] = useState<Member | null>(null);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [nextTab, setNextTab] = useState<string | null>(null);
-  const [currentTab, setCurrentTab] = useState<string>("General Info");
+  const [currentTab, setCurrentTab] = useState<string>("General");
 
 
   const form = useForm<ProfileFormValues>({
@@ -770,7 +770,7 @@ export default function MemberProfilePage() {
     );
 
     switch(tab) {
-        case "General Info":
+        case "General":
             return <FormWrapper><GeneralInfoTab form={form} isPending={isPending} /></FormWrapper>;
         case "Notes":
             return <NotesTab memberId={member.id} />;
@@ -780,7 +780,7 @@ export default function MemberProfilePage() {
             return <SelfAssessmentTab memberId={member.id} />;
         case "Documents":
             return <DocumentsTab memberId={member.id} />;
-        case "Certificate and Courses":
+        case "Courses":
             return <CoursesAndCertificatesTab memberId={member.id} memberName={member.name} />;
         case "Employment History":
             return <EmploymentHistoryTab memberId={member.id} memberName={member.name} />;
@@ -791,7 +791,7 @@ export default function MemberProfilePage() {
     }
   }
 
-  const tabs = ["General Info", "Leave", "Notes", "Performance", "Documents", "Certificate and Courses", "To-Do", "Employment History", "Attendance", "Self-assesment"];
+  const tabs = ["General", "Employment History", "Leave", "Notes", "Performance", "Documents", "Courses", "Self-assesment"];
 
   return (
     <div className='space-y-6'>
@@ -903,9 +903,3 @@ export default function MemberProfilePage() {
     </div>
   );
 }
-
-
-
-
-
-    
