@@ -29,13 +29,11 @@ export function DashboardCalendar({ selectedDate, onDateChange }: DashboardCalen
   const holidayStyle = { 
     color: 'hsl(var(--accent-foreground))',
     backgroundColor: 'hsl(var(--accent))',
-    borderRadius: '100%',
   };
   
   const todayStyle = {
     color: 'hsl(var(--primary-foreground))',
     backgroundColor: 'hsl(var(--primary))',
-    borderRadius: '100%',
   }
 
   return (
@@ -49,8 +47,8 @@ export function DashboardCalendar({ selectedDate, onDateChange }: DashboardCalen
         classNames={{
             caption_label: "text-lg font-bold",
             head_cell: "w-full font-normal text-sm",
-            cell: "h-10 w-full text-center text-sm p-0 relative [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-            day: "h-10 w-full p-0 font-normal aria-selected:opacity-100",
+            cell: "w-full text-center text-sm p-0 relative [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+            day: "h-10 w-10 p-0 font-normal aria-selected:opacity-100",
             day_selected: "bg-primary/10 text-primary-foreground",
             day_today: "font-bold",
         }}
