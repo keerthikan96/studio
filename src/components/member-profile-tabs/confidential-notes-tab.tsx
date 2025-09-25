@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';
@@ -47,8 +46,10 @@ export function ConfidentialNotesTab({ memberId }: ConfidentialNotesTabProps) {
 
   useEffect(() => {
     setIsClient(true);
-    const storedUser = JSON.parse(sessionStorage.getItem('loggedInUser') || '{}');
-    setUser(storedUser);
+    const storedUser = sessionStorage.getItem('loggedInUser');
+    if (storedUser) {
+        setUser(JSON.parse(storedUser));
+    }
   }, []);
 
   const hasAccess = user?.role === 'HR' || user?.id === memberId;
@@ -85,6 +86,7 @@ export function ConfidentialNotesTab({ memberId }: ConfidentialNotesTabProps) {
     } else if (isClient) {
        console.log(`AUDIT: Access denied for user ${user?.id} to confidential notes of member ${memberId}.`);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memberId, hasAccess, isClient, user?.id]);
 
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
