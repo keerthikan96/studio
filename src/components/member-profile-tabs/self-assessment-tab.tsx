@@ -194,179 +194,177 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-                <CardTitle>Self-Performance Evaluation</CardTitle>
-                <CardDescription>Submit and view your self-assessments.</CardDescription>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="date"
-                      variant={"outline"}
-                      className={cn(
-                        "w-full md:w-[300px] justify-start text-left font-normal",
-                        !date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date?.from ? (
-                        date.to ? (
-                          <>
-                            {format(date.from, "LLL dd, y")} -{" "}
-                            {format(date.to, "LLL dd, y")}
-                          </>
-                        ) : (
-                          format(date.from, "LLL dd, y")
-                        )
-                      ) : (
-                        <span>Pick a date range</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="end">
-                    <Calendar
-                      initialFocus
-                      mode="range"
-                      defaultMonth={date?.from}
-                      selected={date}
-                      onSelect={setDate}
-                      numberOfMonths={2}
-                    />
-                  </PopoverContent>
-                </Popover>
+      <CardHeader className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div className="flex-1">
+            <CardTitle>Self-Performance Evaluation</CardTitle>
+            <CardDescription>Submit and view your self-assessments.</CardDescription>
+        </div>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="date"
+                  variant={"outline"}
+                  className={cn(
+                    "w-full sm:w-[300px] justify-start text-left font-normal",
+                    !date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date?.from ? (
+                    date.to ? (
+                      <>
+                        {format(date.from, "LLL dd, y")} -{" "}
+                        {format(date.to, "LLL dd, y")}
+                      </>
+                    ) : (
+                      format(date.from, "LLL dd, y")
+                    )
+                  ) : (
+                    <span>Pick a date range</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={date?.from}
+                  selected={date}
+                  onSelect={setDate}
+                  numberOfMonths={2}
+                />
+              </PopoverContent>
+            </Popover>
 
-                {isClient && userRole !== 'HR' && (
-                    <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button className="w-full md:w-auto"><PlusCircle className="mr-2 h-4 w-4" /> Add Evaluation</Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[600px]">
-                            <DialogHeader>
-                            <DialogTitle>Add Self-Evaluation</DialogTitle>
-                            <DialogDescription>Reflect on your performance. Click save when you're done.</DialogDescription>
-                            </DialogHeader>
-                            <ScrollArea className="max-h-[70vh] pr-6">
-                                <div className="pr-1 pt-4">
-                                <Form {...form}>
-                                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                                    <FormField control={form.control} name="evaluation_date" render={({ field }) => (
-                                        <FormItem className="flex flex-col"><FormLabel>Evaluation Date</FormLabel>
-                                            <Popover><PopoverTrigger asChild>
-                                                <FormControl>
-                                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+            {isClient && userRole !== 'HR' && (
+                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button className="w-full sm:w-auto"><PlusCircle className="mr-2 h-4 w-4" /> Add Evaluation</Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[600px]">
+                        <DialogHeader>
+                        <DialogTitle>Add Self-Evaluation</DialogTitle>
+                        <DialogDescription>Reflect on your performance. Click save when you're done.</DialogDescription>
+                        </DialogHeader>
+                        <ScrollArea className="max-h-[70vh] pr-6">
+                            <div className="pr-1 pt-4">
+                            <Form {...form}>
+                                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                                <FormField control={form.control} name="evaluation_date" render={({ field }) => (
+                                    <FormItem className="flex flex-col"><FormLabel>Evaluation Date</FormLabel>
+                                        <Popover><PopoverTrigger asChild>
+                                            <FormControl>
+                                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                            </Button>
+                                            </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                                        </Popover><FormMessage />
+                                    </FormItem>
+                                    )} />
+                                    
+                                    <div className="space-y-4">
+                                        <FormLabel>Category-wise Comments</FormLabel>
+                                        {commentFields.map((field, index) => (
+                                            <Card key={field.id} className="p-4">
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`comments.${index}.comment`}
+                                                    render={({ field: commentField }) => (
+                                                        <FormItem>
+                                                            <div className="flex justify-between items-center mb-2">
+                                                                <FormLabel>{form.getValues(`comments.${index}.category`)}</FormLabel>
+                                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeComment(index)}>
+                                                                    <Trash2 className="h-4 w-4 text-destructive"/>
+                                                                </Button>
+                                                            </div>
+                                                            <FormControl>
+                                                                <Textarea
+                                                                    {...commentField}
+                                                                    placeholder={`Add your comments for ${form.getValues(`comments.${index}.category`)}...`}
+                                                                    rows={3}
+                                                                />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </Card>
+                                        ))}
+                                        <FormMessage>{form.formState.errors.comments?.root?.message}</FormMessage>
+
+                                        <Popover open={isCategoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="outline" role="combobox" aria-expanded={isCategoryPopoverOpen} className="w-full justify-between" disabled={unselectedCategories.length === 0}>
+                                                    {unselectedCategories.length > 0 ? "Add another category..." : "All categories added"}
+                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                 </Button>
-                                                </FormControl>
                                             </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
-                                            </Popover><FormMessage />
-                                        </FormItem>
-                                        )} />
-                                        
-                                        <div className="space-y-4">
-                                            <FormLabel>Category-wise Comments</FormLabel>
-                                            {commentFields.map((field, index) => (
-                                                <Card key={field.id} className="p-4">
-                                                    <FormField
-                                                        control={form.control}
-                                                        name={`comments.${index}.comment`}
-                                                        render={({ field: commentField }) => (
-                                                            <FormItem>
-                                                                <div className="flex justify-between items-center mb-2">
-                                                                    <FormLabel>{form.getValues(`comments.${index}.category`)}</FormLabel>
-                                                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeComment(index)}>
-                                                                        <Trash2 className="h-4 w-4 text-destructive"/>
-                                                                    </Button>
-                                                                </div>
-                                                                <FormControl>
-                                                                    <Textarea
-                                                                        {...commentField}
-                                                                        placeholder={`Add your comments for ${form.getValues(`comments.${index}.category`)}...`}
-                                                                        rows={3}
-                                                                    />
-                                                                </FormControl>
-                                                                <FormMessage />
-                                                            </FormItem>
-                                                        )}
-                                                    />
-                                                </Card>
-                                            ))}
-                                            <FormMessage>{form.formState.errors.comments?.root?.message}</FormMessage>
+                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                                <Command>
+                                                    <CommandInput placeholder="Search category..." />
+                                                    <CommandList>
+                                                        <CommandEmpty>No categories found.</CommandEmpty>
+                                                        <CommandGroup>
+                                                            {unselectedCategories.map((category) => (
+                                                            <CommandItem
+                                                                key={category.id}
+                                                                value={category.name}
+                                                                onSelect={() => {
+                                                                    appendComment({ category: category.name, comment: '' });
+                                                                    setCategoryPopoverOpen(false);
+                                                                }}
+                                                            >
+                                                                 <Check
+                                                                    className={cn(
+                                                                        "mr-2 h-4 w-4",
+                                                                        commentFields.some(c => c.category === category.name) ? "opacity-100" : "opacity-0"
+                                                                    )}
+                                                                />
+                                                                {category.name}
+                                                            </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
 
-                                            <Popover open={isCategoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
-                                                <PopoverTrigger asChild>
-                                                    <Button variant="outline" role="combobox" aria-expanded={isCategoryPopoverOpen} className="w-full justify-between" disabled={unselectedCategories.length === 0}>
-                                                        {unselectedCategories.length > 0 ? "Add another category..." : "All categories added"}
-                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                    </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                                                    <Command>
-                                                        <CommandInput placeholder="Search category..." />
-                                                        <CommandList>
-                                                            <CommandEmpty>No categories found.</CommandEmpty>
-                                                            <CommandGroup>
-                                                                {unselectedCategories.map((category) => (
-                                                                <CommandItem
-                                                                    key={category.id}
-                                                                    value={category.name}
-                                                                    onSelect={() => {
-                                                                        appendComment({ category: category.name, comment: '' });
-                                                                        setCategoryPopoverOpen(false);
-                                                                    }}
-                                                                >
-                                                                     <Check
-                                                                        className={cn(
-                                                                            "mr-2 h-4 w-4",
-                                                                            commentFields.some(c => c.category === category.name) ? "opacity-100" : "opacity-0"
-                                                                        )}
-                                                                    />
-                                                                    {category.name}
-                                                                </CommandItem>
-                                                                ))}
-                                                            </CommandGroup>
-                                                        </CommandList>
-                                                    </Command>
-                                                </PopoverContent>
-                                            </Popover>
-                                        </div>
-
-                                        <FormField control={form.control} name="self_rating" render={({ field }) => (
+                                    <FormField control={form.control} name="self_rating" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Overall Self-Rating: <span className='font-bold'>{ratingValue}%</span></FormLabel>
+                                        <FormControl><Slider defaultValue={[50]} max={100} step={1} onValueChange={(val) => field.onChange(val[0])} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )} />
+                                    
+                                    <FormField control={form.control} name="other_comments" render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Overall Self-Rating: <span className='font-bold'>{ratingValue}%</span></FormLabel>
-                                            <FormControl><Slider defaultValue={[50]} max={100} step={1} onValueChange={(val) => field.onChange(val[0])} /></FormControl>
+                                            <FormLabel>Other Comments</FormLabel>
+                                            <FormControl>
+                                                <Textarea {...field} rows={4} placeholder="Add any other comments or thoughts here..." />
+                                            </FormControl>
                                             <FormMessage />
                                         </FormItem>
-                                        )} />
-                                        
-                                        <FormField control={form.control} name="other_comments" render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Other Comments</FormLabel>
-                                                <FormControl>
-                                                    <Textarea {...field} rows={4} placeholder="Add any other comments or thoughts here..." />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )} />
-                                        
-                                        <DialogFooter className="pt-4">
-                                            <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                                            <Button type="submit" disabled={isPending}>
-                                                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Submit Evaluation
-                                            </Button>
-                                        </DialogFooter>
-                                    </form>
-                                </Form>
-                                </div>
-                            </ScrollArea>
-                        </DialogContent>
-                    </Dialog>
-                )}
-            </div>
+                                    )} />
+                                    
+                                    <DialogFooter className="pt-4">
+                                        <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                                        <Button type="submit" disabled={isPending}>
+                                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Submit Evaluation
+                                        </Button>
+                                    </DialogFooter>
+                                </form>
+                            </Form>
+                            </div>
+                        </ScrollArea>
+                    </DialogContent>
+                </Dialog>
+            )}
         </div>
       </CardHeader>
       <CardContent>
