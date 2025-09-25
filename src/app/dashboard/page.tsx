@@ -1,8 +1,9 @@
+
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Briefcase, Calendar, Users } from 'lucide-react';
+import { ArrowRight, Briefcase, Calendar, Users, User } from 'lucide-react';
 import Link from 'next/link';
 
 export default function EmployeeDashboard() {
