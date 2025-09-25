@@ -107,7 +107,45 @@ export async function requestPasswordResetAction(email: string, isInvitation = f
     }
 }
 
-export async function resetPasswordAction(data: { token: string, newPassword: string, otp?: string }): Promise<{ success: boolean, email?: string, error?: string }> {
+export async function setNewPasswordAction(data: { token: string, newPassword: string }): Promise<{ success: boolean, email?: string, error?: string }> {
+    await setupDatabase();
+    try {
+        const { token, newPassword } = data;
+
+        const resetRecordResult = await db.query('SELECT * FROM password_resets WHERE token = $1 AND otp = \'INVITE\'', [token]);
+        const resetRecord = resetRecordResult.rows[0];
+
+        if (!resetRecord) {
+            return { success: false, error: 'Invalid or expired invitation token.' };
+        }
+
+        if (new Date() > new Date(resetRecord.expires_at)) {
+            await db.query('DELETE FROM password_resets WHERE id = $1', [resetRecord.id]);
+            return { success: false, error: 'Invitation token has expired. Please request a new one.' };
+        }
+        
+        const { email } = resetRecord;
+
+        // The admin user is not in the 'members' table, so we handle it separately.
+        if (email !== 'admin@gmail.com') {
+             const hashedPassword = await hashPassword(newPassword);
+            await db.query('UPDATE members SET password = $1, status = \'active\', updated_at = NOW() WHERE email = $2', [hashedPassword, email]);
+        } else {
+            console.log(`Admin password has been set. In a real application, you would store this securely.`);
+        }
+        
+        // Clean up the reset token
+        await db.query('DELETE FROM password_resets WHERE id = $1', [resetRecord.id]);
+
+        return { success: true, email };
+
+    } catch (error) {
+        console.error('Error setting new password:', error);
+        return { success: false, error: 'Failed to set password.' };
+    }
+}
+
+export async function resetPasswordAction(data: { token: string, newPassword: string, otp: string }): Promise<{ success: boolean, email?: string, error?: string }> {
     await setupDatabase();
     try {
         const { token, otp, newPassword } = data;
@@ -124,16 +162,8 @@ export async function resetPasswordAction(data: { token: string, newPassword: st
             return { success: false, error: 'Reset token has expired. Please request a new one.' };
         }
 
-        const isInvitation = resetRecord.otp === 'INVITE';
-
-        // Check OTP only if it's NOT an invitation link.
-        if (!isInvitation && otp !== resetRecord.otp) {
+        if (otp !== resetRecord.otp) {
             return { success: false, error: 'Invalid OTP.' };
-        }
-        
-        // If an OTP was passed for an invitation link, it's an error.
-        if (isInvitation && otp) {
-            return { success: false, error: 'Invalid invitation link.' };
         }
 
         const { email } = resetRecord;

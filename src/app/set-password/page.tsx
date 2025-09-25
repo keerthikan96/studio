@@ -20,7 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import Logo from '@/components/logo';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
-import { resetPasswordAction } from '../actions/auth';
+import { setNewPasswordAction } from '../actions/auth';
 
 const formSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters.'),
@@ -50,9 +50,8 @@ export default function SetPasswordPage() {
             return;
         }
 
-        const result = await resetPasswordAction({
+        const result = await setNewPasswordAction({
             token,
-            // No OTP is provided for an invitation link
             newPassword: data.password
         });
         
