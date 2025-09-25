@@ -13,10 +13,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, PlusCircle, Paperclip, Eye, CalendarIcon, Star, X as XIcon, Edit } from 'lucide-react';
+import { Loader2, PlusCircle, Paperclip, Eye, CalendarIcon, X as XIcon, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { SelfEvaluation } from '@/lib/mock-data';
-import { getSelfEvaluationsAction, updateSelfEvaluationAction } from '@/app/actions/staff';
+import { SelfEvaluation, AssessmentCategory, AssessmentCategoryComment } from '@/lib/mock-data';
+import { getSelfEvaluationsAction, updateSelfEvaluationAction, getAssessmentCategoriesAction } from '@/app/actions/staff';
 import { Badge } from '../ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
@@ -24,12 +24,19 @@ import { cn } from '@/lib/utils';
 import { Slider } from '../ui/slider';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from '../ui/alert-dialog';
 import { DateRange } from 'react-day-picker';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
+import { ChevronsUpDown } from 'lucide-react';
 
+
+const evaluationCommentSchema = z.object({
+  category: z.string().min(1, "Category is required"),
+  comment: z.string().min(1, "Comment is required"),
+});
 
 const evaluationSchema = z.object({
-  evaluation_date: z.date({ required_error: "A evaluation date is required." }),
+  evaluation_date: z.date({ required_error: "An evaluation date is required." }),
   self_rating: z.number().min(0).max(100).optional(),
-  comments: z.string().optional(),
+  comments: z.array(evaluationCommentSchema).min(1, "At least one category comment is required."),
   tags: z.array(z.string()).optional(),
   attachments: z.any(),
 });
@@ -47,15 +54,16 @@ type SelfAssessmentTabProps = {
 
 export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
   const [evaluations, setEvaluations] = useState<SelfEvaluation[]>([]);
+  const [categories, setCategories] = useState<AssessmentCategory[]>([]);
   const [isPending, startTransition] = useTransition();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isFinalizeDialogOpen, setIsFinalizeDialogOpen] = useState(false);
   const [selectedEvaluation, setSelectedEvaluation] = useState<SelfEvaluation | null>(null);
-  const [tagInput, setTagInput] = useState('');
   const [userRole, setUserRole] = useState<'staff' | 'HR' | null>(null);
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
   const [date, setDate] = useState<DateRange | undefined>(undefined);
+  const [isCategoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -65,7 +73,7 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
 
   const form = useForm<EvaluationFormValues>({
     resolver: zodResolver(evaluationSchema),
-    defaultValues: { evaluation_date: new Date(), self_rating: 50, comments: '', tags: [], attachments: undefined },
+    defaultValues: { evaluation_date: new Date(), self_rating: 50, comments: [], tags: [], attachments: undefined },
   });
   
   const hrForm = useForm<HrFeedbackFormValues>({
@@ -75,18 +83,19 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
 
   const { register, control, watch } = form;
   const ratingValue = watch('self_rating');
-  
-  const { fields: tagFields, append: appendTag, remove: removeTag } = useFieldArray({
-    control, name: "tags",
+
+  const { fields: commentFields, append: appendComment, remove: removeComment } = useFieldArray({
+    control, name: "comments"
   });
 
-  const fetchEvaluations = () => {
+  const fetchInitialData = () => {
     startTransition(() => {
       getSelfEvaluationsAction(memberId).then(setEvaluations);
+      getAssessmentCategoriesAction().then(setCategories);
     });
   };
 
-  useEffect(fetchEvaluations, [memberId]);
+  useEffect(fetchInitialData, [memberId]);
 
   const filteredEvaluations = useMemo(() => {
     if (!date || (!date.from && !date.to)) {
@@ -108,23 +117,14 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
     });
   }, [evaluations, date]);
 
-  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      const newTag = tagInput.trim();
-      if (newTag && !form.getValues('tags')?.includes(newTag)) {
-        appendTag(newTag);
-        setTagInput('');
-      }
-    }
-  };
-
   const onSubmit = (data: EvaluationFormValues) => {
     startTransition(async () => {
       const formData = new FormData();
       formData.append('evaluation_date', format(data.evaluation_date, 'yyyy-MM-dd'));
       if(data.self_rating) formData.append('self_rating', data.self_rating.toString());
-      if(data.comments) formData.append('comments', data.comments);
+      
+      formData.append('comments', JSON.stringify(data.comments));
+      
       data.tags?.forEach(tag => formData.append('tags', tag));
       
       const fileInput = form.control._fields.attachments?._f.ref as HTMLInputElement;
@@ -145,7 +145,7 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
         toast({ title: 'Evaluation Submitted', description: 'Your self-evaluation has been recorded.' });
         form.reset();
         setIsAddDialogOpen(false);
-        fetchEvaluations();
+        fetchInitialData();
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred.';
         toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
@@ -168,12 +168,18 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
             toast({ title: "Error", description: result.error, variant: "destructive" });
         } else {
             toast({ title: "Evaluation Finalized", description: "Feedback has been submitted." });
-            fetchEvaluations();
+            fetchInitialData();
             setIsFinalizeDialogOpen(false);
             setSelectedEvaluation(null);
         }
     });
   }
+  
+  const unselectedCategories = useMemo(() => {
+    const selected = form.watch('comments').map(c => c.category);
+    return categories.filter(c => !selected.includes(c.name));
+  }, [categories, form.watch('comments')]);
+
 
   const statusStyles: {[key: string]: string} = {
     'Pending': 'bg-yellow-100 text-yellow-800',
@@ -237,7 +243,7 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
                     </DialogHeader>
                     <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField control={form.control} name="evaluation_date" render={({ field }) => (
+                       <FormField control={form.control} name="evaluation_date" render={({ field }) => (
                         <FormItem className="flex flex-col"><FormLabel>Evaluation Date</FormLabel>
                             <Popover><PopoverTrigger asChild>
                                 <FormControl>
@@ -254,35 +260,76 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
 
                         <FormField control={form.control} name="self_rating" render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Self-Rating: <span className='font-bold'>{ratingValue}%</span></FormLabel>
+                            <FormLabel>Overall Self-Rating: <span className='font-bold'>{ratingValue}%</span></FormLabel>
                             <FormControl><Slider defaultValue={[50]} max={100} step={1} onValueChange={(val) => field.onChange(val[0])} /></FormControl>
                             <FormMessage />
                         </FormItem>
                         )} />
+                        
+                        <div className="space-y-4">
+                            <FormLabel>Category-wise Comments</FormLabel>
+                            {commentFields.map((field, index) => (
+                                <Card key={field.id} className="p-4">
+                                     <FormField
+                                        control={form.control}
+                                        name={`comments.${index}.comment`}
+                                        render={({ field: commentField }) => (
+                                            <FormItem>
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <FormLabel>{form.getValues(`comments.${index}.category`)}</FormLabel>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeComment(index)}>
+                                                        <Trash2 className="h-4 w-4 text-destructive"/>
+                                                    </Button>
+                                                </div>
+                                                <FormControl>
+                                                    <Textarea
+                                                        {...commentField}
+                                                        placeholder={`Add your comments for ${form.getValues(`comments.${index}.category`)}...`}
+                                                        rows={3}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </Card>
+                            ))}
+                              <FormMessage>{form.formState.errors.comments?.root?.message}</FormMessage>
 
-                        <FormField control={form.control} name="comments" render={({ field }) => (
-                        <FormItem><FormLabel>Reflections/Comments</FormLabel><FormControl><Textarea {...field} rows={5} placeholder="Your thoughts on your performance, achievements, and areas for improvement..." /></FormControl><FormMessage /></FormItem>
-                        )} />
-
-                        <FormItem>
-                            <FormLabel>Tags</FormLabel>
-                            <FormControl>
-                                <div>
-                                <Input placeholder="Type a tag and press Enter" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={handleTagKeyDown} />
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                    {tagFields.map((field, index) => (
-                                    <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
-                                        {form.getValues('tags')?.[index]}
-                                        <button type="button" onClick={() => removeTag(index)}><XIcon className="h-3 w-3" /></button>
-                                    </Badge>
-                                    ))}
-                                </div>
-                                </div>
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-
-                        <FormItem><FormLabel>Attachments</FormLabel><FormControl><Input type="file" multiple {...register("attachments")} /></FormControl><FormMessage /></FormItem>
+                             <Popover open={isCategoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" role="combobox" aria-expanded={isCategoryPopoverOpen} className="w-full justify-between" disabled={unselectedCategories.length === 0}>
+                                        {unselectedCategories.length > 0 ? "Add another category..." : "All categories added"}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-full p-0">
+                                    <Command>
+                                        <CommandInput placeholder="Search category..." />
+                                        <CommandList>
+                                            <CommandEmpty>No categories found.</CommandEmpty>
+                                            <CommandGroup>
+                                                {unselectedCategories.map((category) => (
+                                                <CommandItem
+                                                    key={category.id}
+                                                    value={category.name}
+                                                    onSelect={(currentValue) => {
+                                                        const cat = categories.find(c => c.name.toLowerCase() === currentValue.toLowerCase());
+                                                        if (cat) {
+                                                            appendComment({ category: cat.name, comment: '' });
+                                                        }
+                                                        setCategoryPopoverOpen(false);
+                                                    }}
+                                                >
+                                                    {category.name}
+                                                </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
                         
                         <DialogFooter>
                             <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
@@ -319,29 +366,27 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
                   <TableCell className="text-right space-x-2">
                     <Dialog>
                         <DialogTrigger asChild><Button variant="outline" size="sm"><Eye className="mr-2 h-4 w-4"/>View</Button></DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="sm:max-w-2xl">
                             <DialogHeader>
                                 <DialogTitle>Self-Evaluation Details</DialogTitle>
                                 <DialogDescription>Submitted on {format(new Date(item.evaluation_date), 'PPP')}</DialogDescription>
                             </DialogHeader>
-                            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-                                {item.self_rating && <div><h4 className="font-medium mb-2">Self-Rating</h4><p>{item.self_rating}%</p></div>}
-                                {item.comments && <div><h4 className="font-medium mb-2">Comments</h4><p className="text-sm text-muted-foreground whitespace-pre-wrap">{item.comments}</p></div>}
-                                {item.tags && item.tags.length > 0 && (
-                                    <div><h4 className="font-medium mb-2">Tags</h4>
-                                        <div className="flex flex-wrap gap-2">{item.tags.map((tag, index) => <Badge key={index} variant="secondary">{tag}</Badge>)}</div>
+                             <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+                                {item.self_rating && <div><h4 className="font-medium mb-2">Overall Self-Rating</h4><p>{item.self_rating}%</p></div>}
+                                {item.comments && item.comments.length > 0 && (
+                                <div>
+                                    <h4 className="font-medium mb-2">Category Comments</h4>
+                                    <div className="space-y-2">
+                                        {item.comments.map((c, i) => (
+                                            <div key={i} className="p-3 bg-muted rounded-md">
+                                                <p className="font-semibold text-sm">{c.category}</p>
+                                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{c.comment}</p>
+                                            </div>
+                                        ))}
                                     </div>
+                                </div>
                                 )}
-                                {item.attachments && item.attachments.length > 0 && (
-                                    <div><h4 className="font-medium mb-2">Attachments</h4>
-                                        <ul className="space-y-2">{item.attachments.map((file, index) => (
-                                            <li key={index} className="flex items-center text-sm"><Paperclip className="h-4 w-4 mr-2 text-muted-foreground"/>
-                                                <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{file.name}</a>
-                                            </li>
-                                        ))}</ul>
-                                    </div>
-                                )}
-                                <hr />
+                                 <hr />
                                 <div>
                                     <h4 className="font-medium mb-2">Manager/HR Feedback</h4>
                                     {item.status === 'Finalized' && item.hr_feedback ? (
