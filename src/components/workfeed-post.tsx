@@ -17,22 +17,21 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 type WorkfeedPostProps = {
     post: WorkfeedPost;
-    currentUserId?: string;
-    currentUserRole?: string;
+    currentUser?: { id: string, name: string, email: string, role: string, profile_picture_url: string } | null;
     onToggleLike: (postId: string) => void;
     onAddComment: (postId: string, commentText: string) => void;
     onDeletePost: (postId: string) => void;
 };
 
-export default function WorkfeedPostComponent({ post, currentUserId, currentUserRole, onToggleLike, onAddComment, onDeletePost }: WorkfeedPostProps) {
+export default function WorkfeedPostComponent({ post, currentUser, onToggleLike, onAddComment, onDeletePost }: WorkfeedPostProps) {
     const fallback = post.author_name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
     const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true });
     const [commentText, setCommentText] = useState('');
     const [showComments, setShowComments] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-    const hasLiked = currentUserId ? post.likes.includes(currentUserId) : false;
-    const canDelete = currentUserRole === 'HR' || currentUserId === post.author_id;
+    const hasLiked = currentUser ? post.likes.includes(currentUser.id) : false;
+    const canDelete = currentUser?.role === 'HR' || currentUser?.id === post.author_id;
 
     const handleCommentSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -125,8 +124,8 @@ export default function WorkfeedPostComponent({ post, currentUserId, currentUser
                         </div>
                         <form onSubmit={handleCommentSubmit} className="flex items-center gap-2">
                             <Avatar className="h-8 w-8">
-                                <AvatarImage src={post.author_avatar_url ?? undefined} />
-                                <AvatarFallback>{fallback}</AvatarFallback>
+                                <AvatarImage src={currentUser?.profile_picture_url ?? undefined} />
+                                <AvatarFallback>{currentUser?.name?.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <Input 
                                 value={commentText}

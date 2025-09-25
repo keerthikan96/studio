@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function WorkfeedPage() {
     const [posts, setPosts] = useState<WorkfeedPost[]>([]);
     const [isPending, startTransition] = useTransition();
-    const [currentUser, setCurrentUser] = useState<{ id: string, role: string } | null>(null);
+    const [currentUser, setCurrentUser] = useState<{ id: string, name: string, email: string, role: string, profile_picture_url: string } | null>(null);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -27,6 +27,11 @@ export default function WorkfeedPage() {
     }, []);
 
     const handleCreatePost = async (content: string, imageFile?: File) => {
+        if (!currentUser) {
+            toast({ title: 'Error', description: 'You must be logged in to post.', variant: 'destructive' });
+            return;
+        }
+
         let imageUrl: string | undefined = undefined;
 
         if (imageFile) {
@@ -52,7 +57,7 @@ export default function WorkfeedPage() {
         }
         
         startTransition(async () => {
-            const result = await createPostAction(content, imageUrl);
+            const result = await createPostAction(content, currentUser, imageUrl);
             if ('error' in result) {
                 toast({ title: 'Error', description: result.error, variant: 'destructive' });
             } else {
@@ -80,13 +85,13 @@ export default function WorkfeedPage() {
         );
         
         // Server action
-        await toggleLikeAction(postId);
+        await toggleLikeAction(postId, currentUser.id);
     };
 
     const handleAddComment = async (postId: string, commentText: string) => {
         if (!currentUser) return;
 
-        const result = await addCommentAction(postId, commentText);
+        const result = await addCommentAction(postId, commentText, currentUser);
         if ('error' in result) {
             toast({ title: 'Error', description: result.error, variant: 'destructive' });
         } else {
@@ -96,7 +101,8 @@ export default function WorkfeedPage() {
     };
 
     const handleDeletePost = async (postId: string) => {
-        const result = await deletePostAction(postId);
+        if (!currentUser) return;
+        const result = await deletePostAction(postId, currentUser.id, currentUser.role);
         if ('error' in result) {
             toast({ title: 'Error', description: result.error, variant: 'destructive' });
         } else {
@@ -109,7 +115,7 @@ export default function WorkfeedPage() {
     return (
         <div className="max-w-3xl mx-auto space-y-6">
             <h1 className="text-3xl font-bold tracking-tight">Workfeed</h1>
-            <CreatePostForm onCreatePost={handleCreatePost} />
+            <CreatePostForm onCreatePost={handleCreatePost} userAvatar={currentUser?.profile_picture_url}/>
             <div className="space-y-4">
                 {isPending && posts.length === 0 ? (
                     <>
@@ -122,10 +128,9 @@ export default function WorkfeedPage() {
                         <WorkfeedPostComponent 
                             key={post.id} 
                             post={post}
-                            currentUserId={currentUser?.id}
-                            currentUserRole={currentUser?.role}
+                            currentUser={currentUser}
                             onToggleLike={handleToggleLike}
-                            onAddComment={handleAddComment}
+                            onAddComment={handleA<ctrl61>ddComment}
                             onDeletePost={handleDeletePost}
                         />
                     ))

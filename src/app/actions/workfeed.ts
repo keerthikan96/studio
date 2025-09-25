@@ -5,25 +5,17 @@ import { db, setupDatabase } from '@/lib/db';
 import { WorkfeedPost, WorkfeedComment } from '@/lib/mock-data';
 import { revalidatePath } from 'next/cache';
 
-// This is a placeholder for getting the current user.
-// In a real app, this would come from your actual auth system (e.g., NextAuth.js, Clerk, etc.)
-async function getCurrentUser() {
-    // For now, we'll return a mock HR user.
-    // Replace this with your actual session management.
-    return {
-        id: 'admin-user-001',
-        name: 'People and Culture office',
-        email: 'admin@gmail.com',
-        role: 'HR',
-        profile_picture_url: 'https://i.pravatar.cc/40?u=admin-user-001',
-    };
+type PostAuthor = {
+    id: string;
+    name: string;
+    role: string;
+    profile_picture_url: string;
 }
 
-export async function createPostAction(content: string, imageUrl?: string): Promise<WorkfeedPost | { error: string }> {
+export async function createPostAction(content: string, author: PostAuthor, imageUrl?: string): Promise<WorkfeedPost | { error: string }> {
     await setupDatabase();
-    const user = await getCurrentUser();
-
-    if (!user) {
+    
+    if (!author) {
         return { error: 'You must be logged in to create a post.' };
     }
 
@@ -32,7 +24,7 @@ export async function createPostAction(content: string, imageUrl?: string): Prom
             `INSERT INTO workfeed_posts (author_id, author_name, author_role, author_avatar_url, content, image_url)
              VALUES ($1, $2, $3, $4, $5, $6)
              RETURNING *;`,
-            [user.id, user.name, user.role, user.profile_picture_url, content, imageUrl]
+            [author.id, author.name, author.role, author.profile_picture_url, content, imageUrl]
         );
 
         const newPost = result.rows[0];
@@ -53,6 +45,14 @@ export async function createPostAction(content: string, imageUrl?: string): Prom
         return { error: 'Failed to create post.' };
     }
 }
+
+// This function now needs the current user passed to it
+async function getCurrentUser(userId: string, userRole: string): Promise<{ id: string, role: string } | null> {
+    // In a real app, you might verify the user against the database here
+    if (!userId || !userRole) return null;
+    return { id: userId, role: userRole };
+}
+
 
 export async function getPostsAction(): Promise<WorkfeedPost[]> {
     await setupDatabase();
@@ -90,11 +90,10 @@ export async function getPostsAction(): Promise<WorkfeedPost[]> {
     }
 }
 
-export async function toggleLikeAction(postId: string): Promise<{ success: boolean; error?: string }> {
+export async function toggleLikeAction(postId: string, userId: string): Promise<{ success: boolean; error?: string }> {
     await setupDatabase();
-    const user = await getCurrentUser();
-
-    if (!user) {
+    
+    if (!userId) {
         return { success: false, error: 'You must be logged in to like a post.' };
     }
 
@@ -102,20 +101,20 @@ export async function toggleLikeAction(postId: string): Promise<{ success: boole
         // Check if the user already liked the post
         const likeResult = await db.query(
             'SELECT * FROM workfeed_likes WHERE post_id = $1 AND user_id = $2',
-            [postId, user.id]
+            [postId, userId]
         );
 
         if (likeResult.rows.length > 0) {
             // User has liked it, so unlike it
             await db.query(
                 'DELETE FROM workfeed_likes WHERE post_id = $1 AND user_id = $2',
-                [postId, user.id]
+                [postId, userId]
             );
         } else {
             // User has not liked it, so like it
             await db.query(
                 'INSERT INTO workfeed_likes (post_id, user_id) VALUES ($1, $2)',
-                [postId, user.id]
+                [postId, userId]
             );
         }
         
@@ -129,11 +128,10 @@ export async function toggleLikeAction(postId: string): Promise<{ success: boole
     }
 }
 
-export async function addCommentAction(postId: string, content: string): Promise<WorkfeedComment | { error: string }> {
+export async function addCommentAction(postId: string, content: string, author: PostAuthor): Promise<WorkfeedComment | { error: string }> {
     await setupDatabase();
-    const user = await getCurrentUser();
-
-    if (!user) {
+    
+    if (!author) {
         return { error: 'You must be logged in to comment.' };
     }
 
@@ -142,7 +140,7 @@ export async function addCommentAction(postId: string, content: string): Promise
             `INSERT INTO workfeed_comments (post_id, author_id, author_name, author_avatar_url, content)
              VALUES ($1, $2, $3, $4, $5)
              RETURNING *;`,
-            [postId, user.id, user.name, user.profile_picture_url, content]
+            [postId, author.id, author.name, author.profile_picture_url, content]
         );
 
         revalidatePath('/admin/workfeed');
@@ -155,9 +153,9 @@ export async function addCommentAction(postId: string, content: string): Promise
     }
 }
 
-export async function deletePostAction(postId: string): Promise<{ success: boolean; error?: string }> {
+export async function deletePostAction(postId: string, userId: string, userRole: string): Promise<{ success: boolean; error?: string }> {
     await setupDatabase();
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(userId, userRole);
 
     if (!user) {
         return { success: false, error: 'You must be logged in to delete a post.' };

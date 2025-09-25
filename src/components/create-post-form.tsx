@@ -11,9 +11,10 @@ import Image from 'next/image';
 
 type CreatePostFormProps = {
     onCreatePost: (content: string, imageFile?: File) => void;
+    userAvatar?: string | null;
 };
 
-export default function CreatePostForm({ onCreatePost }: CreatePostFormProps) {
+export default function CreatePostForm({ onCreatePost, userAvatar }: CreatePostFormProps) {
     const [content, setContent] = useState('');
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [imageFile, setImageFile] = useState<File | undefined>(undefined);
@@ -49,7 +50,7 @@ export default function CreatePostForm({ onCreatePost }: CreatePostFormProps) {
             <CardContent className="p-4">
                 <div className="flex items-start gap-4">
                     <Avatar>
-                        <AvatarImage src="https://i.pravatar.cc/40?u=current-user" />
+                        <AvatarImage src={userAvatar ?? undefined} />
                         <AvatarFallback>U</AvatarFallback>
                     </Avatar>
                     <div className="w-full">
