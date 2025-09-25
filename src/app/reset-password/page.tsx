@@ -20,75 +20,67 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import Logo from '@/components/logo';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
-import { updateMemberStatusAction } from '../actions/staff';
 import { resetPasswordAction } from '../actions/auth';
+import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from '@/components/ui/input-otp';
 
 const formSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters.'),
   confirmPassword: z.string(),
+  otp: z.string().length(6, "Your one-time password must be 6 characters."),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword'],
 });
 
-export default function SetPasswordPage() {
+export default function ResetPasswordPage() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const email = searchParams.get('email');
-  const token = searchParams.get('token'); // In a real app, we'd verify this token
+  const token = searchParams.get('token');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { password: '', confirmPassword: '' },
+    defaultValues: { password: '', confirmPassword: '', otp: '' },
   });
 
   function onSubmit(data: z.infer<typeof formSchema>) {
     startTransition(async () => {
-        // In a real app, you would:
-        // 1. Verify the token against the database to ensure it's valid and not expired.
-        // 2. Hash the password before saving it.
-        // 3. Find the user by the token/email and update their password and status.
-
-        if (!email || !token) {
-            toast({ title: 'Error', description: 'Invalid invitation link.', variant: 'destructive'});
-            return;
-        }
+        if (!token) return;
 
         const result = await resetPasswordAction({
             token,
-            otp: "000000", // This is a placeholder for invitations, where no OTP is used.
+            otp: data.otp,
             newPassword: data.password
         });
         
         if (result.success && result.email) {
             toast({
-                title: 'Password Set Successfully!',
+                title: 'Password Reset Successful!',
                 description: 'You can now log in with your new password.',
             });
-            router.push(`/?new_user=true&email=${result.email}`);
+            router.push(`/?password_reset=true&email=${result.email}`);
         } else {
              toast({
                 title: 'Error',
-                description: result.error || "Failed to set password. The link may have expired.",
+                description: result.error || "An unknown error occurred.",
                 variant: 'destructive',
             });
         }
     });
   }
 
-  if (!token || !email) {
+  if (!token) {
     return (
          <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
             <Card className="w-full max-w-md text-center">
                 <CardHeader>
-                    <CardTitle className='text-destructive'>Invalid Invitation Link</CardTitle>
-                    <CardDescription>This link is either expired or invalid. Please request a new invitation.</CardDescription>
+                    <CardTitle className='text-destructive'>Invalid Reset Link</CardTitle>
+                    <CardDescription>This link is either expired or invalid. Please request a new link.</CardDescription>
                 </CardHeader>
                  <CardContent>
                     <Button asChild>
-                        <Link href="/">Back to Home</Link>
+                        <Link href="/forgot-password">Request Again</Link>
                     </Button>
                 </CardContent>
             </Card>
@@ -103,12 +95,37 @@ export default function SetPasswordPage() {
             <div className='flex justify-center mb-4'>
                 <Logo />
             </div>
-          <CardTitle>Create Your Password</CardTitle>
-          <CardDescription>Welcome to StaffSync! Please set a secure password for {email}.</CardDescription>
+          <CardTitle>Reset Your Password</CardTitle>
+          <CardDescription>Enter the OTP from the console and your new password below.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+               <FormField
+                control={form.control}
+                name="otp"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>One-Time Password (OTP)</FormLabel>
+                    <FormControl>
+                        <InputOTP maxLength={6} {...field}>
+                            <InputOTPGroup>
+                                <InputOTPSlot index={0} />
+                                <InputOTPSlot index={1} />
+                                <InputOTPSlot index={2} />
+                            </InputOTPGroup>
+                            <InputOTPSeparator />
+                            <InputOTPGroup>
+                                <InputOTPSlot index={3} />
+                                <InputOTPSlot index={4} />
+                                <InputOTPSlot index={5} />
+                            </InputOTPGroup>
+                        </InputOTP>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="password"
@@ -136,15 +153,12 @@ export default function SetPasswordPage() {
                 )}
               />
               <Button type="submit" className="w-full" disabled={isPending}>
-                {isPending ? 'Saving...' : 'Set Password and Log In'}
+                {isPending ? 'Resetting...' : 'Reset Password'}
               </Button>
             </form>
           </Form>
         </CardContent>
       </Card>
-      <Link href="/" className="mt-6 text-sm text-muted-foreground hover:text-primary">
-        Back to Home
-      </Link>
     </main>
   );
 }

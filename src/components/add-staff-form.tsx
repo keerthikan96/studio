@@ -39,6 +39,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { requestPasswordResetAction } from '@/app/actions/auth';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
@@ -88,11 +89,6 @@ type StaffFormValues = z.infer<typeof formSchema>;
 type AddStaffFormProps = {
     onAddStaff: (staff: Omit<Member, 'id' | 'status'>) => Promise<boolean>;
 };
-
-function generateSecureToken() {
-    // In a real app, use a crypto library for this.
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-}
 
 export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
   const [isPending, startTransition] = useTransition();
@@ -208,23 +204,24 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
 
   const handleSendInvite = () => {
     if (!formData) return;
-     const token = generateSecureToken();
-      const invitationLink = `${window.location.origin}/set-password?token=${token}&email=${encodeURIComponent(formData.email)}`;
-      
-      console.log('--- Invitation Email ---');
-      console.log(`To: ${formData.email}`);
-      console.log('Subject: You have been invited to join StaffSync!');
-      console.log(`Hi ${formData.name},`);
-      console.log(`Please click the link below to set up your account. This link will expire in 7 days.`);
-      console.log(invitationLink);
-      console.log('------------------------');
-      
-      toast({
-        title: 'Invitation Sent!',
-        description: `An invitation has been sent to ${formData.name} at ${formData.email}.`,
-      });
-      setShowInviteDialog(false);
-      router.push('/admin/members');
+    
+    startTransition(async () => {
+        const result = await requestPasswordResetAction(formData.email);
+        if (result.success) {
+            toast({
+                title: 'Invitation Sent!',
+                description: `An invitation has been sent to ${formData.name}. Check the console for the link.`,
+            });
+        } else {
+            toast({
+                title: 'Error Sending Invitation',
+                description: result.error || 'An unknown error occurred.',
+                variant: 'destructive',
+            });
+        }
+        setShowInviteDialog(false);
+        router.push('/admin/members');
+    });
   }
 
   const handleSkillKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {

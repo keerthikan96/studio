@@ -58,6 +58,7 @@ export async function setupDatabase() {
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 name VARCHAR(255) NOT NULL,
                 email VARCHAR(255) UNIQUE NOT NULL,
+                password TEXT,
                 phone VARCHAR(50),
                 domain VARCHAR(100),
                 country VARCHAR(100),
@@ -130,9 +131,21 @@ export async function setupDatabase() {
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
+
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS password_resets (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                email VARCHAR(255) NOT NULL,
+                token TEXT NOT NULL,
+                otp VARCHAR(6) NOT NULL,
+                expires_at TIMESTAMPTZ NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
         
         // Add new columns if they don't exist for backward compatibility
         const member_columns = [
+            { name: 'password', type: 'TEXT' },
             { name: 'profile_picture_url', type: 'VARCHAR(2048)' },
             { name: 'cover_photo_url', type: 'VARCHAR(2048)' },
             { name: 'job_title', type: 'VARCHAR(255)' },

@@ -4,8 +4,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTransition, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Form,
   FormControl,
@@ -18,8 +19,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, LogIn } from 'lucide-react';
-import { Member } from '@/lib/mock-data';
-import { getMembersAction } from '@/app/actions/staff';
+import { loginAction } from '@/app/actions/auth';
+
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
@@ -28,10 +29,15 @@ const formSchema = z.object({
 
 type LoginFormValues = z.infer<typeof formSchema>;
 
+const handleLoginSession = (user: { id: string, name: string, email: string, role: 'admin' | 'staff' | 'HR' }) => {
+    sessionStorage.setItem('loggedInUser', JSON.stringify(user));
+};
+
 export default function LoginForm() {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(formSchema),
@@ -41,63 +47,51 @@ export default function LoginForm() {
     },
   });
 
-  const handleLogin = (user: { id: string, name: string, email: string, role: 'admin' | 'staff' | 'HR' }) => {
-    sessionStorage.setItem('loggedInUser', JSON.stringify(user));
-  };
-  
   useEffect(() => {
-    // This is a workaround for a demo. In a real app, you'd clear this on logout.
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('new_user') === 'true') {
-        const email = urlParams.get('email');
-        if (email) {
-            startTransition(async () => {
-                const members = await getMembersAction();
-                const newUser = members.find(m => m.email === email);
-                if (newUser) {
-                    handleLogin({ id: newUser.id, name: newUser.name, email: newUser.email, role: 'staff'});
-                }
-            })
-        }
+    const newUserEmail = searchParams.get('email');
+    const newUserParam = searchParams.get('new_user');
+    const passwordResetParam = searchParams.get('password_reset');
+
+    if (newUserParam === 'true' && newUserEmail) {
+        form.setValue('email', newUserEmail);
+        toast({
+            title: 'Account Activated!',
+            description: 'You can now log in with your new password.',
+        });
     }
-  }, []);
+    if (passwordResetParam === 'true' && newUserEmail) {
+        form.setValue('email', newUserEmail);
+         toast({
+            title: 'Password Reset Successful!',
+            description: 'You can now log in with your new password.',
+        });
+    }
+  }, [searchParams, form, toast]);
+
 
   function onSubmit(data: LoginFormValues) {
     startTransition(async () => {
-      
-      // Mock authentication logic
-      if (data.password === 'password') { // Simple password check for demo
-        if (data.email === 'admin@gmail.com') {
-          // Admin login doesn't need a real DB record for this demo
-          handleLogin({ id: 'admin-user-001', name: 'People and Culture office', email: 'admin@gmail.com', role: 'HR' });
-          toast({
-            title: 'Login Successful',
-            description: 'Redirecting to admin dashboard...',
-          });
-          router.push('/admin/dashboard');
-          return;
-        }
+      const result = await loginAction(data);
 
-        // For staff, we check if they exist in the DB
-        const members = await getMembersAction();
-        const member = members.find(m => m.email === data.email && m.status === 'active');
+      if (result.error) {
+        toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description: result.error,
+        });
+      } else if (result.user) {
+        handleLoginSession(result.user);
+        toast({
+          title: 'Login Successful',
+          description: 'Redirecting...',
+        });
         
-        if (member) {
-            handleLogin({ id: member.id, name: member.name, email: data.email, role: 'staff' });
-            toast({
-                title: 'Login Successful',
-                description: 'Redirecting to your profile...',
-            });
+        if (result.user.role === 'HR') {
+            router.push('/admin/dashboard');
+        } else {
             router.push('/profile');
-            return;
         }
       }
-      
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: 'Invalid email, password, or inactive account.',
-      });
     });
   }
 
@@ -122,7 +116,14 @@ export default function LoginForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+                <div className="flex items-center justify-between">
+                    <FormLabel>Password</FormLabel>
+                     <Link href="/forgot-password" passHref>
+                        <span className="text-sm text-primary hover:underline cursor-pointer">
+                            Forgot password?
+                        </span>
+                    </Link>
+                </div>
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
