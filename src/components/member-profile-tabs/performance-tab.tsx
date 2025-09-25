@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useTransition, useEffect, useMemo } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
@@ -14,12 +14,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, PlusCircle, Paperclip, ShieldCheck, Eye, CalendarIcon, Star, Trash, X as XIcon } from 'lucide-react';
+import { Loader2, PlusCircle, Paperclip, ShieldCheck, Eye, CalendarIcon, Star, X as XIcon, ChevronsUpDown, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PerformanceRecord } from '@/lib/mock-data';
 import { getPerformanceRecordsAction } from '@/app/actions/staff';
 import { Badge } from '../ui/badge';
-import Link from 'next/link';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
@@ -27,6 +26,7 @@ import { Slider } from '../ui/slider';
 import { DateRange } from 'react-day-picker';
 import { PerformanceGrowthChart } from '../performance-growth-chart';
 import { ScrollArea } from '../ui/scroll-area';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 
 const recordSchema = z.object({
   review_date: z.date({ required_error: "A review date is required." }),
@@ -44,12 +44,17 @@ type PerformanceTabProps = {
   memberId: string;
 };
 
+const defaultCategories = [
+    'Annual Review', 'Project Feedback', 'Training Assessment', 
+    'Teamwork', 'Leadership', 'Productivity', 'Problem-Solving'
+];
+
 export function PerformanceTab({ memberId }: PerformanceTabProps) {
   const [records, setRecords] = useState<PerformanceRecord[]>([]);
   const [isPending, startTransition] = useTransition();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [tagInput, setTagInput] = useState('');
   const [date, setDate] = useState<DateRange | undefined>(undefined);
+  const [isCategoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<RecordFormValues>({
@@ -65,13 +70,13 @@ export function PerformanceTab({ memberId }: PerformanceTabProps) {
     },
   });
   
-  const { register, control, watch } = form;
+  const { register, control, watch, setValue } = form;
   const scoreValue = watch('score');
-  
-  const { fields: tagFields, append: appendTag, remove: removeTag } = useFieldArray({
-    control,
-    name: "tags",
-  });
+  const selectedTags = watch('tags') || [];
+
+  const unselectedCategories = useMemo(() => {
+    return defaultCategories.filter(c => !selectedTags.includes(c));
+  }, [selectedTags]);
 
   const fetchRecords = () => {
     startTransition(() => {
@@ -92,7 +97,6 @@ export function PerformanceTab({ memberId }: PerformanceTabProps) {
       if (date.from && recordDate < date.from) {
         return false;
       }
-      // Set the 'to' date to the end of the day for inclusive filtering
       if (date.to) {
         const toDate = new Date(date.to);
         toDate.setHours(23, 59, 59, 999);
@@ -103,18 +107,6 @@ export function PerformanceTab({ memberId }: PerformanceTabProps) {
       return true;
     });
   }, [records, date]);
-
-
-  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      const newTag = tagInput.trim();
-      if (newTag && !form.getValues('tags')?.includes(newTag)) {
-        appendTag(newTag);
-        setTagInput('');
-      }
-    }
-  };
 
   const onSubmit = (data: RecordFormValues) => {
     startTransition(async () => {
@@ -231,6 +223,51 @@ export function PerformanceTab({ memberId }: PerformanceTabProps) {
                           </FormItem>
                           )} />
 
+                           <FormItem>
+                                <FormLabel>Categories</FormLabel>
+                                <Popover open={isCategoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" role="combobox" aria-expanded={isCategoryPopoverOpen} className="w-full justify-between">
+                                            {unselectedCategories.length > 0 ? "Select categories..." : "All categories added"}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                        <Command>
+                                            <CommandInput placeholder="Search category..." />
+                                            <CommandList>
+                                                <CommandEmpty>No categories found.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {unselectedCategories.map((category) => (
+                                                    <CommandItem
+                                                        key={category}
+                                                        value={category}
+                                                        onSelect={() => {
+                                                            setValue('tags', [...selectedTags, category]);
+                                                            setCategoryPopoverOpen(false);
+                                                        }}
+                                                    >
+                                                        <Check className={cn("mr-2 h-4 w-4", selectedTags.includes(category) ? "opacity-100" : "opacity-0")} />
+                                                        {category}
+                                                    </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    {selectedTags.map((tag) => (
+                                        <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                                            {tag}
+                                            <button type="button" onClick={() => setValue('tags', selectedTags.filter(t => t !== tag))}>
+                                                <XIcon className="h-3 w-3" />
+                                            </button>
+                                        </Badge>
+                                    ))}
+                                </div>
+                            </FormItem>
+
                           <FormField control={form.control} name="score" render={({ field }) => (
                           <FormItem>
                               <FormLabel>Performance Score: <span className='font-bold'>{scoreValue}%</span></FormLabel>
@@ -240,26 +277,8 @@ export function PerformanceTab({ memberId }: PerformanceTabProps) {
                           )} />
 
                           <FormField control={form.control} name="comments" render={({ field }) => (
-                          <FormItem><FormLabel>Comments</FormLabel><FormControl><Textarea {...field} rows={5} placeholder="Detailed feedback..." /></FormControl><FormMessage /></FormItem>
+                          <FormItem><FormLabel>Comments</FormLabel><FormControl><Textarea {...field} value={field.value ?? ''} rows={5} placeholder="Detailed feedback..." /></FormControl><FormMessage /></FormItem>
                           )} />
-
-                          <FormItem>
-                              <FormLabel>Tags</FormLabel>
-                              <FormControl>
-                                  <div>
-                                  <Input placeholder="Type a tag and press Enter" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={handleTagKeyDown} />
-                                  <div className="flex flex-wrap gap-2 mt-2">
-                                      {tagFields.map((field, index) => (
-                                      <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
-                                          {form.getValues('tags')?.[index]}
-                                          <button type="button" onClick={() => removeTag(index)}><XIcon className="h-3 w-3" /></button>
-                                      </Badge>
-                                      ))}
-                                  </div>
-                                  </div>
-                              </FormControl>
-                              <FormMessage />
-                          </FormItem>
 
                           <FormItem><FormLabel>Attachments</FormLabel><FormControl><Input type="file" multiple {...register("attachments")} /></FormControl><FormMessage /></FormItem>
 
@@ -320,29 +339,31 @@ export function PerformanceTab({ memberId }: PerformanceTabProps) {
                                   <DialogTitle>Performance Review</DialogTitle>
                                   <DialogDescription>Review by {record.reviewer_name} on {format(new Date(record.review_date), 'PPP')}</DialogDescription>
                               </DialogHeader>
-                              <div className="space-y-4 py-4">
-                                  {record.score && <div><h4 className="font-medium mb-2">Score</h4><p>{record.score}%</p></div>}
-                                  {record.comments && <div><h4 className="font-medium mb-2">Comments</h4><p className="text-sm text-muted-foreground whitespace-pre-wrap">{record.comments}</p></div>}
-                                  {record.tags && record.tags.length > 0 && (
-                                      <div><h4 className="font-medium mb-2">Tags</h4>
-                                          <div className="flex flex-wrap gap-2">
-                                              {record.tags.map((tag, index) => <Badge key={index} variant="secondary">{tag}</Badge>)}
-                                          </div>
-                                      </div>
-                                  )}
-                                  {record.attachments && record.attachments.length > 0 && (
-                                      <div><h4 className="font-medium mb-2">Attachments</h4>
-                                          <ul className="space-y-2">
-                                              {record.attachments.map((file, index) => (
-                                                  <li key={index} className="flex items-center text-sm">
-                                                      <Paperclip className="h-4 w-4 mr-2 text-muted-foreground"/>
-                                                      <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{file.name}</a>
-                                                  </li>
-                                              ))}
-                                          </ul>
-                                      </div>
-                                  )}
-                              </div>
+                              <ScrollArea className="max-h-[60vh] pr-6">
+                                <div className="space-y-4 py-4 pr-1">
+                                    {record.score && <div><h4 className="font-medium mb-2">Score</h4><p>{record.score}%</p></div>}
+                                    {record.tags && record.tags.length > 0 && (
+                                        <div><h4 className="font-medium mb-2">Categories</h4>
+                                            <div className="flex flex-wrap gap-2">
+                                                {record.tags.map((tag, index) => <Badge key={index} variant="secondary">{tag}</Badge>)}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {record.comments && <div><h4 className="font-medium mb-2">Comments</h4><p className="text-sm text-muted-foreground whitespace-pre-wrap">{record.comments}</p></div>}
+                                    {record.attachments && record.attachments.length > 0 && (
+                                        <div><h4 className="font-medium mb-2">Attachments</h4>
+                                            <ul className="space-y-2">
+                                                {record.attachments.map((file, index) => (
+                                                    <li key={index} className="flex items-center text-sm">
+                                                        <Paperclip className="h-4 w-4 mr-2 text-muted-foreground"/>
+                                                        <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{file.name}</a>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
+                              </ScrollArea>
                           </DialogContent>
                       </Dialog>
                     </TableCell>
