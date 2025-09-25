@@ -220,13 +220,13 @@ export async function getPerformanceRecordsAction(memberId: string): Promise<Per
 }
 
 export async function addSelfEvaluationAction(data: Omit<SelfEvaluation, 'id' | 'created_at' | 'status' | 'hr_feedback' | 'finalized_by_id' | 'finalized_by_name' | 'finalized_at'>): Promise<SelfEvaluation | { error: string }> {
-  const { member_id, evaluation_date, self_rating, comments, tags, attachments } = data;
+  const { member_id, evaluation_date, self_rating, comments, other_comments, tags, attachments } = data;
   try {
     const result = await db.query(
-      `INSERT INTO self_evaluations (member_id, evaluation_date, self_rating, comments, tags, attachments)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO self_evaluations (member_id, evaluation_date, self_rating, comments, other_comments, tags, attachments)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *;`,
-      [member_id, evaluation_date, self_rating, JSON.stringify(comments), tags, JSON.stringify(attachments)]
+      [member_id, evaluation_date, self_rating, JSON.stringify(comments), other_comments, tags, JSON.stringify(attachments)]
     );
     return result.rows[0];
   } catch (error) {
@@ -382,3 +382,5 @@ export async function deleteAssessmentCategoryAction(id: string): Promise<{ succ
         return { success: false, error: 'Failed to delete category.' };
     }
 }
+
+    

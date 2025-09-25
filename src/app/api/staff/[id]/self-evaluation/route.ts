@@ -13,6 +13,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const evaluation_date = formData.get('evaluation_date') as string;
     const self_rating = formData.get('self_rating');
     const comments = formData.get('comments') as string;
+    const other_comments = formData.get('other_comments') as string | undefined;
     const tags = formData.getAll('tags') as string[];
     const files = formData.getAll('attachments') as File[];
 
@@ -35,7 +36,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       member_id: memberId,
       evaluation_date,
       self_rating: self_rating ? parseInt(self_rating as string, 10) : undefined,
-      comments,
+      comments: JSON.parse(comments),
+      other_comments,
       tags,
       attachments: uploadedAttachments,
     };
@@ -53,3 +55,5 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
+
+    

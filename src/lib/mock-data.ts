@@ -53,6 +53,7 @@ export type SelfEvaluation = {
     evaluation_date: Date | string;
     self_rating?: number;
     comments?: AssessmentCategoryComment[];
+    other_comments?: string;
     tags?: string[];
     attachments?: { name: string, url: string }[];
     status: 'Pending' | 'Finalized';
@@ -158,3 +159,5 @@ export const mockMembers: Member[] = [
         skills: ['React', 'Node.js']
     },
 ];
+
+    

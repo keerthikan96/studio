@@ -112,6 +112,7 @@ export async function setupDatabase() {
                 evaluation_date DATE NOT NULL,
                 self_rating INTEGER,
                 comments JSONB,
+                other_comments TEXT,
                 tags TEXT[],
                 attachments JSONB,
                 status VARCHAR(50) NOT NULL DEFAULT 'Pending',
@@ -308,6 +309,14 @@ export async function setupDatabase() {
                  await client.query(`ALTER TABLE self_evaluations ALTER COLUMN comments TYPE JSONB USING to_jsonb(comments);`);
              }
         }
+        
+        const { rows: selfEvalOtherComments } = await client.query(`
+            SELECT column_name FROM information_schema.columns
+            WHERE table_name='self_evaluations' AND column_name='other_comments';
+        `);
+        if (selfEvalOtherComments.length === 0) {
+            await client.query(`ALTER TABLE self_evaluations ADD COLUMN other_comments TEXT;`);
+        }
 
 
         console.log('Database tables are ready.');
@@ -320,3 +329,5 @@ export async function setupDatabase() {
         }
     }
 }
+
+    

@@ -36,8 +36,9 @@ const evaluationCommentSchema = z.object({
 
 const evaluationSchema = z.object({
   evaluation_date: z.date({ required_error: "An evaluation date is required." }),
-  self_rating: z.number().min(0).max(100).optional(),
   comments: z.array(evaluationCommentSchema).min(1, "At least one category comment is required."),
+  self_rating: z.number().min(0).max(100).optional(),
+  other_comments: z.string().optional(),
   tags: z.array(z.string()).optional(),
   attachments: z.any(),
 });
@@ -74,7 +75,7 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
 
   const form = useForm<EvaluationFormValues>({
     resolver: zodResolver(evaluationSchema),
-    defaultValues: { evaluation_date: new Date(), self_rating: 50, comments: [], tags: [], attachments: undefined },
+    defaultValues: { evaluation_date: new Date(), self_rating: 50, comments: [], other_comments: '', tags: [], attachments: undefined },
   });
   
   const hrForm = useForm<HrFeedbackFormValues>({
@@ -126,6 +127,10 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
       
       formData.append('comments', JSON.stringify(data.comments));
       
+      if (data.other_comments) {
+        formData.append('other_comments', data.other_comments);
+      }
+
       data.tags?.forEach(tag => formData.append('tags', tag));
       
       const fileInput = form.control._fields.attachments?._f.ref as HTMLInputElement;
@@ -261,14 +266,6 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
                                             </Popover><FormMessage />
                                         </FormItem>
                                         )} />
-
-                                        <FormField control={form.control} name="self_rating" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Overall Self-Rating: <span className='font-bold'>{ratingValue}%</span></FormLabel>
-                                            <FormControl><Slider defaultValue={[50]} max={100} step={1} onValueChange={(val) => field.onChange(val[0])} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                        )} />
                                         
                                         <div className="space-y-4">
                                             <FormLabel>Category-wise Comments</FormLabel>
@@ -334,6 +331,24 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
                                                 </PopoverContent>
                                             </Popover>
                                         </div>
+
+                                        <FormField control={form.control} name="self_rating" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Overall Self-Rating: <span className='font-bold'>{ratingValue}%</span></FormLabel>
+                                            <FormControl><Slider defaultValue={[50]} max={100} step={1} onValueChange={(val) => field.onChange(val[0])} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                        )} />
+
+                                         <FormField control={form.control} name="other_comments" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Other Comments</FormLabel>
+                                                <FormControl>
+                                                    <Textarea {...field} rows={4} placeholder="Add any other comments or thoughts here..." />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
                                         
                                         <DialogFooter className="pt-4">
                                             <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
@@ -379,7 +394,6 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
                                 <DialogDescription>Submitted on {format(new Date(item.evaluation_date), 'PPP')}</DialogDescription>
                             </DialogHeader>
                              <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-                                {item.self_rating && <div><h4 className="font-medium mb-2">Overall Self-Rating</h4><p>{item.self_rating}%</p></div>}
                                 {item.comments && item.comments.length > 0 && (
                                 <div>
                                     <h4 className="font-medium mb-2">Category Comments</h4>
@@ -393,6 +407,8 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
                                     </div>
                                 </div>
                                 )}
+                                {item.self_rating && <div><h4 className="font-medium mb-2">Overall Self-Rating</h4><p>{item.self_rating}%</p></div>}
+                                 {item.other_comments && <div><h4 className="font-medium mb-2">Other Comments</h4><p className="text-sm text-muted-foreground whitespace-pre-wrap">{item.other_comments}</p></div>}
                                  <hr />
                                 <div>
                                     <h4 className="font-medium mb-2">Manager/HR Feedback</h4>
@@ -447,3 +463,5 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
     </Card>
   );
 }
+
+    
