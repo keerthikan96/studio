@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, Save, X as XIcon, ArrowLeft, Ban, CalendarIcon } from 'lucide-react';
+import { Loader2, PlusCircle, Save, X as XIcon, ArrowLeft, Ban, CalendarIcon, Trash } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Member } from '@/lib/mock-data';
 import { useRouter, useParams } from 'next/navigation';
@@ -41,6 +41,7 @@ import { SelfAssessmentTab } from '@/components/member-profile-tabs/self-assessm
 import { DocumentsTab } from '@/components/member-profile-tabs/documents-tab';
 import { CoursesAndCertificatesTab } from '@/components/member-profile-tabs/courses-and-certificates-tab';
 import { EmploymentHistoryTab } from '@/components/member-profile-tabs/payslip-tab';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
@@ -97,6 +98,28 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 
 const GeneralInfoTab = ({ form, isPending }: { form: any, isPending: boolean }) => {
   const watchedCountry = form.watch('country');
+  const [skillInput, setSkillInput] = useState('');
+
+  const { fields: expFields, append: appendExp, remove: removeExp } = useFieldArray({
+    control: form.control, name: "experience",
+  });
+  const { fields: eduFields, append: appendEdu, remove: removeEdu } = useFieldArray({
+    control: form.control, name: "education",
+  });
+  const { fields: skillFields, append: appendSkill, remove: removeSkill } = useFieldArray({
+    control: form.control, name: "skills",
+  });
+
+  const handleSkillKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const newSkill = skillInput.trim();
+      if (newSkill && !form.getValues('skills')?.includes(newSkill)) {
+        appendSkill(newSkill);
+        setSkillInput('');
+      }
+    }
+  };
 
     return (
         <Card>
@@ -366,131 +389,81 @@ const GeneralInfoTab = ({ form, isPending }: { form: any, isPending: boolean }) 
                         />
                     )}
                     </div>
+
+                    <Accordion type="multiple" className="w-full space-y-4">
+                        <AccordionItem value="work-experience">
+                            <AccordionTrigger className="text-lg font-medium">Work Experience</AccordionTrigger>
+                            <AccordionContent className="pt-4 space-y-4">
+                                {expFields.map((field, index) => (
+                                    <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
+                                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                            <FormField control={form.control} name={`experience.${index}.companyName`} render={({ field }) => (<FormItem><FormLabel>Company</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                            <FormField control={form.control} name={`experience.${index}.role`} render={({ field }) => (<FormItem><FormLabel>Role</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                            <FormField control={form.control} name={`experience.${index}.years`} render={({ field }) => (<FormItem><FormLabel>Years</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        </div>
+                                        <FormField control={form.control} name={`experience.${index}.keyResponsibilities`} render={({ field }) => (<FormItem><FormLabel>Responsibilities</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <Button type="button" variant="destructive" size="icon" onClick={() => removeExp(index)} className="absolute top-2 right-2 h-6 w-6"><Trash className="h-4 w-4" /></Button>
+                                    </div>
+                                ))}
+                                <Button type="button" variant="outline" onClick={() => appendExp({ companyName: '', role: '', years: '', keyResponsibilities: '' })}>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Experience
+                                </Button>
+                            </AccordionContent>
+                        </AccordionItem>
+
+                        <AccordionItem value="education">
+                            <AccordionTrigger className="text-lg font-medium">Education</AccordionTrigger>
+                            <AccordionContent className="pt-4 space-y-4">
+                                {eduFields.map((field, index) => (
+                                    <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
+                                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                            <FormField control={form.control} name={`education.${index}.institution`} render={({ field }) => (<FormItem><FormLabel>Institution</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                            <FormField control={form.control} name={`education.${index}.degree`} render={({ field }) => (<FormItem><FormLabel>Degree</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        </div>
+                                        <FormField control={form.control} name={`education.${index}.years`} render={({ field }) => (<FormItem><FormLabel>Years</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                        <Button type="button" variant="destructive" size="icon" onClick={() => removeEdu(index)} className="absolute top-2 right-2 h-6 w-6"><Trash className="h-4 w-4" /></Button>
+                                    </div>
+                                ))}
+                                <Button type="button" variant="outline" onClick={() => appendEdu({ institution: '', degree: '', years: '' })}>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Education
+                                </Button>
+                            </AccordionContent>
+                        </AccordionItem>
+
+                        <AccordionItem value="skills">
+                            <AccordionTrigger className="text-lg font-medium">Skills</AccordionTrigger>
+                            <AccordionContent className="pt-4">
+                                <FormItem>
+                                    <FormControl>
+                                        <div>
+                                        <Input 
+                                            placeholder="Type a skill and press Enter"
+                                            value={skillInput}
+                                            onChange={(e) => setSkillInput(e.target.value)}
+                                            onKeyDown={handleSkillKeyDown}
+                                        />
+                                        <div className="flex flex-wrap gap-2 mt-2">
+                                            {skillFields.map((field, index) => (
+                                            <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
+                                                {form.getValues('skills')?.[index]}
+                                                <button type="button" onClick={() => removeSkill(index)}>
+                                                <XIcon className="h-3 w-3" />
+                                                </button>
+                                            </Badge>
+                                            ))}
+                                        </div>
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            </AccordionContent>
+                        </AccordionItem>
+                    </Accordion>
                 </div>
             </CardContent>
         </Card>
     );
 };
-
-const SkillsTab = ({ form }: { form: any }) => {
-  const [skillInput, setSkillInput] = useState('');
-
-  const { fields: skillFields, append: appendSkill, remove: removeSkill } = useFieldArray({
-    control: form.control,
-    name: "skills",
-  });
-
-  const handleSkillKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      const newSkill = skillInput.trim();
-      if (newSkill && !form.getValues('skills')?.includes(newSkill)) {
-        appendSkill(newSkill);
-        setSkillInput('');
-      }
-    }
-  };
-
-    return (
-         <Card>
-            <CardHeader>
-                <CardTitle>Skills</CardTitle>
-                <CardDescription>Manage member's skills.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <FormItem>
-                    <FormLabel>Skills</FormLabel>
-                    <FormControl>
-                        <div>
-                        <Input 
-                            placeholder="Type a skill and press Enter"
-                            value={skillInput}
-                            onChange={(e) => setSkillInput(e.target.value)}
-                            onKeyDown={handleSkillKeyDown}
-                        />
-                        <div className="flex flex-wrap gap-2 mt-2">
-                            {skillFields.map((field, index) => (
-                            <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
-                                {form.getValues('skills')?.[index]}
-                                <button type="button" onClick={() => removeSkill(index)}>
-                                <XIcon className="h-3 w-3" />
-                                </button>
-                            </Badge>
-                            ))}
-                        </div>
-                        </div>
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-            </CardContent>
-        </Card>
-    )
-}
-
-const JobInfoTab = ({ form }: { form: any }) => {
-    const { fields, append } = useFieldArray({
-        control: form.control,
-        name: "experience",
-    });
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Job Information</CardTitle>
-                <CardDescription>Update work experience.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <h3 className="text-lg font-medium">Work Experience</h3>
-                {fields.map((field, index) => (
-                    <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <FormField control={form.control} name={`experience.${index}.companyName`} render={({ field }) => (<FormItem><FormLabel>Company</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                            <FormField control={form.control} name={`experience.${index}.role`} render={({ field }) => (<FormItem><FormLabel>Role</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                            <FormField control={form.control} name={`experience.${index}.years`} render={({ field }) => (<FormItem><FormLabel>Years</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                        </div>
-                        <FormField control={form.control} name={`experience.${index}.keyResponsibilities`} render={({ field }) => (<FormItem><FormLabel>Responsibilities</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
-                        
-                    </div>
-                ))}
-                <Button type="button" variant="outline" onClick={() => append({ companyName: '', role: '', years: '', keyResponsibilities: '' })}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Experience
-                </Button>
-            </CardContent>
-        </Card>
-    );
-};
-
-const EducationTab = ({ form }: { form: any }) => {
-    const { fields, append } = useFieldArray({
-        control: form.control,
-        name: "education",
-    });
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Education</CardTitle>
-                <CardDescription>Update educational background.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                {fields.map((field, index) => (
-                    <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                             <FormField control={form.control} name={`education.${index}.institution`} render={({ field }) => (<FormItem><FormLabel>Institution</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                            <FormField control={form.control} name={`education.${index}.degree`} render={({ field }) => (<FormItem><FormLabel>Degree</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                        </div>
-                        <FormField control={form.control} name={`education.${index}.years`} render={({ field }) => (<FormItem><FormLabel>Years</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                        
-                    </div>
-                ))}
-                <Button type="button" variant="outline" onClick={() => append({ institution: '', degree: '', years: '' })}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Education
-                </Button>
-            </CardContent>
-        </Card>
-    );
-};
-
 
 const PlaceholderContent = ({ title }: { title: string }) => (
     <Card>
@@ -725,12 +698,6 @@ export default function MemberProfilePage() {
     switch(tab) {
         case "General Info":
             return <FormWrapper><GeneralInfoTab form={form} isPending={isPending} /></FormWrapper>;
-        case "Job":
-             return <FormWrapper><JobInfoTab form={form} /></FormWrapper>;
-        case "Education":
-             return <FormWrapper><EducationTab form={form} /></FormWrapper>;
-        case "Skills":
-             return <FormWrapper><SkillsTab form={form} /></FormWrapper>;
         case "Notes":
             return <NotesTab memberId={member.id} />;
         case "Confidential Notes":
@@ -750,7 +717,7 @@ export default function MemberProfilePage() {
     }
   }
 
-  const tabs = ["General Info", "Job", "Education", "Skills", "Leave", "Notes", "Confidential Notes", "Performance", "Permission", "Assets", "Documents", "Certificate and Courses", "To-Do", "Employment History", "Attendance", "Self-assesment"];
+  const tabs = ["General Info", "Leave", "Notes", "Confidential Notes", "Performance", "Permission", "Assets", "Documents", "Certificate and Courses", "To-Do", "Employment History", "Attendance", "Self-assesment"];
 
   return (
     <div className='space-y-6'>
