@@ -29,7 +29,7 @@ import { getMemberByIdAction, updateMemberAction, deleteMemberAction } from '@/a
 import ProfilePictureUploader from '@/components/profile-picture-uploader';
 import CoverPhotoUploader from '@/components/cover-photo-uploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -121,16 +121,20 @@ const GeneralInfoTab = ({ form, isPending }: { form: any, isPending: boolean }) 
   });
 
   const handleKeyDownFactory = (
-    inputValue: string, 
+    inputValue: string,
     setInputValue: (value: string) => void,
     fieldValues: string[] | undefined,
     appendFn: (value: any) => void
   ) => (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
+    if (e.key === 'Enter') {
       e.preventDefault();
-      const newValue = inputValue.trim();
-      if (newValue && !fieldValues?.includes(newValue)) {
-        appendFn(newValue);
+      const valuesToAdd = inputValue
+        .split(',')
+        .map(v => v.trim())
+        .filter(v => v && !fieldValues?.includes(v));
+
+      if (valuesToAdd.length > 0) {
+        appendFn(valuesToAdd);
         setInputValue('');
       }
     }
@@ -486,7 +490,7 @@ const GeneralInfoTab = ({ form, isPending }: { form: any, isPending: boolean }) 
                                     <FormControl>
                                         <div>
                                         <Input 
-                                            placeholder="Type a hobby and press Enter"
+                                            placeholder="Type hobbies separated by commas"
                                             value={hobbyInput}
                                             onChange={(e) => setHobbyInput(e.target.value)}
                                             onKeyDown={handleHobbyKeyDown}
@@ -515,7 +519,7 @@ const GeneralInfoTab = ({ form, isPending }: { form: any, isPending: boolean }) 
                                     <FormControl>
                                         <div>
                                         <Input 
-                                            placeholder="Type a volunteer activity and press Enter"
+                                            placeholder="Type volunteer work separated by commas"
                                             value={volunteerInput}
                                             onChange={(e) => setVolunteerInput(e.target.value)}
                                             onKeyDown={handleVolunteerKeyDown}
@@ -900,3 +904,4 @@ export default function MemberProfilePage() {
     </div>
   );
 }
+
