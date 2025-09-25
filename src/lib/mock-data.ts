@@ -109,6 +109,8 @@ export type Member = {
     address?: string | null;
     emergency_contact_name?: string | null;
     emergency_contact_phone?: string | null;
+    hobbies?: string | null;
+    volunteer_work?: string | null;
     created_at?: Date;
     updated_at?: Date;
 };
@@ -159,5 +161,3 @@ export const mockMembers: Member[] = [
         skills: ['React', 'Node.js']
     },
 ];
-
-    

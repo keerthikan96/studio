@@ -25,7 +25,7 @@ export async function parseResumeAction(
 export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url'>, sendInvite: boolean, resume?: { url: string, type: string, size: number } }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
   await setupDatabase();
   const { staff, sendInvite, resume } = staffData;
-  const { name, email, phone, domain, country, branch, experience, education, skills, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone } = staff;
+  const { name, email, phone, domain, country, branch, experience, education, skills, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, hobbies, volunteer_work } = staff;
   try {
     // Use a database transaction
     const client = await db.connect();
@@ -33,10 +33,10 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
       await client.query('BEGIN');
 
       const result = await client.query(
-        `INSERT INTO members (name, email, phone, domain, country, branch, experience, education, skills, status, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12, $13, $14, $15)
+        `INSERT INTO members (name, email, phone, domain, country, branch, experience, education, skills, status, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, hobbies, volunteer_work)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12, $13, $14, $15, $16, $17)
          RETURNING *;`,
-        [name, email, phone, domain, country, branch, JSON.stringify(experience), JSON.stringify(education), JSON.stringify(skills), job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone]
+        [name, email, phone, domain, country, branch, JSON.stringify(experience), JSON.stringify(education), JSON.stringify(skills), job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, hobbies, volunteer_work]
       );
       const newMember = result.rows[0];
 
@@ -98,7 +98,7 @@ export async function getMemberByIdAction(id: string): Promise<Member | null> {
 }
 
 export async function updateMemberAction(id: string, data: Omit<Partial<Member>, 'id' | 'created_at' | 'updated_at'>): Promise<Member | { error: string }> {
-    const { name, email, phone, domain, country, branch, experience, education, skills, status, profile_picture_url, cover_photo_url, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone } = data;
+    const { name, email, phone, domain, country, branch, experience, education, skills, status, profile_picture_url, cover_photo_url, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, hobbies, volunteer_work } = data;
     try {
         const fields: string[] = [];
         const values: any[] = [];
@@ -122,6 +122,8 @@ export async function updateMemberAction(id: string, data: Omit<Partial<Member>,
         if (address !== undefined) { fields.push(`address = $${fieldIndex++}`); values.push(address); }
         if (emergency_contact_name !== undefined) { fields.push(`emergency_contact_name = $${fieldIndex++}`); values.push(emergency_contact_name); }
         if (emergency_contact_phone !== undefined) { fields.push(`emergency_contact_phone = $${fieldIndex++}`); values.push(emergency_contact_phone); }
+        if (hobbies !== undefined) { fields.push(`hobbies = $${fieldIndex++}`); values.push(hobbies); }
+        if (volunteer_work !== undefined) { fields.push(`volunteer_work = $${fieldIndex++}`); values.push(volunteer_work); }
         
         if (fields.length === 0) {
             const member = await getMemberByIdAction(id);
@@ -382,5 +384,3 @@ export async function deleteAssessmentCategoryAction(id: string): Promise<{ succ
         return { success: false, error: 'Failed to delete category.' };
     }
 }
-
-    

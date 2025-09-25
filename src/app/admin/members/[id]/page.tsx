@@ -84,6 +84,8 @@ const profileSchema = z.object({
   emergency_contact_phone: z.string().optional().nullable(),
   employment_category: z.enum(employmentCategories as [string, ...string[]]).optional(),
   work_location: z.enum(workLocations as [string, ...string[]]).optional(),
+  hobbies: z.string().optional().nullable(),
+  volunteer_work: z.string().optional().nullable(),
 }).refine(data => {
     if (data.country === 'Sri Lanka' && data.branch) {
         return sriLankanBranches.includes(data.branch);
@@ -458,6 +460,29 @@ const GeneralInfoTab = ({ form, isPending }: { form: any, isPending: boolean }) 
                                 </FormItem>
                             </AccordionContent>
                         </AccordionItem>
+                        <AccordionItem value="hobbies-volunteering">
+                            <AccordionTrigger className="text-lg font-medium">Hobbies &amp; Volunteering</AccordionTrigger>
+                            <AccordionContent className="pt-4 space-y-4">
+                                <FormField control={form.control} name="hobbies" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Hobbies</FormLabel>
+                                        <FormControl>
+                                            <Textarea {...field} value={field.value ?? ''} placeholder="List hobbies separated by commas..."/>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                                <FormField control={form.control} name="volunteer_work" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Volunteer Work</FormLabel>
+                                        <FormControl>
+                                            <Textarea {...field} value={field.value ?? ''} placeholder="Describe volunteer experience..."/>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                            </AccordionContent>
+                        </AccordionItem>
                     </Accordion>
                 </div>
             </CardContent>
@@ -535,6 +560,8 @@ export default function MemberProfilePage() {
         address: '',
         emergency_contact_name: '',
         emergency_contact_phone: '',
+        hobbies: '',
+        volunteer_work: '',
     },
   });
   
@@ -717,7 +744,7 @@ export default function MemberProfilePage() {
     }
   }
 
-  const tabs = ["General Info", "Leave", "Notes", "Performance", "Permission", "Assets", "Documents", "Certificate and Courses", "To-Do", "Employment History", "Attendance", "Self-assesment"];
+  const tabs = ["General Info", "Leave", "Notes", "Performance", "Documents", "Certificate and Courses", "To-Do", "Employment History", "Attendance", "Self-assesment"];
 
   return (
     <div className='space-y-6'>

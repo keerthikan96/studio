@@ -66,6 +66,8 @@ export async function setupDatabase() {
                 address TEXT,
                 emergency_contact_name VARCHAR(255),
                 emergency_contact_phone VARCHAR(50),
+                hobbies TEXT,
+                volunteer_work TEXT,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
@@ -248,6 +250,8 @@ export async function setupDatabase() {
             { name: 'address', type: 'TEXT' },
             { name: 'emergency_contact_name', type: 'VARCHAR(255)' },
             { name: 'emergency_contact_phone', type: 'VARCHAR(50)' },
+            { name: 'hobbies', type: 'TEXT' },
+            { name: 'volunteer_work', type: 'TEXT' },
         ];
 
         for (const col of member_columns) {
@@ -329,5 +333,3 @@ export async function setupDatabase() {
         }
     }
 }
-
-    

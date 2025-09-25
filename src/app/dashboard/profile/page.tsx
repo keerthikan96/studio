@@ -713,7 +713,7 @@ export default function ProfilePage() {
     }
   }
 
-  const tabs = ["General Info", "Job", "Education", "Skills", "Leave", "Notes", "Performance", "Permission", "Assets", "Documents", "Certificate and Courses", "To-Do", "Employment History", "Attendance", "Self-assesment"];
+  const tabs = ["General Info", "Job", "Education", "Skills", "Leave", "Notes", "Performance", "Documents", "Certificate and Courses", "To-Do", "Employment History", "Attendance", "Self-assesment"];
 
   return (
     <div className='space-y-6'>
@@ -780,5 +780,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
