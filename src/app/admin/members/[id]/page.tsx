@@ -36,7 +36,6 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { NotesTab } from '@/components/member-profile-tabs/notes-tab';
 import { PerformanceTab } from '@/components/member-profile-tabs/performance-tab';
-import { ConfidentialNotesTab } from '@/components/member-profile-tabs/confidential-notes-tab';
 import { SelfAssessmentTab } from '@/components/member-profile-tabs/self-assessment-tab';
 import { DocumentsTab } from '@/components/member-profile-tabs/documents-tab';
 import { CoursesAndCertificatesTab } from '@/components/member-profile-tabs/courses-and-certificates-tab';
@@ -701,8 +700,6 @@ export default function MemberProfilePage() {
             return <FormWrapper><GeneralInfoTab form={form} isPending={isPending} /></FormWrapper>;
         case "Notes":
             return <NotesTab memberId={member.id} />;
-        case "Confidential Notes":
-            return <ConfidentialNotesTab memberId={member.id} />;
         case "Performance":
             return <PerformanceTab memberId={member.id} />;
         case "Self-assesment":
@@ -720,7 +717,7 @@ export default function MemberProfilePage() {
     }
   }
 
-  const tabs = ["General Info", "Leave", "Notes", "Confidential Notes", "Performance", "Permission", "Assets", "Documents", "Certificate and Courses", "To-Do", "Employment History", "Attendance", "Self-assesment"];
+  const tabs = ["General Info", "Leave", "Notes", "Performance", "Permission", "Assets", "Documents", "Certificate and Courses", "To-Do", "Employment History", "Attendance", "Self-assesment"];
 
   return (
     <div className='space-y-6'>

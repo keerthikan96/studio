@@ -14,13 +14,15 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, PlusCircle, Paperclip, ShieldCheck, Eye, Star, X as XIcon, MessageSquare } from 'lucide-react';
+import { Loader2, PlusCircle, Paperclip, ShieldCheck, Eye, Star, X as XIcon, MessageSquare, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Note } from '@/lib/mock-data';
 import { getNotesAction } from '@/app/actions/staff';
 import { Badge } from '../ui/badge';
 import Link from 'next/link';
 import { ScrollArea } from '../ui/scroll-area';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 const noteSchema = z.object({
   note_name: z.string().min(1, 'Note name is required.'),
@@ -39,11 +41,26 @@ type NotesTabProps = {
 };
 
 export function NotesTab({ memberId }: NotesTabProps) {
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [allNotes, setAllNotes] = useState<Note[]>([]);
   const [isPending, startTransition] = useTransition();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const { toast } = useToast();
+  const [user, setUser] = useState<{id: string, role: string} | null>(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+
+  const publicNotes = allNotes.filter(note => !note.is_confidential);
+  const confidentialNotes = allNotes.filter(note => note.is_confidential);
+  
+  useEffect(() => {
+    const storedUser = sessionStorage.getItem('loggedInUser');
+    if (storedUser) {
+        setUser(JSON.parse(storedUser));
+    }
+    setIsLoadingUser(false);
+  }, []);
+
+  const hasAccessToConfidential = !isLoadingUser && (user?.role === 'HR');
 
   const form = useForm<NoteFormValues>({
     resolver: zodResolver(noteSchema),
@@ -67,7 +84,7 @@ export function NotesTab({ memberId }: NotesTabProps) {
 
   const fetchNotes = () => {
     startTransition(() => {
-      getNotesAction(memberId).then(setNotes);
+      getNotesAction(memberId).then(setAllNotes);
     });
   };
 
@@ -133,7 +150,7 @@ export function NotesTab({ memberId }: NotesTabProps) {
   };
 
   return (
-    <div className="p-4">
+    <div className="space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -233,17 +250,16 @@ export function NotesTab({ memberId }: NotesTabProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isPending && notes.length === 0 ? (
+              {isPending && publicNotes.length === 0 ? (
                   <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" /></TableCell></TableRow>
-              ) : notes.length > 0 ? (
-                notes.map((note) => (
+              ) : publicNotes.length > 0 ? (
+                publicNotes.map((note) => (
                   <TableRow key={note.id}>
                     <TableCell className="font-medium">{note.note_name}</TableCell>
                     <TableCell>{note.created_by_name}</TableCell>
                     <TableCell>{format(new Date(note.created_at), 'PPP')}</TableCell>
                     <TableCell className="space-x-2">
                       {note.pinned && <Badge variant="default" className='bg-yellow-500 hover:bg-yellow-600'><Star className="mr-1 h-3 w-3"/>Pinned</Badge>}
-                      {note.is_confidential && <Badge variant="destructive"><ShieldCheck className="mr-1 h-3 w-3"/>Confidential</Badge>}
                     </TableCell>
                     <TableCell className="text-right">
                       <Dialog>
@@ -292,6 +308,86 @@ export function NotesTab({ memberId }: NotesTabProps) {
           </Table>
         </CardContent>
       </Card>
+      
+      <Accordion type="single" collapsible className="w-full">
+        <AccordionItem value="confidential-notes">
+          <AccordionTrigger className="text-lg font-semibold flex items-center gap-2 p-4 bg-red-50 hover:bg-red-100 rounded-md border border-red-200 text-red-800">
+            <Lock className="h-5 w-5" /> Confidential Notes
+          </AccordionTrigger>
+          <AccordionContent className="p-4 border border-t-0 rounded-b-md">
+            {isLoadingUser ? (
+                <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            ) : hasAccessToConfidential ? (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Note</TableHead>
+                            <TableHead>Created By</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {isPending && confidentialNotes.length === 0 ? (
+                            <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" /></TableCell></TableRow>
+                        ) : confidentialNotes.length > 0 ? (
+                            confidentialNotes.map((note) => (
+                            <TableRow key={note.id}>
+                                <TableCell className="font-medium">{note.note_name}</TableCell>
+                                <TableCell>{note.created_by_name}</TableCell>
+                                <TableCell>{format(new Date(note.created_at), 'PPP')}</TableCell>
+                                <TableCell className="text-right">
+                                <Dialog>
+                                    <DialogTrigger asChild><Button variant="outline" size="sm"><Eye className="mr-2 h-4 w-4"/>View</Button></DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>{note.note_name}</DialogTitle>
+                                            <DialogDescription>Created by {note.created_by_name} on {format(new Date(note.created_at), 'PPP p')}</DialogDescription>
+                                        </DialogHeader>
+                                        <div className="space-y-4 py-4">
+                                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{note.description}</p>
+                                             {note.tags && note.tags.length > 0 && (
+                                                <div><h4 className="font-medium mb-2">Tags</h4>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {note.tags.map((tag, index) => <Badge key={index} variant="secondary">{tag}</Badge>)}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {note.attachments && note.attachments.length > 0 && (
+                                                <div><h4 className="font-medium mb-2">Attachments</h4>
+                                                    <ul className="space-y-2">
+                                                        {note.attachments.map((file, index) => (
+                                                            <li key={index} className="flex items-center text-sm">
+                                                                <Paperclip className="h-4 w-4 mr-2 text-muted-foreground"/>
+                                                                <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{file.name}</a>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
+                                </TableCell>
+                            </TableRow>
+                            ))
+                        ) : (
+                            <TableRow><TableCell colSpan={4} className="h-24 text-center">No confidential notes found.</TableCell></TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            ) : (
+                <Alert variant="destructive">
+                    <Lock className="h-4 w-4" />
+                    <AlertTitle>Access Denied</AlertTitle>
+                    <AlertDescription>
+                        You do not have permission to view confidential notes.
+                    </AlertDescription>
+                </Alert>
+            )}
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }
