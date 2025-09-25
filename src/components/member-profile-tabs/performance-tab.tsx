@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { Slider } from '../ui/slider';
 import { DateRange } from 'react-day-picker';
 import { PerformanceGrowthChart } from '../performance-growth-chart';
+import { ScrollArea } from '../ui/scroll-area';
 
 const recordSchema = z.object({
   review_date: z.date({ required_error: "A review date is required." }),
@@ -210,75 +211,79 @@ export function PerformanceTab({ memberId }: PerformanceTabProps) {
                   <DialogTitle>Add Performance Record</DialogTitle>
                   <DialogDescription>Fill in the details for the performance review.</DialogDescription>
                   </DialogHeader>
-                  <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                      <FormField control={form.control} name="review_date" render={({ field }) => (
-                      <FormItem className="flex flex-col"><FormLabel>Date of Review</FormLabel>
-                          <Popover>
-                          <PopoverTrigger asChild>
+                  <ScrollArea className="max-h-[70vh] pr-6">
+                    <div className="pr-1 pt-4">
+                      <Form {...form}>
+                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                          <FormField control={form.control} name="review_date" render={({ field }) => (
+                          <FormItem className="flex flex-col"><FormLabel>Date of Review</FormLabel>
+                              <Popover>
+                              <PopoverTrigger asChild>
+                                  <FormControl>
+                                  <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                      {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                                  </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                              </Popover><FormMessage />
+                          </FormItem>
+                          )} />
+
+                          <FormField control={form.control} name="score" render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Performance Score: <span className='font-bold'>{scoreValue}%</span></FormLabel>
+                              <FormControl><Slider defaultValue={[50]} max={100} step={1} onValueChange={(val) => field.onChange(val[0])} /></FormControl>
+                              <FormMessage />
+                          </FormItem>
+                          )} />
+
+                          <FormField control={form.control} name="comments" render={({ field }) => (
+                          <FormItem><FormLabel>Comments</FormLabel><FormControl><Textarea {...field} rows={5} placeholder="Detailed feedback..." /></FormControl><FormMessage /></FormItem>
+                          )} />
+
+                          <FormItem>
+                              <FormLabel>Tags</FormLabel>
                               <FormControl>
-                              <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                  {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
+                                  <div>
+                                  <Input placeholder="Type a tag and press Enter" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={handleTagKeyDown} />
+                                  <div className="flex flex-wrap gap-2 mt-2">
+                                      {tagFields.map((field, index) => (
+                                      <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
+                                          {form.getValues('tags')?.[index]}
+                                          <button type="button" onClick={() => removeTag(index)}><XIcon className="h-3 w-3" /></button>
+                                      </Badge>
+                                      ))}
+                                  </div>
+                                  </div>
                               </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
-                          </Popover><FormMessage />
-                      </FormItem>
-                      )} />
-
-                      <FormField control={form.control} name="score" render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>Performance Score: <span className='font-bold'>{scoreValue}%</span></FormLabel>
-                          <FormControl><Slider defaultValue={[50]} max={100} step={1} onValueChange={(val) => field.onChange(val[0])} /></FormControl>
-                          <FormMessage />
-                      </FormItem>
-                      )} />
-
-                      <FormField control={form.control} name="comments" render={({ field }) => (
-                      <FormItem><FormLabel>Comments</FormLabel><FormControl><Textarea {...field} rows={5} placeholder="Detailed feedback..." /></FormControl><FormMessage /></FormItem>
-                      )} />
-
-                      <FormItem>
-                          <FormLabel>Tags</FormLabel>
-                          <FormControl>
-                              <div>
-                              <Input placeholder="Type a tag and press Enter" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={handleTagKeyDown} />
-                              <div className="flex flex-wrap gap-2 mt-2">
-                                  {tagFields.map((field, index) => (
-                                  <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
-                                      {form.getValues('tags')?.[index]}
-                                      <button type="button" onClick={() => removeTag(index)}><XIcon className="h-3 w-3" /></button>
-                                  </Badge>
-                                  ))}
-                              </div>
-                              </div>
-                          </FormControl>
-                          <FormMessage />
-                      </FormItem>
-
-                      <FormItem><FormLabel>Attachments</FormLabel><FormControl><Input type="file" multiple {...register("attachments")} /></FormControl><FormMessage /></FormItem>
-
-                      <div className="flex justify-between gap-4">
-                      <FormField control={form.control} name="is_confidential" render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm flex-1">
-                          <div className="space-y-0.5"><FormLabel>Confidential</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                              <FormMessage />
                           </FormItem>
-                      )} />
-                      <FormField control={form.control} name="pinned" render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm flex-1">
-                          <div className="space-y-0.5"><FormLabel>Pin to Top</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                          </FormItem>
-                      )} />
-                      </div>
 
-                      <DialogFooter>
-                      <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                      <Button type="submit" disabled={isPending}>{isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Record</Button>
-                      </DialogFooter>
-                  </form>
-                  </Form>
+                          <FormItem><FormLabel>Attachments</FormLabel><FormControl><Input type="file" multiple {...register("attachments")} /></FormControl><FormMessage /></FormItem>
+
+                          <div className="flex justify-between gap-4">
+                          <FormField control={form.control} name="is_confidential" render={({ field }) => (
+                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm flex-1">
+                              <div className="space-y-0.5"><FormLabel>Confidential</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                              </FormItem>
+                          )} />
+                          <FormField control={form.control} name="pinned" render={({ field }) => (
+                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm flex-1">
+                              <div className="space-y-0.5"><FormLabel>Pin to Top</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                              </FormItem>
+                          )} />
+                          </div>
+
+                          <DialogFooter className="pr-0 pt-4">
+                          <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                          <Button type="submit" disabled={isPending}>{isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Record</Button>
+                          </DialogFooter>
+                      </form>
+                      </Form>
+                    </div>
+                  </ScrollArea>
               </DialogContent>
               </Dialog>
           </div>
