@@ -81,6 +81,7 @@ export default function ProfilePage() {
               setMember(currentMember);
               form.reset({
                 ...currentMember,
+                phone: currentMember.phone ?? '',
                 experience: currentMember.experience || [],
                 education: currentMember.education || [],
                 skills: currentMember.skills || [],
@@ -140,6 +141,7 @@ export default function ProfilePage() {
           setMember(updatedMember);
           form.reset({
             ...updatedMember,
+            phone: updatedMember.phone ?? '',
             experience: updatedMember.experience || [],
             education: updatedMember.education || [],
             skills: updatedMember.skills || [],
@@ -340,7 +342,7 @@ export default function ProfilePage() {
                           <FormItem>
                             <FormLabel>Key Responsibilities</FormLabel>
                             <FormControl>
-                              <Textarea {...field} placeholder="Describe key responsibilities..."/>
+                              <Textarea {...field} placeholder="Describe key responsibilities..." value={field.value ?? ''} />
                             </FormControl>
                              <FormMessage />
                           </FormItem>
@@ -440,3 +442,5 @@ export default function ProfilePage() {
     </Card>
   );
 }
+
+    

@@ -111,6 +111,11 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
       experience: [],
       education: [],
       skills: [],
+      job_title: '',
+      branch: '',
+      address: '',
+      emergency_contact_name: '',
+      emergency_contact_phone: '',
     },
   });
 
@@ -332,7 +337,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                   <FormItem>
                     <FormLabel>Job Title</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Software Engineer" {...field} />
+                      <Input placeholder="e.g. Software Engineer" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -345,7 +350,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                   <FormItem>
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. (123) 456-7890" {...field} />
+                      <Input placeholder="e.g. (123) 456-7890" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -405,7 +410,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                         <FormItem>
                             <FormLabel>Address</FormLabel>
                             <FormControl>
-                                <Textarea placeholder="123 Main St, Anytown, USA" {...field} />
+                                <Textarea placeholder="123 Main St, Anytown, USA" {...field} value={field.value ?? ''} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -419,7 +424,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                     <FormItem>
                         <FormLabel>Emergency Contact Name</FormLabel>
                         <FormControl>
-                            <Input placeholder="e.g. John Smith" {...field} />
+                            <Input placeholder="e.g. John Smith" {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -432,7 +437,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                     <FormItem>
                         <FormLabel>Emergency Contact Phone</FormLabel>
                         <FormControl>
-                            <Input placeholder="e.g. (987) 654-3210" {...field} />
+                            <Input placeholder="e.g. (987) 654-3210" {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -510,7 +515,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                     <FormItem>
                         <FormLabel>Branch / State</FormLabel>
                         <FormControl>
-                            <Input placeholder="e.g. New York, California" {...field} />
+                            <Input placeholder="e.g. New York, California" {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -716,3 +721,5 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
     </>
   );
 }
+
+    
