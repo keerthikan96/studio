@@ -18,7 +18,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, Briefcase, Award, Calendar as CalendarIcon, User, FileText, Search, Bell, Newspaper, Settings, ChevronDown } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, Award, Calendar as CalendarIcon, User, FileText, Search, Bell, Newspaper, Settings, ChevronDown, ClipboardList } from "lucide-react";
 import Logo from "@/components/logo";
 import UserNav from "@/components/user-nav";
 import { Input } from "@/components/ui/input";
@@ -52,6 +52,15 @@ export default function AdminLayout({
       ]
     },
     { href: "/admin/calendar", label: "Calendar", icon: CalendarIcon },
+    { 
+      label: "Intake Management",
+      icon: ClipboardList,
+      subItems: [
+        { href: "/admin/intake/list", label: "Intake List" },
+        { href: "/admin/intake/new", label: "New Intake" },
+        { href: "/admin/intake/configuration", label: "Intake Configuration" }
+      ]
+    },
     { href: "/admin/attendance", label: "Attendance", icon: CalendarIcon },
     { href: "/admin/department", label: "Department", icon: Briefcase },
     { href: "/admin/members", label: "Members", icon: Users },
@@ -61,26 +70,21 @@ export default function AdminLayout({
     { href: "/dashboard/profile", label: "Profile", icon: User },
   ];
 
-  const getIsActive = (href: string) => {
+  const getIsActive = (href: string, subItems?: any[]) => {
+     if (subItems) {
+       return subItems.some(item => pathname.startsWith(item.href));
+     }
      if (href === '/admin/members') {
         return pathname.startsWith("/admin/members") || pathname === "/admin/add-staff";
      }
-     if (href === '/admin/workfeed/settings') {
-        return pathname.startsWith('/admin/workfeed/settings');
-     }
-     if (href === '/admin/workfeed') {
-        return pathname === '/admin/workfeed';
-     }
-     if (href === '/admin/calendar') {
-        return pathname === '/admin/calendar';
-     }
-      if (href === '/dashboard/profile') {
+     if (href === '/dashboard/profile') {
         return pathname.startsWith('/dashboard/profile');
      }
      return pathname === href;
   }
   
   const isWorkfeedActive = pathname.startsWith('/admin/workfeed');
+  const isIntakeActive = pathname.startsWith('/admin/intake');
 
   // Logic to generate page title
   const pathSegments = pathname.split('/').filter(Boolean);
@@ -119,10 +123,10 @@ export default function AdminLayout({
             {isClient && menuItems.map((item, index) => (
                 <SidebarMenuItem key={index}>
                 {item.subItems ? (
-                  <Collapsible defaultOpen={isWorkfeedActive}>
+                  <Collapsible defaultOpen={getIsActive(item.href!, item.subItems)}>
                     <CollapsibleTrigger asChild>
                        <SidebarMenuButton
-                          isActive={isWorkfeedActive}
+                          isActive={getIsActive(item.href!, item.subItems)}
                           tooltip={{ children: item.label }}
                           className="justify-between"
                         >
@@ -137,7 +141,7 @@ export default function AdminLayout({
                         <SidebarMenuSub>
                           {item.subItems.map(subItem => (
                              <SidebarMenuItem key={subItem.href}>
-                                <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
+                                <SidebarMenuSubButton asChild isActive={pathname.startsWith(subItem.href)}>
                                   <Link href={subItem.href}>
                                     {subItem.label}
                                   </Link>
