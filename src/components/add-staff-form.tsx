@@ -206,17 +206,12 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
     if (!formData) return;
     
     startTransition(async () => {
-        // We request a reset, but this is for an invitation. 
-        // We will generate a link to `/set-password` instead of `/reset-password`.
-        const result = await requestPasswordResetAction(formData.email, true); // isInvitation = true
-        if (result.success && result.invitationLink) {
+        const result = await requestPasswordResetAction(formData.email, true);
+        if (result.success) {
             toast({
                 title: 'Invitation Sent!',
-                description: `An invitation has been sent to ${formData.name}. Check the console for the link.`,
+                description: `An invitation has been sent to ${formData.name}. Check the server console for the link.`,
             });
-            console.log('--- INVITATION LINK (for new employee) ---');
-            console.log(result.invitationLink);
-            console.log('-------------------------------------------');
         } else {
             toast({
                 title: 'Error Sending Invitation',
@@ -682,7 +677,9 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => router.push('/admin/members')}>No, Later</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSendInvite}>Yes, Send Invite</AlertDialogAction>
+            <AlertDialogAction onClick={handleSendInvite} disabled={isPending}>
+                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Yes, Send Invite'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

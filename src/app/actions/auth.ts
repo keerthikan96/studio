@@ -11,7 +11,7 @@ async function hashPassword(password: string) {
 }
 
 async function verifyPassword(password: string, hash: string) {
-    return hashPassword(password) === hash;
+    return (await hashPassword(password)) === hash;
 }
 
 export async function loginAction(credentials: { email: string, password: string }): Promise<{ user?: { id: string, name: string, email: string, role: 'staff' | 'HR' }, error?: string }> {
@@ -68,7 +68,7 @@ export async function requestPasswordResetAction(email: string, isInvitation = f
         } else {
             const memberResult = await db.query('SELECT id FROM members WHERE email = $1', [email]);
             if (memberResult.rows.length === 0) {
-                 console.log(`Password reset requested for non-existent user: ${email}. Silently failing.`);
+                 console.log(`Password reset/invitation requested for non-existent user: ${email}. Silently failing.`);
                  return { success: true };
             }
             memberId = memberResult.rows[0].id;
@@ -84,11 +84,14 @@ export async function requestPasswordResetAction(email: string, isInvitation = f
             [email, token, otp, expires_at, type]
         );
         
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9000';
         const resetLink = `${baseUrl}/reset-password?token=${token}`;
         const invitationLink = `${baseUrl}/set-password?token=${token}&email=${encodeURIComponent(email)}`;
 
         if (isInvitation) {
+            console.log('--- INVITATION LINK (for new employee) ---');
+            console.log(invitationLink);
+            console.log('-------------------------------------------');
             return { success: true, invitationLink };
         }
 
@@ -111,7 +114,7 @@ export async function setNewPasswordAction(data: { token: string, newPassword: s
     await setupDatabase();
     try {
         const { token, newPassword } = data;
-
+        
         const resetRecordResult = await db.query('SELECT * FROM password_resets WHERE token = $1 AND type = \'invitation\'', [token]);
         const resetRecord = resetRecordResult.rows[0];
 
@@ -123,22 +126,22 @@ export async function setNewPasswordAction(data: { token: string, newPassword: s
             await db.query('DELETE FROM password_resets WHERE id = $1', [resetRecord.id]);
             return { success: false, error: 'Invitation token has expired. Please request a new one.' };
         }
-        
+                
         const { email } = resetRecord;
 
         // The admin user is not in the 'members' table, so we handle it separately.
         if (email !== 'admin@gmail.com') {
-             const hashedPassword = await hashPassword(newPassword);
+            const hashedPassword = await hashPassword(newPassword);
             await db.query('UPDATE members SET password = $1, status = \'active\', updated_at = NOW() WHERE email = $2', [hashedPassword, email]);
         } else {
             console.log(`Admin password has been set. In a real application, you would store this securely.`);
         }
-        
+                
         // Clean up the reset token
         await db.query('DELETE FROM password_resets WHERE id = $1', [resetRecord.id]);
 
         return { success: true, email };
-
+     
     } catch (error) {
         console.error('Error setting new password:', error);
         return { success: false, error: 'Failed to set password.' };
