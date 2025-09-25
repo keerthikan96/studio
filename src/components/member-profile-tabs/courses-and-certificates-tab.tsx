@@ -57,7 +57,15 @@ export function CoursesAndCertificatesTab({ memberId, memberName }: CoursesAndCe
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { type: 'Course', name: '' },
+    defaultValues: { 
+      type: 'Course', 
+      name: '',
+      provider: '',
+      course_url: '',
+      status: undefined,
+      verification_url: '',
+      certificate: undefined,
+    },
   });
   
   const watchedType = form.watch('type');
@@ -95,7 +103,15 @@ export function CoursesAndCertificatesTab({ memberId, memberName }: CoursesAndCe
         toast({ title: `${data.type} Added`, description: `"${data.name}" has been successfully saved.` });
         setLastAddedItem(result);
         setShowShareDialog(true); // Trigger share dialog
-        form.reset({ type: 'Course', name: '' });
+        form.reset({
+          type: 'Course',
+          name: '',
+          provider: '',
+          course_url: '',
+          status: undefined,
+          verification_url: '',
+          certificate: undefined,
+        });
         setIsDialogOpen(false);
         fetchRecords();
       } catch (error) {
@@ -255,3 +271,5 @@ export function CoursesAndCertificatesTab({ memberId, memberName }: CoursesAndCe
     </>
   );
 }
+
+    

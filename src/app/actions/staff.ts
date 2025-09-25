@@ -327,7 +327,7 @@ export async function addCourseOrCertificateAction(data: Omit<CourseOrCertificat
       `INSERT INTO member_courses_certificates (member_id, type, name, provider, course_url, status, verification_url, certificate_url, certificate_file_type)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *;`,
-      [member_id, type, name, provider, course_url, status, verification_url, certificate_url, certificate_file_type]
+      [member_id, type, name, provider || null, course_url || null, status || null, verification_url || null, certificate_url || null, certificate_file_type || null]
     );
     return result.rows[0];
   } catch (error) {
@@ -346,3 +346,5 @@ export async function getCoursesAndCertificatesAction(memberId: string): Promise
     return [];
   }
 }
+
+    
