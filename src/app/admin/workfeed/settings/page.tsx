@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/popover"
 import { Check, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 
 export type AutomatedPostConfig = {
@@ -156,91 +157,93 @@ export default function WorkfeedSettingsPage() {
                             <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Create Manual Post</Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-[600px]">
-                             <DialogHeader>
-                                <DialogTitle>Create a Manual Workfeed Post</DialogTitle>
-                                <DialogDescription>
-                                    Choose a member and a template to generate a post. You can edit the content before publishing.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4 py-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label>Select Member</Label>
-                                         <Popover open={open} onOpenChange={setOpen}>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                variant="outline"
-                                                role="combobox"
-                                                aria-expanded={open}
-                                                className="w-full justify-between"
-                                                >
-                                                {selectedMember
-                                                    ? selectedMember.name
-                                                    : "Select member..."}
-                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-[260px] p-0">
-                                                <Command>
-                                                    <CommandInput placeholder="Search member..." />
-                                                    <CommandList>
-                                                        <CommandEmpty>No member found.</CommandEmpty>
-                                                        <CommandGroup>
-                                                            {members.map((member) => (
-                                                            <CommandItem
-                                                                key={member.id}
-                                                                value={member.id}
-                                                                onSelect={(currentValue) => {
-                                                                    const member = members.find(m => m.id === currentValue)
-                                                                    setSelectedMember(member || null)
-                                                                    setOpen(false)
-                                                                }}
-                                                            >
-                                                                <Check className={cn("mr-2 h-4 w-4", selectedMember?.id === member.id ? "opacity-100" : "opacity-0")} />
-                                                                {member.name}
-                                                            </CommandItem>
-                                                            ))}
-                                                        </CommandGroup>
-                                                    </CommandList>
-                                                </Command>
-                                            </PopoverContent>
-                                        </Popover>
+                            <ScrollArea className="max-h-[80vh] pr-6">
+                                <div className="space-y-4 pt-4">
+                                    <DialogHeader className="pr-6">
+                                        <DialogTitle>Create a Manual Workfeed Post</DialogTitle>
+                                        <DialogDescription>
+                                            Choose a member and a template to generate a post. You can edit the content before publishing.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="grid grid-cols-2 gap-4 pr-6">
+                                        <div className="space-y-2">
+                                            <Label>Select Member</Label>
+                                            <Popover open={open} onOpenChange={setOpen}>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                    variant="outline"
+                                                    role="combobox"
+                                                    aria-expanded={open}
+                                                    className="w-full justify-between"
+                                                    >
+                                                    {selectedMember
+                                                        ? selectedMember.name
+                                                        : "Select member..."}
+                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[260px] p-0">
+                                                    <Command>
+                                                        <CommandInput placeholder="Search member..." />
+                                                        <CommandList>
+                                                            <CommandEmpty>No member found.</CommandEmpty>
+                                                            <CommandGroup>
+                                                                {members.map((member) => (
+                                                                <CommandItem
+                                                                    key={member.id}
+                                                                    value={member.name}
+                                                                    onSelect={(currentValue) => {
+                                                                        const member = members.find(m => m.name.toLowerCase() === currentValue.toLowerCase())
+                                                                        setSelectedMember(member || null)
+                                                                        setOpen(false)
+                                                                    }}
+                                                                >
+                                                                    <Check className={cn("mr-2 h-4 w-4", selectedMember?.id === member.id ? "opacity-100" : "opacity-0")} />
+                                                                    {member.name}
+                                                                </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        </CommandList>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Select Template</Label>
+                                            <Select value={selectedTemplate} onValueChange={(v: any) => setSelectedTemplate(v)}>
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="birthday">Birthday</SelectItem>
+                                                    <SelectItem value="anniversary">Anniversary</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label>Select Template</Label>
-                                        <Select value={selectedTemplate} onValueChange={(v: any) => setSelectedTemplate(v)}>
-                                            <SelectTrigger><SelectValue /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="birthday">Birthday</SelectItem>
-                                                <SelectItem value="anniversary">Anniversary</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                    <div className="space-y-2 pr-6">
+                                        <Label htmlFor="post-content">Post Content</Label>
+                                        <Textarea id="post-content" value={postContent} onChange={(e) => setPostContent(e.target.value)} rows={5} />
                                     </div>
+                                    {selectedMember && (
+                                        <div className="space-y-2 pr-6">
+                                            <Label>Preview</Label>
+                                            <BirthdayCardPreview 
+                                                name={selectedMember.name}
+                                                imageUrl={selectedMember.profile_picture_url || '/placeholder.svg'}
+                                                type={selectedTemplate}
+                                                years={selectedMember.start_date ? new Date().getFullYear() - new Date(selectedMember.start_date).getFullYear() : 1}
+                                                onImageUpload={() => {}}
+                                                backgroundImageUrl={null}
+                                            />
+                                        </div>
+                                    )}
+                                    <DialogFooter className="pr-6 pt-4">
+                                        <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                                        <Button onClick={handleCreatePost} disabled={isCreatePostPending || !selectedMember}>
+                                            {isCreatePostPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Post to Feed'}
+                                        </Button>
+                                    </DialogFooter>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="post-content">Post Content</Label>
-                                    <Textarea id="post-content" value={postContent} onChange={(e) => setPostContent(e.target.value)} rows={5} />
-                                </div>
-                                {selectedMember && (
-                                    <div className="space-y-2">
-                                        <Label>Preview</Label>
-                                        <BirthdayCardPreview 
-                                            name={selectedMember.name}
-                                            imageUrl={selectedMember.profile_picture_url || '/placeholder.svg'}
-                                            type={selectedTemplate}
-                                            years={selectedMember.start_date ? new Date().getFullYear() - new Date(selectedMember.start_date).getFullYear() : 1}
-                                            onImageUpload={() => {}}
-                                            backgroundImageUrl={null}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                            <DialogFooter>
-                                <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                                <Button onClick={handleCreatePost} disabled={isCreatePostPending || !selectedMember}>
-                                    {isCreatePostPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Post to Feed'}
-                                </Button>
-                            </DialogFooter>
+                            </ScrollArea>
                         </DialogContent>
                      </Dialog>
                     <Button onClick={handleSave} disabled={isPending || isLoading}>
