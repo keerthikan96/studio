@@ -69,6 +69,7 @@ export async function requestPasswordResetAction(email: string, isInvitation = f
             const memberResult = await db.query('SELECT id FROM members WHERE email = $1', [email]);
             if (memberResult.rows.length === 0) {
                  console.log(`Password reset/invitation requested for non-existent user: ${email}. Silently failing.`);
+                 // Still return success to prevent user enumeration
                  return { success: true };
             }
             memberId = memberResult.rows[0].id;
@@ -89,9 +90,10 @@ export async function requestPasswordResetAction(email: string, isInvitation = f
         const invitationLink = `${baseUrl}/set-password?token=${token}&email=${encodeURIComponent(email)}`;
 
         if (isInvitation) {
-            console.log('--- INVITATION LINK (for new employee) ---');
+            console.log('--- INVITATION LINK (for existing employee) ---');
+            console.log(`To: ${email}`);
             console.log(invitationLink);
-            console.log('-------------------------------------------');
+            console.log('-----------------------------------------------');
             return { success: true, invitationLink };
         }
 
@@ -106,7 +108,7 @@ export async function requestPasswordResetAction(email: string, isInvitation = f
 
     } catch (error) {
         console.error('Error requesting password reset:', error);
-        return { error: 'Failed to request password reset.' };
+        return { error: 'Failed to request password reset.', success: false };
     }
 }
 
@@ -119,7 +121,6 @@ export async function setNewPasswordAction(data: { token: string, newPassword: s
         const resetRecord = resetRecordResult.rows[0];
 
         if (!resetRecord) {
-            console.log('Invalid or expired invitation token.',resetRecordResult)
             return { success: false, error: 'Invalid or expired invitation token.' };
         }
 

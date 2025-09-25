@@ -5,7 +5,7 @@ import Link from "next/link";
 import { MemberList } from "@/components/member-list";
 import { Button } from "@/components/ui/button";
 import { Member } from "@/lib/mock-data";
-import { List, PlusCircle, LayoutGrid } from "lucide-react";
+import { List, PlusCircle, LayoutGrid, Loader2 } from "lucide-react";
 import { useState, useEffect, useTransition } from "react";
 import {
   AlertDialog,
@@ -19,13 +19,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { getMembersAction } from "@/app/actions/staff";
+import { requestPasswordResetAction } from "@/app/actions/auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
-function generateSecureToken() {
-    // In a real app, use a crypto library for this.
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-}
 
 type ViewMode = 'grid' | 'list';
 
@@ -33,6 +29,7 @@ export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [memberToInvite, setMemberToInvite] = useState<Member | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isInvitePending, startInviteTransition] = useTransition();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const { toast } = useToast();
 
@@ -46,23 +43,23 @@ export default function MembersPage() {
   const onInviteConfirm = () => {
     if (!memberToInvite) return;
 
-    const token = generateSecureToken();
-    const invitationLink = `${window.location.origin}/set-password?token=${token}&email=${encodeURIComponent(memberToInvite.email)}`;
-      
-    console.log('--- Invitation Email ---');
-    console.log(`To: ${memberToInvite.email}`);
-    console.log('Subject: You have been invited to join StaffSync!');
-    console.log(`Hi ${memberToInvite.name},`);
-    console.log(`Please click the link below to set up your account. This link will expire in 7 days.`);
-    console.log(invitationLink);
-    console.log('------------------------');
-      
-    toast({
-      title: 'Invitation Sent!',
-      description: `An invitation has been sent to ${memberToInvite.name} at ${memberToInvite.email}.`,
-    });
+    startInviteTransition(async () => {
+      const result = await requestPasswordResetAction(memberToInvite.email, true);
 
-    setMemberToInvite(null); // Close the dialog
+      if (result.success) {
+        toast({
+          title: 'Invitation Sent!',
+          description: `An invitation link for ${memberToInvite.name} has been logged to the server console.`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Failed to Send Invitation',
+          description: result.error || 'An unknown error occurred.',
+        });
+      }
+      setMemberToInvite(null); // Close the dialog
+    });
   };
 
   return (
@@ -123,12 +120,15 @@ export default function MembersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Send Invitation?</AlertDialogTitle>
             <AlertDialogDescription>
-              Do you want to send an invitation email to {memberToInvite?.name} at {memberToInvite?.email}?
+              Do you want to send an invitation email to {memberToInvite?.name} at {memberToInvite?.email}? The invitation link will be logged to the console.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={onInviteConfirm}>Yes, Send Invite</AlertDialogAction>
+            <AlertDialogAction onClick={onInviteConfirm} disabled={isInvitePending}>
+                {isInvitePending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Yes, Send Invite
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
