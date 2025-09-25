@@ -58,6 +58,17 @@ export type SelfEvaluation = {
     created_at: Date | string;
 }
 
+export type Document = {
+  id: string;
+  member_id: string;
+  name: string;
+  description: string;
+  file_url: string;
+  file_type?: string;
+  file_size?: number;
+  created_at: Date | string;
+};
+
 export type Member = {
     id: string;
     name: string;

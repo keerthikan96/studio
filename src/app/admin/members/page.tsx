@@ -44,9 +44,11 @@ export default function MembersPage() {
     if (!memberToInvite) return;
 
     startInviteTransition(async () => {
-      const result = await requestPasswordResetAction(memberToInvite.email, true);
+      let baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+      const result = await requestPasswordResetAction(memberToInvite.email, true,baseUrl);
 
       if (result.success) {
+        console.log(result);
         toast({
           title: 'Invitation Sent!',
           description: `An invitation link for ${memberToInvite.name} has been logged to the server console.`,

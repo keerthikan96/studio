@@ -7,7 +7,7 @@ import {
   ParseResumeToAutofillProfileOutput,
 } from '@/ai/flows/resume-parsing-to-autofill-profile';
 import { db, setupDatabase } from '@/lib/db';
-import { Member, Note, PerformanceRecord, SelfEvaluation } from '@/lib/mock-data';
+import { Member, Note, PerformanceRecord, SelfEvaluation, Document } from '@/lib/mock-data';
 import { requestPasswordResetAction } from './auth';
 
 export async function parseResumeAction(
@@ -22,33 +22,53 @@ export async function parseResumeAction(
   }
 }
 
-export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url'>, sendInvite: boolean }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
+export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url'>, sendInvite: boolean, resume?: { url: string, type: string, size: number } }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
   await setupDatabase();
-  const { staff, sendInvite } = staffData;
+  const { staff, sendInvite, resume } = staffData;
   const { name, email, phone, domain, country, branch, experience, education, skills, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone } = staff;
   try {
-    const result = await db.query(
-      `INSERT INTO members (name, email, phone, domain, country, branch, experience, education, skills, status, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12, $13, $14, $15)
-       RETURNING *;`,
-      [name, email, phone, domain, country, branch, JSON.stringify(experience), JSON.stringify(education), JSON.stringify(skills), job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone]
-    );
+    // Use a database transaction
+    const client = await db.connect();
+    try {
+      await client.query('BEGIN');
 
-    const newMember = result.rows[0];
-    let invitationLink: string | undefined = undefined;
+      const result = await client.query(
+        `INSERT INTO members (name, email, phone, domain, country, branch, experience, education, skills, status, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12, $13, $14, $15)
+         RETURNING *;`,
+        [name, email, phone, domain, country, branch, JSON.stringify(experience), JSON.stringify(education), JSON.stringify(skills), job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone]
+      );
+      const newMember = result.rows[0];
 
-    if (sendInvite) {
-        const inviteResult = await requestPasswordResetAction(newMember.email, true);
-        if (inviteResult.success && inviteResult.invitationLink) {
-            invitationLink = inviteResult.invitationLink;
-        } else {
-            console.error("Failed to generate invitation link for new member:", inviteResult.error);
-            // Decide if you want to fail the whole operation or just log the error
-        }
+      // If a resume was uploaded, add it to the documents table
+      if (resume) {
+        await client.query(
+          `INSERT INTO member_documents (member_id, name, description, file_url, file_type, file_size)
+           VALUES ($1, $2, $3, $4, $5, $6);`,
+          [newMember.id, 'Resume', 'Uploaded during employee creation.', resume.url, resume.type, resume.size]
+        );
+      }
+
+      let invitationLink: string | undefined = undefined;
+      if (sendInvite) {
+          const inviteResult = await requestPasswordResetAction(newMember.email, true);
+          if (inviteResult.success && inviteResult.invitationLink) {
+              invitationLink = inviteResult.invitationLink;
+          } else {
+              console.error("Failed to generate invitation link for new member:", inviteResult.error);
+              // Decide if you want to fail the whole operation or just log the error
+          }
+      }
+
+      await client.query('COMMIT');
+      return { member: newMember, invitationLink };
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error; // Re-throw the error to be caught by the outer catch block
+    } finally {
+      client.release();
     }
-    
-    return { member: newMember, invitationLink };
-
   } catch (error) {
     console.error('Error adding staff member:', error);
     return { error: 'A member with this email may already exist.' };
@@ -242,6 +262,59 @@ export async function updateSelfEvaluationAction(id: string, data: Partial<Pick<
   }
 }
 
-    
+export async function getDocumentsAction(memberId: string): Promise<Document[]> {
+  await setupDatabase();
+  try {
+    const result = await db.query('SELECT * FROM member_documents WHERE member_id = $1 ORDER BY created_at DESC', [memberId]);
+    return result.rows;
+  } catch (error) {
+    console.error(`Error fetching documents for member ${memberId}:`, error);
+    return [];
+  }
+}
 
-  
+export async function addDocumentAction(data: Omit<Document, 'id' | 'created_at'>): Promise<Document | { error: string }> {
+  const { member_id, name, description, file_url, file_type, file_size } = data;
+  try {
+    const result = await db.query(
+      `INSERT INTO member_documents (member_id, name, description, file_url, file_type, file_size)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *;`,
+      [member_id, name, description, file_url, file_type, file_size]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error adding document:', error);
+    return { error: 'Failed to add document.' };
+  }
+}
+
+export async function updateDocumentAction(docId: string, data: { name: string, description: string }): Promise<Document | { error: string }> {
+  const { name, description } = data;
+  try {
+    const result = await db.query(
+      `UPDATE member_documents SET name = $1, description = $2 WHERE id = $3 RETURNING *;`,
+      [name, description, docId]
+    );
+    if (result.rows.length === 0) {
+      return { error: 'Document not found.' };
+    }
+    return result.rows[0];
+  } catch (error) {
+    console.error(`Error updating document ${docId}:`, error);
+    return { error: 'Failed to update document.' };
+  }
+}
+
+export async function deleteDocumentAction(docId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const result = await db.query('DELETE FROM member_documents WHERE id = $1', [docId]);
+    if (result.rowCount === 0) {
+      return { success: false, error: 'Document not found.' };
+    }
+    return { success: true };
+  } catch (error) {
+    console.error(`Error deleting document ${docId}:`, error);
+    return { success: false, error: 'Failed to delete document.' };
+  }
+}

@@ -143,6 +143,19 @@ export async function setupDatabase() {
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
+
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS member_documents (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                name VARCHAR(255) NOT NULL,
+                description TEXT,
+                file_url VARCHAR(2048) NOT NULL,
+                file_type VARCHAR(100),
+                file_size BIGINT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
         
         // Add new columns if they don't exist for backward compatibility
         const member_columns = [

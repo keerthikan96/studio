@@ -59,7 +59,7 @@ export async function loginAction(credentials: { email: string, password: string
     }
 }
 
-export async function requestPasswordResetAction(email: string, isInvitation = false): Promise<{ success: boolean; error?: string; invitationLink?: string }> {
+export async function requestPasswordResetAction(email: string, isInvitation = false,baseUrlR?: string): Promise<{ success: boolean; error?: string; invitationLink?: string }> {
     await setupDatabase();
     try {
         let memberId: string | null = null;
@@ -85,7 +85,7 @@ export async function requestPasswordResetAction(email: string, isInvitation = f
             [email, token, otp, expires_at, type]
         );
         
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9000';
+        const baseUrl = baseUrlR|| 'http://localhost:9000';
         const resetLink = `${baseUrl}/reset-password?token=${token}`;
         const invitationLink = `${baseUrl}/set-password?token=${token}&email=${encodeURIComponent(email)}`;
 

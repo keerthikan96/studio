@@ -8,8 +8,8 @@ import { Member } from "@/lib/mock-data";
 export default function AddStaffPage() {
     const router = useRouter();
 
-    const handleAddStaff = async (staff: Omit<Member, 'id' | 'status'>, sendInvite: boolean) => {
-        const result = await addStaffAction({ staff, sendInvite });
+    const handleAddStaff = async (staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url'>, sendInvite: boolean, resume?: { url: string, type: string, size: number } }) => {
+        const result = await addStaffAction(staffData);
 
         if ('error' in result) {
             // The form will show the toast with the error
@@ -25,7 +25,3 @@ export default function AddStaffPage() {
         </div>
     );
 }
-
-    
-
-  

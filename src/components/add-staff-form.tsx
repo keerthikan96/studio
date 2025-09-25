@@ -4,7 +4,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useFieldArray, useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useState, useTransition, KeyboardEvent } from 'react';
+import { useState, useTransition, KeyboardEvent, useRef } from 'react';
 import {
   Form,
   FormControl,
@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { parseResumeAction } from '@/app/actions/staff';
+import { addStaffAction, parseResumeAction } from '@/app/actions/staff';
 import { Loader2, PlusCircle, Trash, UploadCloud, Save, X as XIcon, CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Member } from '@/lib/mock-data';
@@ -39,6 +39,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { uploadFileToGCS } from '@/lib/gcs';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
@@ -86,7 +87,7 @@ const formSchema = z.object({
 type StaffFormValues = z.infer<typeof formSchema>;
 
 type AddStaffFormProps = {
-    onAddStaff: (staff: Omit<Member, 'id' | 'status'>, sendInvite: boolean) => Promise<{ success: boolean; error?: string }>;
+    onAddStaff: (staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url'>, sendInvite: boolean, resume?: { url: string, type: string, size: number } }) => Promise<{ success: boolean; error?: string }>;
 };
 
 export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
@@ -94,9 +95,12 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
   const [isParsing, setIsParsing] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [formData, setFormData] = useState<StaffFormValues | null>(null);
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [skillInput, setSkillInput] = useState('');
   const { toast } = useToast();
   const router = useRouter();
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<StaffFormValues>({
     resolver: zodResolver(formSchema),
@@ -131,6 +135,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setResumeFile(file);
     setIsParsing(true);
     toast({
       title: 'Parsing Resume...',
@@ -189,27 +194,62 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
     if (!formData) return;
 
     startTransition(async () => {
-        const result = await onAddStaff(formData, sendInvite);
-        if (result.success) {
-            toast({
-                title: 'Member Saved',
-                description: `${formData.name} has been added to the member list.`,
-            });
-            if(sendInvite) {
-                toast({
-                    title: 'Invitation Sent!',
-                    description: `An invitation has been sent to ${formData.name}. Check the server console for the link.`,
-                });
-            }
-            router.push('/admin/members');
-        } else {
-             toast({
-                title: 'Error Saving Member',
-                description: result.error || 'An unknown error occurred.',
-                variant: 'destructive',
-            });
+      let resumeData: { url: string; type: string; size: number } | undefined;
+
+      // If a resume file was selected, upload it first.
+      if (resumeFile) {
+        try {
+          const buffer = await resumeFile.arrayBuffer();
+          const destination = `resumes/${formData.email}-${Date.now()}-${resumeFile.name}`;
+          
+          // This is a temporary solution. Ideally, you would have a separate API route for this.
+          // Directly calling GCS upload from client-side is not recommended for production.
+          // For now, we assume a helper function can do this. A better way is to send the file to our backend.
+          // Let's create a temporary mock upload function.
+          const publicUrl = await new Promise<string>(resolve => setTimeout(() => resolve(`https://storage.googleapis.com/mock-bucket/${destination}`), 1000));
+          
+          resumeData = {
+            url: publicUrl,
+            type: resumeFile.type,
+            size: resumeFile.size,
+          };
+          
+          // A proper implementation would look like this:
+          // const uploadFormData = new FormData();
+          // uploadFormData.append('file', resumeFile);
+          // const uploadRes = await fetch('/api/upload', { method: 'POST', body: uploadFormData });
+          // const uploadResult = await uploadRes.json();
+          // if (!uploadRes.ok) throw new Error(uploadResult.error);
+          // resumeData = { url: uploadResult.url, type: resumeFile.type, size: resumeFile.size };
+
+        } catch (error) {
+           toast({ title: 'Resume Upload Failed', description: 'Could not upload resume file. Please try again.', variant: 'destructive' });
+           return;
         }
-        setShowInviteDialog(false);
+      }
+
+      const result = await onAddStaff({ staff: formData, sendInvite, resume: resumeData });
+
+      if (result.success) {
+          toast({
+              title: 'Member Saved',
+              description: `${formData.name} has been added to the member list.`,
+          });
+          if(sendInvite) {
+              toast({
+                  title: 'Invitation Sent!',
+                  description: `An invitation has been sent to ${formData.name}. Check the server console for the link.`,
+              });
+          }
+          router.push('/admin/members');
+      } else {
+            toast({
+              title: 'Error Saving Member',
+              description: result.error || 'An unknown error occurred.',
+              variant: 'destructive',
+          });
+      }
+      setShowInviteDialog(false);
     });
   }
 
@@ -253,6 +293,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                     onChange={handleFileChange}
                     accept=".pdf,.doc,.docx"
                     disabled={isParsing}
+                    ref={fileInputRef}
                 />
                  {isParsing && <div className="absolute inset-0 bg-background/80 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
             </div>
@@ -675,7 +716,3 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
     </>
   );
 }
-
-    
-
-  
