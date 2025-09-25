@@ -77,6 +77,8 @@ const profileSchema = z.object({
   emergency_contact_phone: z.string().optional().nullable(),
   employment_category: z.enum(employmentCategories as [string, ...string[]]).optional(),
   work_location: z.enum(workLocations as [string, ...string[]]).optional(),
+  hobbies: z.array(z.string()).optional().nullable(),
+  volunteer_work: z.array(z.string()).optional().nullable(),
 }).refine(data => {
     if (data.country === 'Sri Lanka' && data.branch) {
         return sriLankanBranches.includes(data.branch);
@@ -546,6 +548,8 @@ export default function ProfilePage() {
         address: '',
         emergency_contact_name: '',
         emergency_contact_phone: '',
+        hobbies: [],
+        volunteer_work: [],
     },
   });
   
@@ -559,6 +563,8 @@ export default function ProfilePage() {
         experience: memberData.experience || [],
         education: memberData.education || [],
         skills: memberData.skills || [],
+        hobbies: memberData.hobbies || [],
+        volunteer_work: memberData.volunteer_work || [],
     });
   }, [reset]);
 

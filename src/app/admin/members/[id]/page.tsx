@@ -48,10 +48,6 @@ const countries = ['Canada', 'USA', 'Sri Lanka'];
 const sriLankanBranches = ['Nothern', 'Central', 'Eastern'];
 const employmentCategories = ['Full-time', 'Part-time', 'Contract'];
 const workLocations = ['Office', 'Work from home'];
-const hobbyCategories = ['Sports', 'Arts', 'Music', 'Reading', 'Travel', 'Gaming', 'Fitness', 'Other'];
-const hobbySkillLevels = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
-const hobbyFrequencies = ['Occasional', 'Weekly', 'Daily'];
-const causeAreas = ['Education', 'Environment', 'Health', 'Community Service', 'Human Rights', 'Animal Welfare', 'Other'];
 
 const workExperienceSchema = z.object({
   companyName: z.string().min(1, 'Company name is required.'),
@@ -64,25 +60,6 @@ const educationSchema = z.object({
   institution: z.string().min(1, 'Institution is required.'),
   degree: z.string().min(1, 'Degree is required.'),
   years: z.string().min(1, 'Years are required.'),
-});
-
-const hobbySchema = z.object({
-  id: z.string().optional(),
-  name: z.string().min(1, 'Hobby name is required.'),
-  category: z.enum(hobbyCategories as [string, ...string[]]),
-  skillLevel: z.enum(hobbySkillLevels as [string, ...string[]]),
-  frequency: z.enum(hobbyFrequencies as [string, ...string[]]),
-});
-
-const volunteerExperienceSchema = z.object({
-    id: z.string().optional(),
-    organization: z.string().min(1, 'Organization name is required.'),
-    role: z.string().min(1, 'Role is required.'),
-    cause: z.enum(causeAreas as [string, ...string[]]),
-    startDate: z.date(),
-    endDate: z.date().optional().nullable(),
-    location: z.string().optional(),
-    contributions: z.string().optional(),
 });
 
 const profileSchema = z.object({
@@ -106,8 +83,8 @@ const profileSchema = z.object({
   emergency_contact_phone: z.string().optional().nullable(),
   employment_category: z.enum(employmentCategories as [string, ...string[]]).optional(),
   work_location: z.enum(workLocations as [string, ...string[]]).optional(),
-  hobbies: z.array(hobbySchema).optional().nullable(),
-  volunteer_work: z.array(volunteerExperienceSchema).optional().nullable(),
+  hobbies: z.array(z.string()).optional().nullable(),
+  volunteer_work: z.array(z.string()).optional().nullable(),
 }).refine(data => {
     if (data.country === 'Sri Lanka' && data.branch) {
         return sriLankanBranches.includes(data.branch);
@@ -123,6 +100,8 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 const GeneralInfoTab = ({ form, isPending }: { form: any, isPending: boolean }) => {
   const watchedCountry = form.watch('country');
   const [skillInput, setSkillInput] = useState('');
+  const [hobbyInput, setHobbyInput] = useState('');
+  const [volunteerInput, setVolunteerInput] = useState('');
 
   const { fields: expFields, append: appendExp, remove: removeExp } = useFieldArray({
     control: form.control, name: "experience",
@@ -133,23 +112,33 @@ const GeneralInfoTab = ({ form, isPending }: { form: any, isPending: boolean }) 
   const { fields: skillFields, append: appendSkill, remove: removeSkill } = useFieldArray({
     control: form.control, name: "skills",
   });
-    const { fields: hobbyFields, append: appendHobby, remove: removeHobby } = useFieldArray({
+  const { fields: hobbyFields, append: appendHobby, remove: removeHobby } = useFieldArray({
     control: form.control, name: "hobbies",
   });
-    const { fields: volunteerFields, append: appendVolunteer, remove: removeVolunteer } = useFieldArray({
+  const { fields: volunteerFields, append: appendVolunteer, remove: removeVolunteer } = useFieldArray({
     control: form.control, name: "volunteer_work",
   });
 
-  const handleSkillKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDownFactory = (
+    inputValue: string, 
+    setInputValue: (value: string) => void,
+    fieldValues: string[] | undefined,
+    appendFn: (value: any) => void
+  ) => (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
-      const newSkill = skillInput.trim();
-      if (newSkill && !form.getValues('skills')?.includes(newSkill)) {
-        appendSkill(newSkill);
-        setSkillInput('');
+      const newValue = inputValue.trim();
+      if (newValue && !fieldValues?.includes(newValue)) {
+        appendFn(newValue);
+        setInputValue('');
       }
     }
   };
+
+  const handleSkillKeyDown = handleKeyDownFactory(skillInput, setSkillInput, form.getValues('skills'), appendSkill);
+  const handleHobbyKeyDown = handleKeyDownFactory(hobbyInput, setHobbyInput, form.getValues('hobbies'), appendHobby);
+  const handleVolunteerKeyDown = handleKeyDownFactory(volunteerInput, setVolunteerInput, form.getValues('volunteer_work'), appendVolunteer);
+
 
     return (
         <Card>
@@ -488,67 +477,62 @@ const GeneralInfoTab = ({ form, isPending }: { form: any, isPending: boolean }) 
                                 </FormItem>
                             </AccordionContent>
                         </AccordionItem>
+                        
                         <AccordionItem value="hobbies">
                             <AccordionTrigger className="text-lg font-medium">Hobbies</AccordionTrigger>
-                            <AccordionContent className="pt-4 space-y-4">
-                                {hobbyFields.map((field, index) => (
-                                    <Accordion key={field.id} type="single" collapsible className="w-full border rounded-md p-4 pr-12 relative">
-                                        <AccordionItem value={`hobby-${index}`} className="border-b-0">
-                                            <AccordionTrigger>{form.watch(`hobbies.${index}.name`) || "New Hobby"}</AccordionTrigger>
-                                            <AccordionContent className="pt-4 space-y-4">
-                                                 <FormField control={form.control} name={`hobbies.${index}.name`} render={({ field }) => (<FormItem><FormLabel>Hobby / Activity Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                                <FormField control={form.control} name={`hobbies.${index}.category`} render={({ field }) => (
-                                                    <FormItem><FormLabel>Category</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a category"/></SelectTrigger></FormControl><SelectContent>{hobbyCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select><FormMessage/></FormItem>
-                                                )}/>
-                                                <FormField control={form.control} name={`hobbies.${index}.skillLevel`} render={({ field }) => (
-                                                    <FormItem><FormLabel>Skill Level</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a level"/></SelectTrigger></FormControl><SelectContent>{hobbySkillLevels.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select><FormMessage/></FormItem>
-                                                )}/>
-                                                <FormField control={form.control} name={`hobbies.${index}.frequency`} render={({ field }) => (
-                                                    <FormItem><FormLabel>Frequency</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select frequency"/></SelectTrigger></FormControl><SelectContent>{hobbyFrequencies.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select><FormMessage/></FormItem>
-                                                )}/>
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                         <Button type="button" variant="destructive" size="icon" onClick={() => removeHobby(index)} className="absolute top-2 right-2 h-6 w-6"><Trash className="h-4 w-4" /></Button>
-                                    </Accordion>
-                                ))}
-                                 <Button type="button" variant="outline" onClick={() => appendHobby({ name: '', category: 'Other', skillLevel: 'Beginner', frequency: 'Occasional' })}>
-                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Hobby
-                                </Button>
+                            <AccordionContent className="pt-4">
+                                <FormItem>
+                                    <FormControl>
+                                        <div>
+                                        <Input 
+                                            placeholder="Type a hobby and press Enter"
+                                            value={hobbyInput}
+                                            onChange={(e) => setHobbyInput(e.target.value)}
+                                            onKeyDown={handleHobbyKeyDown}
+                                        />
+                                        <div className="flex flex-wrap gap-2 mt-2">
+                                            {hobbyFields.map((field, index) => (
+                                            <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
+                                                {form.getValues('hobbies')?.[index]}
+                                                <button type="button" onClick={() => removeHobby(index)}>
+                                                <XIcon className="h-3 w-3" />
+                                                </button>
+                                            </Badge>
+                                            ))}
+                                        </div>
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
                             </AccordionContent>
                         </AccordionItem>
+
                          <AccordionItem value="volunteer_work">
                             <AccordionTrigger className="text-lg font-medium">Volunteer Work</AccordionTrigger>
-                            <AccordionContent className="pt-4 space-y-4">
-                                {volunteerFields.map((field, index) => (
-                                     <Accordion key={field.id} type="single" collapsible className="w-full border rounded-md p-4 pr-12 relative">
-                                        <AccordionItem value={`volunteer-${index}`} className="border-b-0">
-                                            <AccordionTrigger>{form.watch(`volunteer_work.${index}.organization`) || "New Volunteer Work"}</AccordionTrigger>
-                                            <AccordionContent className="pt-4 space-y-4">
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    <FormField control={form.control} name={`volunteer_work.${index}.organization`} render={({ field }) => (<FormItem><FormLabel>Organization</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                                    <FormField control={form.control} name={`volunteer_work.${index}.role`} render={({ field }) => (<FormItem><FormLabel>Role</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                                    <FormField control={form.control} name={`volunteer_work.${index}.cause`} render={({ field }) => (
-                                                        <FormItem><FormLabel>Cause Area</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a cause"/></SelectTrigger></FormControl><SelectContent>{causeAreas.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select><FormMessage/></FormItem>
-                                                    )}/>
-                                                     <FormField control={form.control} name={`volunteer_work.${index}.location`} render={({ field }) => (<FormItem><FormLabel>Location</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                                                </div>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    <FormField control={form.control} name={`volunteer_work.${index}.startDate`} render={({ field }) => (
-                                                        <FormItem className="flex flex-col"><FormLabel>Start Date</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
-                                                    )} />
-                                                     <FormField control={form.control} name={`volunteer_work.${index}.endDate`} render={({ field }) => (
-                                                        <FormItem className="flex flex-col"><FormLabel>End Date (or ongoing)</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
-                                                    )} />
-                                                </div>
-                                                <FormField control={form.control} name={`volunteer_work.${index}.contributions`} render={({ field }) => (<FormItem><FormLabel>Contributions</FormLabel><FormControl><Textarea {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                        <Button type="button" variant="destructive" size="icon" onClick={() => removeVolunteer(index)} className="absolute top-2 right-2 h-6 w-6"><Trash className="h-4 w-4" /></Button>
-                                     </Accordion>
-                                ))}
-                                <Button type="button" variant="outline" onClick={() => appendVolunteer({ organization: '', role: '', cause: 'Other', startDate: new Date(), endDate: null, location: '', contributions: '' })}>
-                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Volunteer Work
-                                </Button>
+                            <AccordionContent className="pt-4">
+                                <FormItem>
+                                    <FormControl>
+                                        <div>
+                                        <Input 
+                                            placeholder="Type a volunteer activity and press Enter"
+                                            value={volunteerInput}
+                                            onChange={(e) => setVolunteerInput(e.target.value)}
+                                            onKeyDown={handleVolunteerKeyDown}
+                                        />
+                                        <div className="flex flex-wrap gap-2 mt-2">
+                                            {volunteerFields.map((field, index) => (
+                                            <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
+                                                {form.getValues('volunteer_work')?.[index]}
+                                                <button type="button" onClick={() => removeVolunteer(index)}>
+                                                <XIcon className="h-3 w-3" />
+                                                </button>
+                                            </Badge>
+                                            ))}
+                                        </div>
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
                             </AccordionContent>
                         </AccordionItem>
                     </Accordion>
@@ -629,8 +613,8 @@ export default function MemberProfilePage() {
         experience: memberData.experience || [],
         education: memberData.education || [],
         skills: memberData.skills || [],
-        hobbies: (memberData.hobbies || []).map(h => ({...h, id: h.id || crypto.randomUUID()})),
-        volunteer_work: (memberData.volunteer_work || []).map(v => ({...v, id: v.id || crypto.randomUUID(), startDate: parseDateString(v.startDate)!, endDate: parseDateString(v.endDate)})),
+        hobbies: memberData.hobbies || [],
+        volunteer_work: memberData.volunteer_work || [],
     });
   }, [reset]);
 
