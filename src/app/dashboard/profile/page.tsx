@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -21,7 +20,7 @@ import { Loader2, PlusCircle, Save, Trash, X as XIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Member } from '@/lib/mock-data';
-import { getMemberByIdAction, updateMemberAction } from '../actions/staff';
+import { getMemberByIdAction, updateMemberAction } from '../../actions/staff';
 import ProfilePictureUploader from '@/components/profile-picture-uploader';
 import CoverPhotoUploader from '@/components/cover-photo-uploader';
 
@@ -75,19 +74,40 @@ export default function ProfilePage() {
     const storedUser = sessionStorage.getItem('loggedInUser');
     if (storedUser) {
       const user = JSON.parse(storedUser);
+      // For both admin and regular staff, we fetch from DB to get latest data
+      const idToFetch = user.id === 'admin' ? 'admin-user-001' : user.id;
+
       startTransition(() => {
-        getMemberByIdAction(user.id).then(currentMember => {
-            if (currentMember) {
-              setMember(currentMember);
-              form.reset({
-                ...currentMember,
-                phone: currentMember.phone ?? '',
-                experience: currentMember.experience || [],
-                education: currentMember.education || [],
-                skills: currentMember.skills || [],
-              });
-            }
-        });
+        if (idToFetch === 'admin-user-001') {
+            const adminData = JSON.parse(sessionStorage.getItem('loggedInUser') || '{}');
+            const adminAsMember: Member = {
+               id: adminData.id || 'admin-user-001',
+               name: adminData.name || 'People and Culture office',
+               email: adminData.email || 'admin@gmail.com',
+               status: 'active',
+               phone: adminData.phone || '',
+               experience: adminData.experience || [],
+               education: adminData.education || [],
+               skills: adminData.skills || [],
+               profile_picture_url: adminData.profile_picture_url || null,
+               cover_photo_url: adminData.cover_photo_url || null,
+            };
+            setMember(adminAsMember);
+            form.reset(adminAsMember);
+        } else {
+            getMemberByIdAction(idToFetch).then(currentMember => {
+                if (currentMember) {
+                  setMember(currentMember);
+                  form.reset({
+                    ...currentMember,
+                    phone: currentMember.phone ?? '',
+                    experience: currentMember.experience || [],
+                    education: currentMember.education || [],
+                    skills: currentMember.skills || [],
+                  });
+                }
+            });
+        }
       });
     }
   }, [form]);
@@ -111,43 +131,61 @@ export default function ProfilePage() {
   function onSubmit(data: ProfileFormValues) {
     if (!member) return;
 
-    startTransition(async () => {
-      const dirtyFields = form.formState.dirtyFields;
-      // Image URLs are handled by their own components
-      const { profile_picture_url, cover_photo_url, ...otherDirtyFields } = dirtyFields;
+    // Special handling for the admin user who is not in the database
+    if (member.id === 'admin-user-001') {
+        const currentUser = JSON.parse(sessionStorage.getItem('loggedInUser') || '{}');
+        const updatedAdmin = { ...currentUser, ...data };
+        sessionStorage.setItem('loggedInUser', JSON.stringify(updatedAdmin));
+        
+        setMember(prev => ({...prev, ...updatedAdmin} as Member));
+        form.reset(updatedAdmin, { keepDirty: false });
 
-      if (Object.keys(otherDirtyFields).length === 0) {
-        toast({ title: 'No Changes', description: 'No changes were detected to save.' });
-        return;
-      }
-      
-      const dataToUpdate: Partial<Omit<ProfileFormValues, 'profile_picture_url' | 'cover_photo_url'>> = {};
-      for (const field of Object.keys(otherDirtyFields)) {
-          // @ts-ignore
-          dataToUpdate[field] = data[field];
-      }
-
-      const result = await updateMemberAction(member.id, dataToUpdate);
-
-      if ('error' in result) {
-          toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });
-      } else {
         toast({
-          title: 'Profile Updated!',
-          description: 'Your information has been successfully saved.',
+            title: 'Profile Updated!',
+            description: 'Your information has been successfully saved.',
         });
-        const updatedMember = await getMemberByIdAction(member.id);
-        if (updatedMember) {
-          setMember(updatedMember);
-          form.reset({
-            ...updatedMember,
-            phone: updatedMember.phone ?? '',
-            experience: updatedMember.experience || [],
-            education: updatedMember.education || [],
-            skills: updatedMember.skills || [],
-          }, { keepDirty: false });
+        
+        // Notify other components like UserNav to update
+        window.dispatchEvent(new CustomEvent('profile-picture-updated'));
+        return;
+    } 
+    
+    startTransition(async () => {
+        const dirtyFields = form.formState.dirtyFields;
+        const { profile_picture_url, cover_photo_url, ...otherDirtyFields } = dirtyFields;
+
+        if (Object.keys(otherDirtyFields).length === 0) {
+            toast({ title: 'No Changes', description: 'No changes were detected to save.' });
+            return;
         }
-      }
+        
+        const dataToUpdate: Partial<Omit<ProfileFormValues, 'profile_picture_url' | 'cover_photo_url'>> = {};
+        for (const field of Object.keys(otherDirtyFields)) {
+            // @ts-ignore
+            if(Object.prototype.hasOwnProperty.call(data, field)) {
+                // @ts-ignore
+                dataToUpdate[field] = data[field];
+            }
+        }
+        
+        const result = await updateMemberAction(member.id, dataToUpdate);
+
+        if ('error' in result) {
+            toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });
+        } else {
+            toast({
+                title: 'Profile Updated!',
+                description: 'Your information has been successfully saved.',
+            });
+            setMember(result as Member);
+            form.reset({
+                ...(result as Member),
+                phone: (result as Member).phone ?? '',
+                experience: (result as Member).experience || [],
+                education: (result as Member).education || [],
+                skills: (result as Member).skills || [],
+            }, { keepDirty: false });
+        }
     });
   }
 
@@ -155,7 +193,7 @@ export default function ProfilePage() {
     if (!member) return;
     form.setValue('profile_picture_url', newUrl, { shouldDirty: false });
     const updatedMember = { ...member, profile_picture_url: newUrl };
-    setMember(updatedMember);
+    setMember(updatedMember as Member);
     const storedUser = sessionStorage.getItem('loggedInUser');
     if (storedUser) {
         const user = JSON.parse(storedUser);
@@ -171,7 +209,7 @@ export default function ProfilePage() {
     if (!member) return;
     form.setValue('cover_photo_url', newUrl, { shouldDirty: false });
      const updatedMember = { ...member, cover_photo_url: newUrl };
-      setMember(updatedMember);
+      setMember(updatedMember as Member);
       const storedUser = sessionStorage.getItem('loggedInUser');
       if (storedUser) {
         const user = JSON.parse(storedUser);
@@ -257,7 +295,7 @@ export default function ProfilePage() {
                   <FormItem>
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. (123) 456-7890" {...field} />
+                      <Input placeholder="e.g. (123) 456-7890" {...field} value={field.value ?? ''}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -342,7 +380,7 @@ export default function ProfilePage() {
                           <FormItem>
                             <FormLabel>Key Responsibilities</FormLabel>
                             <FormControl>
-                              <Textarea {...field} placeholder="Describe key responsibilities..." value={field.value ?? ''} />
+                              <Textarea {...field} placeholder="Describe key responsibilities..." value={field.value ?? ''}/>
                             </FormControl>
                              <FormMessage />
                           </FormItem>
@@ -442,5 +480,3 @@ export default function ProfilePage() {
     </Card>
   );
 }
-
-    

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -89,7 +88,7 @@ export default function LoginForm() {
         if (result.user.role === 'HR') {
             router.push('/admin/dashboard');
         } else {
-            router.push('/profile');
+            router.push('/dashboard');
         }
       }
     });
