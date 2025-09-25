@@ -25,6 +25,7 @@ import {
   Trash2,
   KeyRound,
   Loader2,
+  PauseCircle,
 } from 'lucide-react';
 
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -62,6 +63,7 @@ const statusStyles: { [key: string]: string } = {
   active: 'bg-green-100 text-green-800 border-green-200 hover:bg-green-100',
   pending: 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-100',
   inactive: 'bg-red-100 text-red-800 border-red-200 hover:bg-red-100',
+  'on-hold': 'bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100',
 };
 
 const getColumns = (
@@ -155,17 +157,23 @@ const getColumns = (
                     Send Invite
                  </DropdownMenuItem>
             )}
-             {member.status === 'inactive' && (
+             {(member.status === 'inactive' || member.status === 'on-hold') && (
                  <DropdownMenuItem onClick={() => onStatusChange(member, 'active')}>
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Activate
                  </DropdownMenuItem>
             )}
             {member.status === 'active' && (
-                 <DropdownMenuItem onClick={() => onStatusChange(member, 'inactive')}>
-                    <CircleSlash className="mr-2 h-4 w-4" />
-                    Deactivate
-                 </DropdownMenuItem>
+                 <>
+                    <DropdownMenuItem onClick={() => onStatusChange(member, 'on-hold')}>
+                        <PauseCircle className="mr-2 h-4 w-4" />
+                        Set On-hold
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onStatusChange(member, 'inactive')}>
+                        <CircleSlash className="mr-2 h-4 w-4" />
+                        Deactivate
+                    </DropdownMenuItem>
+                </>
             )}
             <DropdownMenuItem onClick={() => onSendPasswordReset(member)}>
                 <KeyRound className="mr-2 h-4 w-4" />
@@ -192,7 +200,7 @@ type MemberListProps = {
 }
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
-const statuses = ['active', 'pending', 'inactive'];
+const statuses = ['active', 'pending', 'inactive', 'on-hold'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
 
 

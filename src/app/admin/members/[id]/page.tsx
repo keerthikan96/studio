@@ -19,13 +19,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, Save, X as XIcon, ArrowLeft, Ban, CalendarIcon, Trash, Pencil, Briefcase, MapPin } from 'lucide-react';
+import { Loader2, PlusCircle, Save, X as XIcon, ArrowLeft, Ban, CalendarIcon, Trash, Pencil, Briefcase, MapPin, MoreHorizontal, CheckCircle, CircleSlash, PauseCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Member } from '@/lib/mock-data';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getMemberByIdAction, updateMemberAction, deleteMemberAction } from '@/app/actions/staff';
+import { getMemberByIdAction, updateMemberAction, deleteMemberAction, updateMemberStatusAction } from '@/app/actions/staff';
 import ProfilePictureUploader from '@/components/profile-picture-uploader';
 import CoverPhotoUploader from '@/components/cover-photo-uploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -43,6 +43,7 @@ import { CoursesAndCertificatesTab } from '@/components/member-profile-tabs/cour
 import { EmploymentHistoryTab } from '@/components/member-profile-tabs/payslip-tab';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { LeaveTab } from '@/components/member-profile-tabs/leave-tab';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
@@ -74,7 +75,7 @@ const profileSchema = z.object({
   experience: z.array(workExperienceSchema).optional(),
   education: z.array(educationSchema).optional(),
   skills: z.array(z.string()).optional(),
-  status: z.enum(['active', 'pending', 'inactive']).optional(),
+  status: z.enum(['active', 'pending', 'inactive', 'on-hold']).optional(),
   profile_picture_url: z.string().url().optional().nullable(),
   cover_photo_url: z.string().url().optional().nullable(),
   date_of_birth: z.date().optional().nullable(),
@@ -490,7 +491,7 @@ const GeneralInfoTab = ({ form, isPending }: { form: any, isPending: boolean }) 
                                     <FormControl>
                                         <div>
                                         <Input 
-                                            placeholder="Type hobbies separated by commas"
+                                            placeholder="Type hobbies separated by commas and press Enter"
                                             value={hobbyInput}
                                             onChange={(e) => setHobbyInput(e.target.value)}
                                             onKeyDown={handleHobbyKeyDown}
@@ -519,7 +520,7 @@ const GeneralInfoTab = ({ form, isPending }: { form: any, isPending: boolean }) 
                                     <FormControl>
                                         <div>
                                         <Input 
-                                            placeholder="Type volunteer work separated by commas"
+                                            placeholder="Type volunteer work separated by commas and press Enter"
                                             value={volunteerInput}
                                             onChange={(e) => setVolunteerInput(e.target.value)}
                                             onKeyDown={handleVolunteerKeyDown}
@@ -722,6 +723,19 @@ export default function MemberProfilePage() {
     });
   }
 
+  const handleStatusChange = (status: Member['status']) => {
+      if (!member) return;
+      startTransition(async () => {
+        const result = await updateMemberStatusAction(member.id, status);
+        if (result.success) {
+            toast({ title: "Status Updated", description: `${member.name}'s status is now ${status}.` });
+            fetchMember(); // Refetch to get the latest member data
+        } else {
+            toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
+        }
+    });
+  }
+
   const handleTabChange = (value: string) => {
     if (isDirty) {
       setNextTab(value);
@@ -818,25 +832,44 @@ export default function MemberProfilePage() {
                         className='w-24 h-24 text-3xl border-4 border-card'
                     />
                      <div className="flex items-center gap-2 pb-4">
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="destructive">Terminate</Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete the member account for {member.name}.
-                                </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDelete} disabled={isPending}>
-                                    {isPending ? 'Terminating...' : 'Yes, Terminate'}
-                                </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                 <DropdownMenuItem onClick={() => handleStatusChange('active')}>
+                                    <CheckCircle className="mr-2 h-4 w-4" /> Activate
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleStatusChange('on-hold')}>
+                                    <PauseCircle className="mr-2 h-4 w-4" /> Set On-hold
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleStatusChange('inactive')}>
+                                    <CircleSlash className="mr-2 h-4 w-4" /> Deactivate
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                                            <Trash2 className="mr-2 h-4 w-4" /> Terminate
+                                        </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete the member account for {member.name}.
+                                        </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleDelete} disabled={isPending}>
+                                            {isPending ? 'Terminating...' : 'Yes, Terminate'}
+                                        </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
                  <div className='pt-4'>
@@ -904,5 +937,6 @@ export default function MemberProfilePage() {
     </div>
   );
 }
+
 
 

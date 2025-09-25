@@ -96,7 +96,7 @@ export type Member = {
     domain?: 'Engineering' | 'Design' | 'Marketing' | 'Sales' | 'HR';
     country?: 'Canada' | 'USA' | 'Sri Lanka';
     branch?: string; // Can be a state, province, or a Sri Lankan branch
-    status: 'active' | 'pending' | 'inactive';
+    status: 'active' | 'pending' | 'inactive' | 'on-hold';
     phone?: string;
     experience?: WorkExperience[];
     education?: Education[];

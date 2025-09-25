@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Member } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
-import { CheckCircle, CircleSlash, Eye, Mail, MoreHorizontal, Pencil, Trash2, KeyRound } from "lucide-react";
+import { CheckCircle, CircleSlash, Eye, Mail, MoreHorizontal, Pencil, Trash2, KeyRound, PauseCircle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -24,6 +24,7 @@ const statusStyles: { [key: string]: string } = {
   active: 'bg-green-100 text-green-800 border-green-200',
   pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
   inactive: 'bg-red-100 text-red-800 border-red-200',
+  'on-hold': 'bg-orange-100 text-orange-800 border-orange-200',
 };
 
 
@@ -55,17 +56,23 @@ export function MemberCard({ member, onStatusChange, onDelete, onSendInvite, onS
                             Send Invite
                         </DropdownMenuItem>
                     )}
-                    {member.status === 'inactive' && (
+                    {(member.status === 'inactive' || member.status === 'on-hold') && (
                         <DropdownMenuItem onClick={() => onStatusChange(member, 'active')}>
                             <CheckCircle className="mr-2 h-4 w-4" />
                             Activate
                         </DropdownMenuItem>
                     )}
                     {member.status === 'active' && (
-                        <DropdownMenuItem onClick={() => onStatusChange(member, 'inactive')}>
-                            <CircleSlash className="mr-2 h-4 w-4" />
-                            Deactivate
-                        </DropdownMenuItem>
+                        <>
+                            <DropdownMenuItem onClick={() => onStatusChange(member, 'on-hold')}>
+                                <PauseCircle className="mr-2 h-4 w-4" />
+                                Set On-hold
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onStatusChange(member, 'inactive')}>
+                                <CircleSlash className="mr-2 h-4 w-4" />
+                                Deactivate
+                            </DropdownMenuItem>
+                        </>
                     )}
                      <DropdownMenuItem onClick={() => onSendPasswordReset(member)}>
                         <KeyRound className="mr-2 h-4 w-4" />
