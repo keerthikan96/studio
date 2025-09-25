@@ -39,6 +39,7 @@ import { PerformanceTab } from '@/components/member-profile-tabs/performance-tab
 import { ConfidentialNotesTab } from '@/components/member-profile-tabs/confidential-notes-tab';
 import { SelfAssessmentTab } from '@/components/member-profile-tabs/self-assessment-tab';
 import { DocumentsTab } from '@/components/member-profile-tabs/documents-tab';
+import { CoursesAndCertificatesTab } from '@/components/member-profile-tabs/courses-and-certificates-tab';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
@@ -694,12 +695,14 @@ export default function MemberProfilePage() {
             return <SelfAssessmentTab memberId={member.id} />;
         case "Documents":
             return <DocumentsTab memberId={member.id} />;
+        case "Certificate and Courses":
+            return <CoursesAndCertificatesTab memberId={member.id} memberName={member.name} />;
         default:
             return <PlaceholderContent title={tab} />;
     }
   }
 
-  const tabs = ["General Info", "Job", "Education", "Skills", "Leave", "Notes", "Confidential Notes", "Performance", "Permission", "Assets", "Documents", "Training", "To-Do", "Payslip", "Payroll", "Attendance", "Self-assesment"];
+  const tabs = ["General Info", "Job", "Education", "Skills", "Leave", "Notes", "Confidential Notes", "Performance", "Permission", "Assets", "Documents", "Certificate and Courses", "To-Do", "Payslip", "Attendance", "Self-assesment"];
 
   return (
     <div className='space-y-6'>
@@ -794,5 +797,3 @@ export default function MemberProfilePage() {
     </div>
   );
 }
-
-    

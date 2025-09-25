@@ -69,6 +69,20 @@ export type Document = {
   created_at: Date | string;
 };
 
+export type CourseOrCertificate = {
+    id: string;
+    member_id: string;
+    type: 'Course' | 'Certificate';
+    name: string;
+    provider?: string;
+    course_url?: string;
+    status?: 'Completed' | 'In Progress';
+    verification_url?: string;
+    certificate_url?: string;
+    certificate_file_type?: string;
+    created_at: Date | string;
+};
+
 export type Member = {
     id: string;
     name: string;

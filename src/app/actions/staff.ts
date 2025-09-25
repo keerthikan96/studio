@@ -7,7 +7,7 @@ import {
   ParseResumeToAutofillProfileOutput,
 } from '@/ai/flows/resume-parsing-to-autofill-profile';
 import { db, setupDatabase } from '@/lib/db';
-import { Member, Note, PerformanceRecord, SelfEvaluation, Document } from '@/lib/mock-data';
+import { Member, Note, PerformanceRecord, SelfEvaluation, Document, CourseOrCertificate } from '@/lib/mock-data';
 import { requestPasswordResetAction } from './auth';
 
 export async function parseResumeAction(
@@ -316,5 +316,33 @@ export async function deleteDocumentAction(docId: string): Promise<{ success: bo
   } catch (error) {
     console.error(`Error deleting document ${docId}:`, error);
     return { success: false, error: 'Failed to delete document.' };
+  }
+}
+
+
+export async function addCourseOrCertificateAction(data: Omit<CourseOrCertificate, 'id' | 'created_at'>): Promise<CourseOrCertificate | { error: string }> {
+  const { member_id, type, name, provider, course_url, status, verification_url, certificate_url, certificate_file_type } = data;
+  try {
+    const result = await db.query(
+      `INSERT INTO member_courses_certificates (member_id, type, name, provider, course_url, status, verification_url, certificate_url, certificate_file_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING *;`,
+      [member_id, type, name, provider, course_url, status, verification_url, certificate_url, certificate_file_type]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error adding course or certificate:', error);
+    return { error: 'Failed to add course or certificate.' };
+  }
+}
+
+export async function getCoursesAndCertificatesAction(memberId: string): Promise<CourseOrCertificate[]> {
+  await setupDatabase();
+  try {
+    const result = await db.query('SELECT * FROM member_courses_certificates WHERE member_id = $1 ORDER BY created_at DESC', [memberId]);
+    return result.rows;
+  } catch (error) {
+    console.error(`Error fetching courses/certificates for member ${memberId}:`, error);
+    return [];
   }
 }

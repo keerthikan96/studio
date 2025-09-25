@@ -156,6 +156,22 @@ export async function setupDatabase() {
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
+
+         await client.query(`
+            CREATE TABLE IF NOT EXISTS member_courses_certificates (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                type VARCHAR(50) NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                provider VARCHAR(255),
+                course_url VARCHAR(2048),
+                status VARCHAR(50),
+                verification_url VARCHAR(2048),
+                certificate_url VARCHAR(2048),
+                certificate_file_type VARCHAR(100),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
         
         // Add new columns if they don't exist for backward compatibility
         const member_columns = [
