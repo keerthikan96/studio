@@ -42,7 +42,6 @@ export type AutomatedPostConfig = {
 export default function WorkfeedSettingsPage() {
     const { toast } = useToast();
     const [isPending, startTransition] = useTransition();
-    const [isLoading, startLoadingTransition] = useTransition();
     const [isCreatePostPending, startCreatePostTransition] = useTransition();
 
     const [members, setMembers] = useState<Member[]>([]);
@@ -73,7 +72,7 @@ export default function WorkfeedSettingsPage() {
             setCurrentUser(JSON.parse(storedUser));
         }
 
-        startLoadingTransition(async () => {
+        startTransition(async () => {
             const settings = await getWorkfeedSettingsAction();
             if (settings) {
                 if(settings.birthday) setBirthdayConfig(settings.birthday);
@@ -246,13 +245,13 @@ export default function WorkfeedSettingsPage() {
                             </ScrollArea>
                         </DialogContent>
                      </Dialog>
-                    <Button onClick={handleSave} disabled={isPending || isLoading}>
+                    <Button onClick={handleSave} disabled={isPending}>
                         {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Save All Settings'}
                     </Button>
                  </div>
             </div>
             
-            {isLoading ? <Loader2 className="h-8 w-8 animate-spin" /> : (
+            {isPending ? <Loader2 className="h-8 w-8 animate-spin" /> : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <AutomatedPostSetting
                         title="Automatic Birthday Posts"
@@ -283,3 +282,5 @@ export default function WorkfeedSettingsPage() {
         </div>
     );
 }
+
+    
