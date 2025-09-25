@@ -20,7 +20,7 @@ import { Note } from '@/lib/mock-data';
 import { getNotesAction } from '@/app/actions/staff';
 import { Badge } from '../ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-
+import { ScrollArea } from '../ui/scroll-area';
 
 const noteSchema = z.object({
   note_name: z.string().min(1, 'Note name is required.'),
@@ -172,51 +172,55 @@ export function ConfidentialNotesTab({ memberId }: ConfidentialNotesTabProps) {
                 This note will only be visible to authorized personnel. Click save when you're done.
               </DialogDescription>
             </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField control={form.control} name="note_name" render={({ field }) => (
-                    <FormItem><FormLabel>Note Name</FormLabel><FormControl><Input {...field} placeholder="e.g., Q3 Performance Concern" /></FormControl><FormMessage /></FormItem>
-                )} />
+            <ScrollArea className="max-h-[70vh] pr-6">
+              <div className="pr-1">
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField control={form.control} name="note_name" render={({ field }) => (
+                        <FormItem><FormLabel>Note Name</FormLabel><FormControl><Input {...field} placeholder="e.g., Q3 Performance Concern" /></FormControl><FormMessage /></FormItem>
+                    )} />
 
-                <FormField control={form.control} name="description" render={({ field }) => (
-                    <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} rows={5} placeholder="Detailed notes..." /></FormControl><FormMessage /></FormItem>
-                )} />
+                    <FormField control={form.control} name="description" render={({ field }) => (
+                        <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} rows={5} placeholder="Detailed notes..." /></FormControl><FormMessage /></FormItem>
+                    )} />
 
-                <FormItem>
-                    <FormLabel>Tags</FormLabel>
-                     <FormControl>
-                        <div>
-                        <Input placeholder="Type a tag and press Enter" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={handleTagKeyDown} />
-                        <div className="flex flex-wrap gap-2 mt-2">
-                            {tagFields.map((field, index) => (
-                            <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
-                                {form.getValues('tags')?.[index]}
-                                <button type="button" onClick={() => removeTag(index)}><XIcon className="h-3 w-3" /></button>
-                            </Badge>
-                            ))}
-                        </div>
-                        </div>
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-
-                <FormItem><FormLabel>Attachments</FormLabel><FormControl><Input type="file" multiple {...register("attachments")} /></FormControl><FormMessage /></FormItem>
-
-                 <FormField control={form.control} name="pinned" render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm flex-1">
-                        <div className="space-y-0.5"><FormLabel>Pin to Top</FormLabel></div>
-                        <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                    <FormItem>
+                        <FormLabel>Tags</FormLabel>
+                        <FormControl>
+                            <div>
+                            <Input placeholder="Type a tag and press Enter" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={handleTagKeyDown} />
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                {tagFields.map((field, index) => (
+                                <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
+                                    {form.getValues('tags')?.[index]}
+                                    <button type="button" onClick={() => removeTag(index)}><XIcon className="h-3 w-3" /></button>
+                                </Badge>
+                                ))}
+                            </div>
+                            </div>
+                        </FormControl>
+                        <FormMessage />
                     </FormItem>
-                )} />
-                
-                <DialogFooter>
-                    <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                    <Button type="submit" disabled={isPending}>
-                        {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Note
-                    </Button>
-                </DialogFooter>
-              </form>
-            </Form>
+
+                    <FormItem><FormLabel>Attachments</FormLabel><FormControl><Input type="file" multiple {...register("attachments")} /></FormControl><FormMessage /></FormItem>
+
+                    <FormField control={form.control} name="pinned" render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm flex-1">
+                            <div className="space-y-0.5"><FormLabel>Pin to Top</FormLabel></div>
+                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                        </FormItem>
+                    )} />
+                    
+                    <DialogFooter className="pr-0 pt-4">
+                        <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                        <Button type="submit" disabled={isPending}>
+                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Note
+                        </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </div>
+            </ScrollArea>
           </DialogContent>
         </Dialog>
       </CardHeader>
