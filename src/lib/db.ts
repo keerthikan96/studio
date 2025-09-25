@@ -2,16 +2,13 @@
 import { Pool } from 'pg';
 import 'dotenv/config';
 
-// This pool will be used for all our database queries
 let pool: Pool;
 
 try {
-  // Check if the essential environment variables are set
   if (!process.env.POSTGRES_USER || !process.env.POSTGRES_PASSWORD || !process.env.POSTGRES_HOST || !process.env.POSTGRES_PORT || !process.env.POSTGRES_DATABASE || !process.env.POSTGRES_CA) {
     throw new Error('One or more PostgreSQL environment variables are not set.');
   }
 
-  // Initialize the connection pool using detailed configuration
   pool = new Pool({
     user: process.env.POSTGRES_USER,
     password: process.env.POSTGRES_PASSWORD,
@@ -20,9 +17,6 @@ try {
     database: process.env.POSTGRES_DATABASE,
     ssl: {
       rejectUnauthorized: true,
-      // The `ca` certificate is passed directly as a string.
-      // The certificate string from the .env file might contain escaped newlines (\n),
-      // which need to be unescaped for the connection to work.
       ca: process.env.POSTGRES_CA.replace(/\\n/g, '\n'),
     },
   });
@@ -31,8 +25,6 @@ try {
 
 } catch (error) {
   console.error('Failed to create database connection pool:', error);
-  // If the pool fails to initialize, we'll assign a mock pool
-  // to prevent the app from crashing during development if the DB is not available.
   pool = new Proxy({} as Pool, {
     get(target, prop) {
       if (prop === 'query') {
@@ -48,7 +40,6 @@ try {
 
 export const db = pool;
 
-// A function to create the members table if it doesn't exist
 export async function setupDatabase() {
     let client;
     try {
@@ -198,6 +189,7 @@ export async function setupDatabase() {
             CREATE TABLE IF NOT EXISTS workfeed_comments (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 post_id UUID NOT NULL REFERENCES workfeed_posts(id) ON DELETE CASCADE,
+                parent_comment_id UUID REFERENCES workfeed_comments(id) ON DELETE CASCADE,
                 author_id VARCHAR(255) NOT NULL,
                 author_name VARCHAR(255) NOT NULL,
                 author_avatar_url VARCHAR(2048),
@@ -207,13 +199,20 @@ export async function setupDatabase() {
         `);
 
         await client.query(`
+            CREATE TABLE IF NOT EXISTS workfeed_comment_likes (
+                comment_id UUID NOT NULL REFERENCES workfeed_comments(id) ON DELETE CASCADE,
+                user_id VARCHAR(255) NOT NULL,
+                PRIMARY KEY (comment_id, user_id)
+            );
+        `);
+        
+        await client.query(`
             CREATE TABLE IF NOT EXISTS app_settings (
                 key VARCHAR(255) PRIMARY KEY,
                 value JSONB NOT NULL
             );
         `);
         
-        // Add new columns if they don't exist for backward compatibility
         const member_columns = [
             { name: 'password', type: 'TEXT' },
             { name: 'profile_picture_url', type: 'VARCHAR(2048)' },
@@ -254,7 +253,6 @@ export async function setupDatabase() {
             }
         }
 
-        // Add 'type' column to password_resets if it doesn't exist
         const { rows: resetColumns } = await client.query(`
             SELECT column_name
             FROM information_schema.columns
@@ -264,10 +262,18 @@ export async function setupDatabase() {
             await client.query(`ALTER TABLE password_resets ADD COLUMN type VARCHAR(20) NOT NULL DEFAULT 'reset';`);
         }
         
+        const { rows: commentColumns } = await client.query(`
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name='workfeed_comments' AND column_name='parent_comment_id';
+        `);
+        if (commentColumns.length === 0) {
+            await client.query(`ALTER TABLE workfeed_comments ADD COLUMN parent_comment_id UUID REFERENCES workfeed_comments(id) ON DELETE CASCADE;`);
+        }
+
         console.log('Database tables are ready.');
     } catch (err) {
         console.error('Error setting up the database table:', err);
-        // Re-throw the error to be caught by the calling function
         throw err;
     } finally {
         if (client) {
@@ -275,3 +281,5 @@ export async function setupDatabase() {
         }
     }
 }
+
+  

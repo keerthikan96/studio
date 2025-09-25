@@ -15,15 +15,18 @@ export default function WorkfeedPage() {
     const [currentUser, setCurrentUser] = useState<{ id: string, name: string, email: string, role: string, profile_picture_url: string } | null>(null);
     const { toast } = useToast();
 
+    const fetchPosts = () => {
+        startTransition(() => {
+            getPostsAction().then(setPosts);
+        });
+    }
+
     useEffect(() => {
         const storedUser = sessionStorage.getItem('loggedInUser');
         if (storedUser) {
             setCurrentUser(JSON.parse(storedUser));
         }
-
-        startTransition(() => {
-            getPostsAction().then(setPosts);
-        });
+        fetchPosts();
     }, []);
 
     const handleCreatePost = async (content: string, imageFile?: File) => {
@@ -56,21 +59,18 @@ export default function WorkfeedPage() {
             }
         }
         
-        startTransition(async () => {
-            const result = await createPostAction(content, currentUser, imageUrl);
-            if ('error' in result) {
-                toast({ title: 'Error', description: result.error, variant: 'destructive' });
-            } else {
-                setPosts(prevPosts => [result, ...prevPosts]);
-                toast({ title: 'Post Created!', description: 'Your post is now live on the feed.' });
-            }
-        });
+        const result = await createPostAction(content, currentUser, imageUrl);
+        if ('error' in result) {
+            toast({ title: 'Error', description: result.error, variant: 'destructive' });
+        } else {
+            fetchPosts();
+            toast({ title: 'Post Created!', description: 'Your post is now live on the feed.' });
+        }
     };
 
     const handleToggleLike = async (postId: string) => {
         if (!currentUser) return;
         
-        // Optimistic update
         setPosts(prevPosts =>
             prevPosts.map(post => {
                 if (post.id === postId) {
@@ -84,7 +84,6 @@ export default function WorkfeedPage() {
             })
         );
         
-        // Server action
         await toggleLikeAction(postId, currentUser.id);
     };
 
@@ -95,10 +94,32 @@ export default function WorkfeedPage() {
         if ('error' in result) {
             toast({ title: 'Error', description: result.error, variant: 'destructive' });
         } else {
-             // Refresh posts to get new comment
-            getPostsAction().then(setPosts);
+            fetchPosts();
         }
     };
+    
+    const handleAddReply = (postId: string, parentCommentId: string, replyText: string) => {
+        fetchPosts();
+    };
+    
+    const handleToggleCommentLike = (commentId: string) => {
+        if (!currentUser) return;
+         setPosts(prevPosts =>
+            prevPosts.map(post => ({
+                ...post,
+                comments: post.comments.map(comment => {
+                    if (comment.id === commentId) {
+                         const hasLiked = comment.likes.includes(currentUser.id);
+                         const newLikes = hasLiked
+                            ? comment.likes.filter(id => id !== currentUser.id)
+                            : [...comment.likes, currentUser.id];
+                        return { ...comment, likes: newLikes };
+                    }
+                    return comment;
+                })
+            }))
+        );
+    }
 
     const handleDeletePost = async (postId: string) => {
         if (!currentUser) return;
@@ -147,6 +168,8 @@ export default function WorkfeedPage() {
                             onAddComment={handleAddComment}
                             onDeletePost={handleDeletePost}
                             onDeleteComment={handleDeleteComment}
+                            onAddReply={handleAddReply}
+                            onToggleCommentLike={handleToggleCommentLike}
                         />
                     ))
                 )}
@@ -154,3 +177,5 @@ export default function WorkfeedPage() {
         </div>
     );
 }
+
+  

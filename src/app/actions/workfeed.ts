@@ -29,7 +29,6 @@ export async function createPostAction(content: string, author: PostAuthor, imag
 
         const newPost = result.rows[0];
         
-        // To make it immediately usable, add empty likes and comments arrays
         const fullPost: WorkfeedPost = {
             ...newPost,
             likes: [],
@@ -46,9 +45,7 @@ export async function createPostAction(content: string, author: PostAuthor, imag
     }
 }
 
-// This function now needs the current user passed to it
 async function getCurrentUser(userId: string, userRole: string): Promise<{ id: string, role: string } | null> {
-    // In a real app, you might verify the user against the database here
     if (!userId || !userRole) return null;
     return { id: userId, role: userRole };
 }
@@ -59,28 +56,41 @@ export async function getPostsAction(): Promise<WorkfeedPost[]> {
     try {
         const postsResult = await db.query('SELECT * FROM workfeed_posts ORDER BY created_at DESC');
         
-        const likesResult = await db.query('SELECT post_id, user_id FROM workfeed_likes');
+        const postLikesResult = await db.query('SELECT post_id, user_id FROM workfeed_likes');
+        const commentLikesResult = await db.query('SELECT comment_id, user_id FROM workfeed_comment_likes');
         const commentsResult = await db.query('SELECT * FROM workfeed_comments ORDER BY created_at ASC');
 
-        const likesByPost: { [key: string]: string[] } = {};
-        for (const like of likesResult.rows) {
-            if (!likesByPost[like.post_id]) {
-                likesByPost[like.post_id] = [];
+        const postLikesByPost: { [key: string]: string[] } = {};
+        for (const like of postLikesResult.rows) {
+            if (!postLikesByPost[like.post_id]) {
+                postLikesByPost[like.post_id] = [];
             }
-            likesByPost[like.post_id].push(like.user_id);
+            postLikesByPost[like.post_id].push(like.user_id);
+        }
+
+        const commentLikesByComment: { [key: string]: string[] } = {};
+        for (const like of commentLikesResult.rows) {
+            if (!commentLikesByComment[like.comment_id]) {
+                commentLikesByComment[like.comment_id] = [];
+            }
+            commentLikesByComment[like.comment_id].push(like.user_id);
         }
 
         const commentsByPost: { [key: string]: WorkfeedComment[] } = {};
         for (const comment of commentsResult.rows) {
+            const fullComment: WorkfeedComment = {
+                ...comment,
+                likes: commentLikesByComment[comment.id] || [],
+            };
             if (!commentsByPost[comment.post_id]) {
                 commentsByPost[comment.post_id] = [];
             }
-            commentsByPost[comment.post_id].push(comment);
+            commentsByPost[comment.post_id].push(fullComment);
         }
         
         return postsResult.rows.map(post => ({
             ...post,
-            likes: likesByPost[post.id] || [],
+            likes: postLikesByPost[post.id] || [],
             comments: commentsByPost[post.id] || [],
         }));
 
@@ -98,20 +108,17 @@ export async function toggleLikeAction(postId: string, userId: string): Promise<
     }
 
     try {
-        // Check if the user already liked the post
         const likeResult = await db.query(
             'SELECT * FROM workfeed_likes WHERE post_id = $1 AND user_id = $2',
             [postId, userId]
         );
 
         if (likeResult.rows.length > 0) {
-            // User has liked it, so unlike it
             await db.query(
                 'DELETE FROM workfeed_likes WHERE post_id = $1 AND user_id = $2',
                 [postId, userId]
             );
         } else {
-            // User has not liked it, so like it
             await db.query(
                 'INSERT INTO workfeed_likes (post_id, user_id) VALUES ($1, $2)',
                 [postId, userId]
@@ -125,6 +132,41 @@ export async function toggleLikeAction(postId: string, userId: string): Promise<
     } catch (error) {
         console.error('Error toggling like:', error);
         return { success: false, error: 'Failed to update like status.' };
+    }
+}
+
+export async function toggleCommentLikeAction(commentId: string, userId: string): Promise<{ success: boolean; error?: string }> {
+    await setupDatabase();
+    
+    if (!userId) {
+        return { success: false, error: 'You must be logged in to like a comment.' };
+    }
+
+    try {
+        const likeResult = await db.query(
+            'SELECT * FROM workfeed_comment_likes WHERE comment_id = $1 AND user_id = $2',
+            [commentId, userId]
+        );
+
+        if (likeResult.rows.length > 0) {
+            await db.query(
+                'DELETE FROM workfeed_comment_likes WHERE comment_id = $1 AND user_id = $2',
+                [commentId, userId]
+            );
+        } else {
+            await db.query(
+                'INSERT INTO workfeed_comment_likes (comment_id, user_id) VALUES ($1, $2)',
+                [commentId, userId]
+            );
+        }
+        
+        revalidatePath('/admin/workfeed');
+        revalidatePath('/dashboard/workfeed');
+        return { success: true };
+
+    } catch (error) {
+        console.error('Error toggling comment like:', error);
+        return { success: false, error: 'Failed to update comment like status.' };
     }
 }
 
@@ -142,14 +184,39 @@ export async function addCommentAction(postId: string, content: string, author: 
              RETURNING *;`,
             [postId, author.id, author.name, author.profile_picture_url, content]
         );
-
+        const newComment = { ...result.rows[0], likes: [] };
         revalidatePath('/admin/workfeed');
         revalidatePath('/dashboard/workfeed');
-        return result.rows[0];
+        return newComment;
 
     } catch (error) {
         console.error('Error adding comment:', error);
         return { error: 'Failed to add comment.' };
+    }
+}
+
+export async function addReplyAction(postId: string, parentCommentId: string, content: string, author: PostAuthor): Promise<WorkfeedComment | { error: string }> {
+    await setupDatabase();
+    
+    if (!author) {
+        return { error: 'You must be logged in to reply.' };
+    }
+
+    try {
+        const result = await db.query(
+            `INSERT INTO workfeed_comments (post_id, parent_comment_id, author_id, author_name, author_avatar_url, content)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             RETURNING *;`,
+            [postId, parentCommentId, author.id, author.name, author.profile_picture_url, content]
+        );
+        const newReply = { ...result.rows[0], likes: [] };
+        revalidatePath('/admin/workfeed');
+        revalidatePath('/dashboard/workfeed');
+        return newReply;
+
+    } catch (error) {
+        console.error('Error adding reply:', error);
+        return { error: 'Failed to add reply.' };
     }
 }
 
@@ -170,12 +237,10 @@ export async function deletePostAction(postId: string, userId: string, userRole:
 
         const post = postResult.rows[0];
 
-        // Check if user is the author or has HR role
         if (post.author_id !== user.id && user.role !== 'HR') {
             return { success: false, error: 'You do not have permission to delete this post.' };
         }
 
-        // Deletion will cascade to likes and comments due to DB constraints
         await db.query('DELETE FROM workfeed_posts WHERE id = $1', [postId]);
         
         revalidatePath('/admin/workfeed');
@@ -205,7 +270,6 @@ export async function deleteCommentAction(commentId: string, userId: string, use
 
         const comment = commentResult.rows[0];
 
-        // Check if user is the author or has HR role
         if (comment.author_id !== user.id && user.role !== 'HR') {
             return { success: false, error: 'You do not have permission to delete this comment.' };
         }
@@ -226,7 +290,6 @@ export async function deleteCommentAction(commentId: string, userId: string, use
 export async function saveWorkfeedSettingsAction(settings: { birthday: any; anniversary: any; }): Promise<{ success: boolean; error?: string }> {
     await setupDatabase();
     try {
-        // Using an "upsert" operation
         await db.query(
             `INSERT INTO app_settings (key, value) 
              VALUES ('workfeed_automation', $1)
@@ -254,3 +317,5 @@ export async function getWorkfeedSettingsAction(): Promise<{ birthday: any; anni
         return null;
     }
 }
+
+  
