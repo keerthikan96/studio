@@ -119,6 +119,7 @@ export async function setNewPasswordAction(data: { token: string, newPassword: s
         const resetRecord = resetRecordResult.rows[0];
 
         if (!resetRecord) {
+            console.log('Invalid or expired invitation token.',resetRecordResult)
             return { success: false, error: 'Invalid or expired invitation token.' };
         }
 

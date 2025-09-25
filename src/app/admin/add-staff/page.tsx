@@ -8,17 +8,14 @@ import { Member } from "@/lib/mock-data";
 export default function AddStaffPage() {
     const router = useRouter();
 
-    const handleAddStaff = async (newStaff: Omit<Member, 'id' | 'status'>) => {
-        const result = await addStaffAction(newStaff);
+    const handleAddStaff = async (staff: Omit<Member, 'id' | 'status'>, sendInvite: boolean) => {
+        const result = await addStaffAction({ staff, sendInvite });
 
         if ('error' in result) {
             // The form will show the toast with the error
-            return false;
+            return { success: false, error: result.error };
         } else {
-            // On success, the form shows a confirmation and asks about sending an invite.
-            // We can optionally redirect from here if needed.
-            // router.push('/admin/members');
-            return true;
+            return { success: true };
         }
     };
     
@@ -28,3 +25,5 @@ export default function AddStaffPage() {
         </div>
     );
 }
+
+    

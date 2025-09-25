@@ -8,6 +8,7 @@ import {
 } from '@/ai/flows/resume-parsing-to-autofill-profile';
 import { db, setupDatabase } from '@/lib/db';
 import { Member, Note, PerformanceRecord, SelfEvaluation } from '@/lib/mock-data';
+import { requestPasswordResetAction } from './auth';
 
 export async function parseResumeAction(
   input: ParseResumeToAutofillProfileInput
@@ -21,9 +22,10 @@ export async function parseResumeAction(
   }
 }
 
-export async function addStaffAction(staffData: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url'>): Promise<Member | { error: string }> {
+export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url'>, sendInvite: boolean }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
   await setupDatabase();
-  const { name, email, phone, domain, country, branch, experience, education, skills, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone } = staffData;
+  const { staff, sendInvite } = staffData;
+  const { name, email, phone, domain, country, branch, experience, education, skills, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone } = staff;
   try {
     const result = await db.query(
       `INSERT INTO members (name, email, phone, domain, country, branch, experience, education, skills, status, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone)
@@ -31,7 +33,22 @@ export async function addStaffAction(staffData: Omit<Member, 'id' | 'status' | '
        RETURNING *;`,
       [name, email, phone, domain, country, branch, JSON.stringify(experience), JSON.stringify(education), JSON.stringify(skills), job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone]
     );
-    return result.rows[0];
+
+    const newMember = result.rows[0];
+    let invitationLink: string | undefined = undefined;
+
+    if (sendInvite) {
+        const inviteResult = await requestPasswordResetAction(newMember.email, true);
+        if (inviteResult.success && inviteResult.invitationLink) {
+            invitationLink = inviteResult.invitationLink;
+        } else {
+            console.error("Failed to generate invitation link for new member:", inviteResult.error);
+            // Decide if you want to fail the whole operation or just log the error
+        }
+    }
+    
+    return { member: newMember, invitationLink };
+
   } catch (error) {
     console.error('Error adding staff member:', error);
     return { error: 'A member with this email may already exist.' };
@@ -224,3 +241,5 @@ export async function updateSelfEvaluationAction(id: string, data: Partial<Pick<
     return { error: 'Failed to update self-evaluation.' };
   }
 }
+
+    

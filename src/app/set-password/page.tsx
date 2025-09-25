@@ -62,6 +62,7 @@ export default function SetPasswordPage() {
             });
             router.push(`/?new_user=true&email=${result.email}`);
         } else {
+            console.log(result);
              toast({
                 title: 'Error',
                 description: result.error || "Failed to set password. The link may have expired.",

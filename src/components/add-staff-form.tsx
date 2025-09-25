@@ -39,7 +39,6 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { requestPasswordResetAction } from '@/app/actions/auth';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
@@ -87,7 +86,7 @@ const formSchema = z.object({
 type StaffFormValues = z.infer<typeof formSchema>;
 
 type AddStaffFormProps = {
-    onAddStaff: (staff: Omit<Member, 'id' | 'status'>) => Promise<boolean>;
+    onAddStaff: (staff: Omit<Member, 'id' | 'status'>, sendInvite: boolean) => Promise<{ success: boolean; error?: string }>;
 };
 
 export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
@@ -183,44 +182,34 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
   
   function onSubmit(data: StaffFormValues) {
     setFormData(data);
+    setShowInviteDialog(true);
+  }
+
+  const handleSaveAndInvite = (sendInvite: boolean) => {
+    if (!formData) return;
+
     startTransition(async () => {
-        // @ts-ignore
-        const success = await onAddStaff(data);
-        if (success) {
+        const result = await onAddStaff(formData, sendInvite);
+        if (result.success) {
             toast({
                 title: 'Member Saved',
-                description: `${data.name} has been added to the member list.`,
+                description: `${formData.name} has been added to the member list.`,
             });
-            setShowInviteDialog(true);
+            if(sendInvite) {
+                toast({
+                    title: 'Invitation Sent!',
+                    description: `An invitation has been sent to ${formData.name}. Check the server console for the link.`,
+                });
+            }
+            router.push('/admin/members');
         } else {
              toast({
                 title: 'Error Saving Member',
-                description: 'A member with this email might already exist.',
-                variant: 'destructive',
-            });
-        }
-    });
-  }
-
-  const handleSendInvite = () => {
-    if (!formData) return;
-    
-    startTransition(async () => {
-        const result = await requestPasswordResetAction(formData.email, true);
-        if (result.success) {
-            toast({
-                title: 'Invitation Sent!',
-                description: `An invitation has been sent to ${formData.name}. Check the server console for the link.`,
-            });
-        } else {
-            toast({
-                title: 'Error Sending Invitation',
                 description: result.error || 'An unknown error occurred.',
                 variant: 'destructive',
             });
         }
         setShowInviteDialog(false);
-        router.push('/admin/members');
     });
   }
 
@@ -672,13 +661,13 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Send Invitation?</AlertDialogTitle>
             <AlertDialogDescription>
-              The member has been saved. Would you like to send an invitation email to {formData?.name} now?
+              The member has been saved. Would you like to send an invitation email to {formData?.name} to set up their account?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => router.push('/admin/members')}>No, Later</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSendInvite} disabled={isPending}>
-                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Yes, Send Invite'}
+            <AlertDialogCancel onClick={() => handleSaveAndInvite(false)}>No, Later</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleSaveAndInvite(true)} disabled={isPending}>
+                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Yes, Save & Send Invite'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -686,3 +675,5 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
     </>
   );
 }
+
+    
