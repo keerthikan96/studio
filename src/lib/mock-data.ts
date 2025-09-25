@@ -42,12 +42,17 @@ export type PerformanceRecord = {
     created_at: Date | string;
 };
 
+export type AssessmentCategoryComment = {
+    category: string;
+    comment: string;
+};
+
 export type SelfEvaluation = {
     id: string;
     member_id: string;
     evaluation_date: Date | string;
     self_rating?: number;
-    comments?: string;
+    comments?: AssessmentCategoryComment[];
     tags?: string[];
     attachments?: { name: string, url: string }[];
     status: 'Pending' | 'Finalized';
@@ -132,6 +137,12 @@ export type WorkfeedPost = {
     comments: WorkfeedComment[];
 };
 
+export type AssessmentCategory = {
+    id: string;
+    name: string;
+    created_at: string;
+};
+
 export const mockMembers: Member[] = [
     { 
         id: 'm_1', 
@@ -147,5 +158,3 @@ export const mockMembers: Member[] = [
         skills: ['React', 'Node.js']
     },
 ];
-
-  

@@ -35,6 +35,13 @@ const settingsModules = [
       { name: "Roles & Permissions", href: "/admin/settings/user-management/roles", isCritical: true },
     ],
   },
+  {
+    title: "Assessment Management",
+    isCollapsible: true,
+    subItems: [
+      { name: "Categories", href: "/admin/settings/assessment/categories", isCritical: false },
+    ],
+  }
 ];
 
 const SubItem = ({ name, href, isCritical }: { name: string; href: string; isCritical: boolean; }) => {

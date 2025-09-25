@@ -111,7 +111,7 @@ export async function setupDatabase() {
                 member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
                 evaluation_date DATE NOT NULL,
                 self_rating INTEGER,
-                comments TEXT,
+                comments JSONB,
                 tags TEXT[],
                 attachments JSONB,
                 status VARCHAR(50) NOT NULL DEFAULT 'Pending',
@@ -213,6 +213,14 @@ export async function setupDatabase() {
             );
         `);
         
+         await client.query(`
+            CREATE TABLE IF NOT EXISTS assessment_categories (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                name VARCHAR(255) UNIQUE NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
+        
         const member_columns = [
             { name: 'password', type: 'TEXT' },
             { name: 'profile_picture_url', type: 'VARCHAR(2048)' },
@@ -271,6 +279,21 @@ export async function setupDatabase() {
             await client.query(`ALTER TABLE workfeed_comments ADD COLUMN parent_comment_id UUID REFERENCES workfeed_comments(id) ON DELETE CASCADE;`);
         }
 
+        const { rows: selfEvalColumns } = await client.query(`
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name='self_evaluations' AND column_name='comments';
+        `);
+        if (selfEvalColumns.length > 0) {
+             const { rows: columnInfo } = await client.query(`
+                SELECT data_type FROM information_schema.columns
+                WHERE table_name='self_evaluations' AND column_name='comments';
+             `);
+             if (columnInfo[0].data_type === 'text') {
+                 await client.query(`ALTER TABLE self_evaluations ALTER COLUMN comments TYPE JSONB USING to_jsonb(comments);`);
+             }
+        }
+
+
         console.log('Database tables are ready.');
     } catch (err) {
         console.error('Error setting up the database table:', err);
@@ -281,5 +304,3 @@ export async function setupDatabase() {
         }
     }
 }
-
-  

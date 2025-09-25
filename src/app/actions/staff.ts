@@ -7,7 +7,7 @@ import {
   ParseResumeToAutofillProfileOutput,
 } from '@/ai/flows/resume-parsing-to-autofill-profile';
 import { db, setupDatabase } from '@/lib/db';
-import { Member, Note, PerformanceRecord, SelfEvaluation, Document, CourseOrCertificate } from '@/lib/mock-data';
+import { Member, Note, PerformanceRecord, SelfEvaluation, Document, CourseOrCertificate, AssessmentCategory } from '@/lib/mock-data';
 import { requestPasswordResetAction } from './auth';
 
 export async function parseResumeAction(
@@ -226,7 +226,7 @@ export async function addSelfEvaluationAction(data: Omit<SelfEvaluation, 'id' | 
       `INSERT INTO self_evaluations (member_id, evaluation_date, self_rating, comments, tags, attachments)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *;`,
-      [member_id, evaluation_date, self_rating, comments, tags, JSON.stringify(attachments)]
+      [member_id, evaluation_date, self_rating, JSON.stringify(comments), tags, JSON.stringify(attachments)]
     );
     return result.rows[0];
   } catch (error) {
@@ -347,4 +347,38 @@ export async function getCoursesAndCertificatesAction(memberId: string): Promise
   }
 }
 
-    
+export async function getAssessmentCategoriesAction(): Promise<AssessmentCategory[]> {
+    await setupDatabase();
+    try {
+        const result = await db.query('SELECT * FROM assessment_categories ORDER BY name ASC');
+        return result.rows;
+    } catch (error) {
+        console.error('Error fetching assessment categories:', error);
+        return [];
+    }
+}
+
+export async function addAssessmentCategoryAction(name: string): Promise<AssessmentCategory | { error: string }> {
+    await setupDatabase();
+    try {
+        const result = await db.query('INSERT INTO assessment_categories (name) VALUES ($1) RETURNING *', [name]);
+        return result.rows[0];
+    } catch (error) {
+        console.error('Error adding assessment category:', error);
+        return { error: 'Failed to add category. It may already exist.' };
+    }
+}
+
+export async function deleteAssessmentCategoryAction(id: string): Promise<{ success: boolean; error?: string }> {
+    await setupDatabase();
+    try {
+        const result = await db.query('DELETE FROM assessment_categories WHERE id = $1', [id]);
+        if (result.rowCount === 0) {
+            return { success: false, error: 'Category not found.' };
+        }
+        return { success: true };
+    } catch (error) {
+        console.error(`Error deleting category ${id}:`, error);
+        return { success: false, error: 'Failed to delete category.' };
+    }
+}
