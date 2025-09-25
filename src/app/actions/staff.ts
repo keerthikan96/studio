@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import {
@@ -146,26 +147,6 @@ export async function updateMemberAction(id: string, data: Omit<Partial<Member>,
     } catch (error) {
         console.error(`Error updating member with id ${id}:`, error);
         return { error: 'Failed to update member profile.' };
-    }
-}
-
-export async function deleteMemberAction(id: string): Promise<{ success: boolean }> {
-    try {
-        await db.query('DELETE FROM members WHERE id = $1', [id]);
-        return { success: true };
-    } catch (error) {
-        console.error(`Error deleting member with id ${id}:`, error);
-        return { success: false };
-    }
-}
-
-export async function updateMemberStatusAction(id: string, status: Member['status']): Promise<{ success: boolean }> {
-    try {
-        await db.query('UPDATE members SET status = $1, updated_at = NOW() WHERE id = $2', [status, id]);
-        return { success: true };
-    } catch (error) {
-        console.error(`Error updating status for member with id ${id}:`, error);
-        return { success: false };
     }
 }
 
@@ -382,5 +363,15 @@ export async function deleteAssessmentCategoryAction(id: string): Promise<{ succ
     } catch (error) {
         console.error(`Error deleting category ${id}:`, error);
         return { success: false, error: 'Failed to delete category.' };
+    }
+}
+
+export async function updateMemberStatusAction(id: string, status: Member['status']): Promise<{ success: boolean }> {
+    try {
+        await db.query('UPDATE members SET status = $1, updated_at = NOW() WHERE id = $2', [status, id]);
+        return { success: true };
+    } catch (error) {
+        console.error(`Error updating status for member with id ${id}:`, error);
+        return { success: false };
     }
 }

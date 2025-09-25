@@ -25,7 +25,7 @@ import { Member } from '@/lib/mock-data';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getMemberByIdAction, updateMemberAction, deleteMemberAction, updateMemberStatusAction } from '@/app/actions/staff';
+import { getMemberByIdAction, updateMemberAction, updateMemberStatusAction } from '@/app/actions/staff';
 import ProfilePictureUploader from '@/components/profile-picture-uploader';
 import CoverPhotoUploader from '@/components/cover-photo-uploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -711,18 +711,6 @@ export default function MemberProfilePage() {
   const handleFormSubmit = handleSubmit(() => onSubmit());
 
 
-  const handleDelete = () => {
-    startTransition(async () => {
-        const result = await deleteMemberAction(memberId);
-        if (result.success) {
-            toast({ title: "Member Terminated", description: `${member?.name} has been removed.` });
-            router.push('/admin/members');
-        } else {
-            toast({ title: "Error", description: "Failed to terminate member.", variant: "destructive" });
-        }
-    });
-  }
-
   const handleStatusChange = (status: Member['status']) => {
       if (!member) return;
       startTransition(async () => {
@@ -843,31 +831,9 @@ export default function MemberProfilePage() {
                                 <DropdownMenuItem onClick={() => handleStatusChange('on-hold')}>
                                     <PauseCircle className="mr-2 h-4 w-4" /> Set On-hold
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleStatusChange('inactive')}>
+                                <DropdownMenuItem onClick={() => handleStatusChange('inactive')} className="text-destructive">
                                     <CircleSlash className="mr-2 h-4 w-4" /> Deactivate
                                 </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                                            <Trash2 className="mr-2 h-4 w-4" /> Terminate
-                                        </DropdownMenuItem>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            This action cannot be undone. This will permanently delete the member account for {member.name}.
-                                        </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleDelete} disabled={isPending}>
-                                            {isPending ? 'Terminating...' : 'Yes, Terminate'}
-                                        </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
