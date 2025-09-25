@@ -22,7 +22,6 @@ import {
   Mail,
   MoreHorizontal,
   Pencil,
-  Trash2,
   KeyRound,
   Loader2,
   PauseCircle,
@@ -53,7 +52,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
-import { deleteMemberAction, updateMemberStatusAction } from '@/app/actions/staff';
+import { updateMemberStatusAction } from '@/app/actions/staff';
 import { requestPasswordResetAction } from '@/app/actions/auth';
 import { useToast } from '@/hooks/use-toast';
 import { MemberCard } from './member-card';
@@ -69,7 +68,6 @@ const statusStyles: { [key: string]: string } = {
 const getColumns = (
     onSendInvite: (member: Member) => void,
     onStatusChange: (member: Member, status: Member['status']) => void,
-    onDelete: (member: Member) => void,
     onSendPasswordReset: (member: Member) => void,
 ): ColumnDef<Member>[] => [
   {
@@ -169,7 +167,7 @@ const getColumns = (
                         <PauseCircle className="mr-2 h-4 w-4" />
                         Set On-hold
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onStatusChange(member, 'inactive')}>
+                    <DropdownMenuItem onClick={() => onStatusChange(member, 'inactive')} className="text-destructive">
                         <CircleSlash className="mr-2 h-4 w-4" />
                         Deactivate
                     </DropdownMenuItem>
@@ -178,11 +176,6 @@ const getColumns = (
             <DropdownMenuItem onClick={() => onSendPasswordReset(member)}>
                 <KeyRound className="mr-2 h-4 w-4" />
                 Send Password Reset
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive" onClick={() => onDelete(member)}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -210,7 +203,6 @@ export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberL
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
-  const [memberToDelete, setMemberToDelete] = React.useState<Member | null>(null);
   const [memberToReset, setMemberToReset] = React.useState<Member | null>(null);
   const [isPending, startTransition] = React.useTransition();
   const [isResetPending, startResetTransition] = React.useTransition();
@@ -236,21 +228,6 @@ export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberL
         }
     });
   };
-  
-  const handleDeleteConfirm = () => {
-    if (memberToDelete) {
-        startTransition(async () => {
-            const { success } = await deleteMemberAction(memberToDelete.id);
-            if (success) {
-                setMembers(current => current.filter(m => m.id !== memberToDelete.id));
-                toast({ title: 'Member Deleted', description: `${memberToDelete.name} has been removed.`});
-                setMemberToDelete(null);
-            } else {
-                toast({ title: 'Error', description: 'Failed to delete member.', variant: 'destructive' });
-            }
-        });
-    }
-  }
 
   const handlePasswordResetConfirm = () => {
     if (!memberToReset) return;
@@ -265,7 +242,7 @@ export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberL
     });
   };
 
-  const columns = React.useMemo(() => getColumns(onSendInvite, handleStatusChange, setMemberToDelete, setMemberToReset), [onSendInvite]);
+  const columns = React.useMemo(() => getColumns(onSendInvite, handleStatusChange, setMemberToReset), [onSendInvite]);
 
   const table = useReactTable({
     data,
@@ -396,7 +373,6 @@ export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberL
                 key={member.id}
                 member={member}
                 onStatusChange={handleStatusChange}
-                onDelete={setMemberToDelete}
                 onSendInvite={onSendInvite}
                 onSendPasswordReset={setMemberToReset}
               />
@@ -508,23 +484,6 @@ export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberL
           </Button>
         </div>
       </div>
-      <AlertDialog open={!!memberToDelete} onOpenChange={() => setMemberToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the member account for {memberToDelete?.name}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} disabled={isPending} className={buttonVariants({ variant: "destructive" })}>
-                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Yes, Delete Member
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
       <AlertDialog open={!!memberToReset} onOpenChange={() => setMemberToReset(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -545,3 +504,5 @@ export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberL
     </div>
   );
 }
+
+    

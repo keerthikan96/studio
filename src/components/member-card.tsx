@@ -4,18 +4,16 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Member } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
-import { CheckCircle, CircleSlash, Eye, Mail, MoreHorizontal, Pencil, Trash2, KeyRound, PauseCircle } from "lucide-react";
+import { CheckCircle, CircleSlash, Eye, Mail, MoreHorizontal, Pencil, KeyRound, PauseCircle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 type MemberCardProps = {
   member: Member;
   onStatusChange: (member: Member, status: Member['status']) => void;
-  onDelete: (member: Member) => void;
   onSendInvite: (member: Member) => void;
   onSendPasswordReset: (member: Member) => void;
 };
@@ -28,7 +26,7 @@ const statusStyles: { [key: string]: string } = {
 };
 
 
-export function MemberCard({ member, onStatusChange, onDelete, onSendInvite, onSendPasswordReset }: MemberCardProps) {
+export function MemberCard({ member, onStatusChange, onSendInvite, onSendPasswordReset }: MemberCardProps) {
   const fallback = member.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
 
   return (
@@ -68,7 +66,7 @@ export function MemberCard({ member, onStatusChange, onDelete, onSendInvite, onS
                                 <PauseCircle className="mr-2 h-4 w-4" />
                                 Set On-hold
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onStatusChange(member, 'inactive')}>
+                            <DropdownMenuItem onClick={() => onStatusChange(member, 'inactive')} className="text-destructive">
                                 <CircleSlash className="mr-2 h-4 w-4" />
                                 Deactivate
                             </DropdownMenuItem>
@@ -77,11 +75,6 @@ export function MemberCard({ member, onStatusChange, onDelete, onSendInvite, onS
                      <DropdownMenuItem onClick={() => onSendPasswordReset(member)}>
                         <KeyRound className="mr-2 h-4 w-4" />
                         Send Password Reset
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive" onClick={() => onDelete(member)}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
