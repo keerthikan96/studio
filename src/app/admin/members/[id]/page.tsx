@@ -29,7 +29,7 @@ import { getMemberByIdAction, updateMemberAction, updateMemberStatusAction } fro
 import ProfilePictureUploader from '@/components/profile-picture-uploader';
 import CoverPhotoUploader from '@/components/cover-photo-uploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -776,7 +776,7 @@ export default function MemberProfilePage() {
             return <NotesTab memberId={member.id} />;
         case "Performance":
             return <PerformanceTab memberId={member.id} />;
-        case "Self-assesment":
+        case "Assessments":
             return <SelfAssessmentTab memberId={member.id} />;
         case "Documents":
             return <DocumentsTab memberId={member.id} />;
@@ -791,7 +791,7 @@ export default function MemberProfilePage() {
     }
   }
 
-  const tabs = ["General", "Employment History", "Leave", "Notes", "Performance", "Documents", "Courses", "Self-assesment"];
+  const tabs = ["General", "Employment History", "Leave", "Notes", "Performance", "Documents", "Courses", "Assessments"];
 
   return (
     <div className='space-y-6'>
@@ -867,7 +867,7 @@ export default function MemberProfilePage() {
         </Card>
 
         <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-13">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 xl:grid-cols-10">
                  {tabs.map(tab => <TabsTrigger key={tab} value={tab}>{tab}</TabsTrigger>)}
             </TabsList>
 

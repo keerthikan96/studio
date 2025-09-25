@@ -707,7 +707,7 @@ export default function ProfilePage() {
             return <NotesTab memberId={member.id} />;
         case "Performance":
             return <PerformanceTab memberId={member.id} />;
-        case "Self-assesment":
+        case "Assessments":
             return <SelfAssessmentTab memberId={member.id} />;
         case "Documents":
             return <DocumentsTab memberId={member.id} />;
@@ -720,7 +720,7 @@ export default function ProfilePage() {
     }
   }
 
-  const tabs = ["General", "Employment History", "Job", "Education", "Skills", "Leave", "Notes", "Performance", "Documents", "Courses", "Self-assesment"];
+  const tabs = ["General", "Employment History", "Job", "Education", "Skills", "Leave", "Notes", "Performance", "Documents", "Courses", "Assessments"];
 
   return (
     <div className='space-y-6'>
@@ -771,7 +771,7 @@ export default function ProfilePage() {
         </Card>
 
         <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-13">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 xl:grid-cols-11">
                  {tabs.map(tab => <TabsTrigger key={tab} value={tab}>{tab}</TabsTrigger>)}
             </TabsList>
 
