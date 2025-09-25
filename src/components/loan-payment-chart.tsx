@@ -48,9 +48,9 @@ export function DashboardCalendar({ selectedDate, onDateChange }: DashboardCalen
         className="w-full p-0"
         classNames={{
             caption_label: "text-lg font-bold",
-            head_cell: "w-10 font-normal text-sm",
-            cell: "h-10 w-10 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-            day: "h-10 w-10 p-0 font-normal aria-selected:opacity-100",
+            head_cell: "w-full font-normal text-sm",
+            cell: "h-10 w-full text-center text-sm p-0 relative [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+            day: "h-10 w-full p-0 font-normal aria-selected:opacity-100",
             day_selected: "bg-primary/10 text-primary-foreground",
             day_today: "font-bold",
         }}
