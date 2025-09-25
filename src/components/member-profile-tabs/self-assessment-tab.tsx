@@ -25,7 +25,7 @@ import { Slider } from '../ui/slider';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from '../ui/alert-dialog';
 import { DateRange } from 'react-day-picker';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
-import { ChevronsUpDown } from 'lucide-react';
+import { Check, ChevronsUpDown } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 
 
@@ -322,6 +322,12 @@ export function SelfAssessmentTab({ memberId }: SelfAssessmentTabProps) {
                                                                         setCategoryPopoverOpen(false);
                                                                     }}
                                                                 >
+                                                                     <Check
+                                                                        className={cn(
+                                                                            "mr-2 h-4 w-4",
+                                                                            commentFields.some(c => c.category === category.name) ? "opacity-100" : "opacity-0"
+                                                                        )}
+                                                                    />
                                                                     {category.name}
                                                                 </CommandItem>
                                                                 ))}
