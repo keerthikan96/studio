@@ -41,6 +41,13 @@ const settingsModules = [
     subItems: [
       { name: "Categories", href: "/admin/settings/assessment/categories", isCritical: false },
     ],
+  },
+  {
+    title: "Leave Management",
+    isCollapsible: true,
+    subItems: [
+      { name: "Leave Requests", href: "/admin/settings/leave", isCritical: false },
+    ],
   }
 ];
 
