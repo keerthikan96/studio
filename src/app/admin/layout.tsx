@@ -18,7 +18,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, Briefcase, Award, Calendar as CalendarIcon, User, FileText, Search, Bell, Newspaper, Settings, ChevronDown, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, Award, Calendar as CalendarIcon, User, FileText, Search, Bell, Newspaper, Settings, ChevronDown, ClipboardList, FlaskConical } from "lucide-react";
 import Logo from "@/components/logo";
 import UserNav from "@/components/user-nav";
 import { Input } from "@/components/ui/input";
@@ -59,6 +59,10 @@ export default function AdminLayout({
     { href: "/admin/leave", label: "Leave", icon: CalendarIcon },
     { href: "/admin/notice", label: "Notice", icon: FileText },
     { href: "/dashboard/profile", label: "Profile", icon: User },
+  ];
+  
+  const devMenuItems = [
+    { href: "/admin/sample", label: "Sample Page", icon: FlaskConical },
   ];
 
   const getIsActive = (href: string, subItems?: any[]) => {
@@ -156,6 +160,25 @@ export default function AdminLayout({
                 </SidebarMenuItem>
             ))}
           </SidebarMenu>
+          
+           <SidebarGroup>
+                <SidebarGroupLabel>Developer</SidebarGroupLabel>
+                 <SidebarMenu>
+                    {isClient && devMenuItems.map((item, index) => (
+                        <SidebarMenuItem key={index}>
+                            <Link href={item.href!}>
+                                <SidebarMenuButton
+                                isActive={getIsActive(item.href!)}
+                                tooltip={{ children: item.label }}
+                                >
+                                <item.icon />
+                                <span>{item.label}</span>
+                                </SidebarMenuButton>
+                            </Link>
+                        </SidebarMenuItem>
+                    ))}
+                </SidebarMenu>
+            </SidebarGroup>
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
