@@ -5,7 +5,6 @@ import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { LeaveEntitlement, LeaveRequest } from '@/lib/mock-data';
 import { getMemberEntitlementsAction, getMemberLeaveRequestsAction } from '@/app/actions/leave';
-import { Progress } from '../ui/progress';
 import { Loader2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Badge } from '../ui/badge';
@@ -57,7 +56,7 @@ export function MemberLeaveInfo({ memberId, refetchTrigger }: MemberLeaveInfoPro
     }, [requests]);
 
 
-    if (isPending) {
+    if (isPending && entitlements.length === 0 && requests.length === 0) {
         return (
              <Card>
                 <CardHeader>
@@ -72,41 +71,44 @@ export function MemberLeaveInfo({ memberId, refetchTrigger }: MemberLeaveInfoPro
 
     return (
         <div className='space-y-6'>
-            <Card>
-                <CardHeader>
-                    <CardTitle>My Leave Entitlements</CardTitle>
-                    <CardDescription>Your available leave days for the current year.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                     {entitlements.length > 0 ? (
-                        <Accordion type="single" collapsible className="w-full">
-                            {entitlements.map(ent => {
-                                const usedDays = usedDaysByCategory[ent.category_id] || 0;
-                                const remaining = ent.days - usedDays;
-                                const progress = (usedDays / ent.days) * 100;
-                                return (
-                                    <AccordionItem value={ent.id} key={ent.id}>
-                                        <AccordionTrigger>
-                                            <div className='flex justify-between w-full pr-4'>
-                                                <span>{ent.leave_category_name}</span>
-                                                <span className='text-muted-foreground'>{remaining} / {ent.days} days left</span>
-                                            </div>
-                                        </AccordionTrigger>
-                                        <AccordionContent className="pt-2">
-                                            <div className="flex justify-between mb-1">
-                                                <span className="text-sm text-muted-foreground">Used: {usedDays} days</span>
-                                                <span className="text-sm text-muted-foreground">Total: {ent.days} days</span>
-                                            </div>
-                                            <Progress value={progress} />
-                                        </AccordionContent>
-                                    </AccordionItem>
-                                )
-                            })}
-                        </Accordion>
-                    ) : <p className='text-sm text-muted-foreground'>No entitlements found for this year.</p>}
-                </CardContent>
-            </Card>
-
+            <Accordion type="single" collapsible className="w-full" defaultValue='item-1'>
+                <AccordionItem value="item-1">
+                    <AccordionTrigger className="text-lg font-semibold">
+                        My Leave Entitlements
+                    </AccordionTrigger>
+                    <AccordionContent>
+                         {isPending ? <div className='flex justify-center p-4'><Loader2 className="h-6 w-6 animate-spin" /></div> : (
+                            entitlements.length > 0 ? (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Category Name</TableHead>
+                                            <TableHead className="text-center">Allocated</TableHead>
+                                            <TableHead className="text-center">Used</TableHead>
+                                            <TableHead className="text-right">Available</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {entitlements.map(ent => {
+                                            const usedDays = usedDaysByCategory[ent.category_id] || 0;
+                                            const available = ent.days - usedDays;
+                                            return (
+                                                <TableRow key={ent.id}>
+                                                    <TableCell className="font-medium">{ent.leave_category_name}</TableCell>
+                                                    <TableCell className="text-center">{ent.days}</TableCell>
+                                                    <TableCell className="text-center">{usedDays}</TableCell>
+                                                    <TableCell className="text-right font-bold">{available}</TableCell>
+                                                </TableRow>
+                                            )
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            ) : <p className='text-sm text-muted-foreground p-4 text-center'>No entitlements found for this year.</p>
+                         )}
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
+            
             <Card>
                  <CardHeader>
                     <CardTitle>My Leave Requests</CardTitle>
@@ -122,14 +124,19 @@ export function MemberLeaveInfo({ memberId, refetchTrigger }: MemberLeaveInfoPro
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {requests.slice(0, 5).map(req => ( // Show recent 5
-                                <TableRow key={req.id}>
-                                    <TableCell>{req.leave_category_name}</TableCell>
-                                    <TableCell>{format(new Date(req.start_date), 'MMM d')} - {format(new Date(req.end_date), 'MMM d')}</TableCell>
-                                    <TableCell><Badge variant="outline" className={cn(statusStyles[req.status])}>{req.status}</Badge></TableCell>
+                            {isPending && requests.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="text-center h-24"><Loader2 className="h-6 w-6 animate-spin" /></TableCell>
                                 </TableRow>
-                            ))}
-                             {requests.length === 0 && (
+                            ) : requests.length > 0 ? (
+                                requests.slice(0, 5).map(req => ( // Show recent 5
+                                    <TableRow key={req.id}>
+                                        <TableCell>{req.leave_category_name}</TableCell>
+                                        <TableCell>{format(new Date(req.start_date), 'MMM d')} - {format(new Date(req.end_date), 'MMM d')}</TableCell>
+                                        <TableCell><Badge variant="outline" className={cn(statusStyles[req.status])}>{req.status}</Badge></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
                                 <TableRow>
                                     <TableCell colSpan={3} className="text-center h-24">No requests submitted yet.</TableCell>
                                 </TableRow>
