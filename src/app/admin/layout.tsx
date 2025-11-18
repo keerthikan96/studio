@@ -15,6 +15,7 @@ import {
   SidebarTrigger,
   SidebarInput,
   SidebarGroup,
+  SidebarGroupLabel,
   SidebarMenuSub,
   SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
