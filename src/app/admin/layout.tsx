@@ -62,10 +62,6 @@ export default function AdminLayout({
     { href: "/dashboard/profile", label: "Profile", icon: User },
   ];
   
-  const devMenuItems = [
-    { href: "/admin/sample", label: "Sample Page", icon: FlaskConical },
-  ];
-
   const getIsActive = (href: string, subItems?: any[]) => {
      if (subItems) {
        return subItems.some(item => pathname.startsWith(item.href));
@@ -161,25 +157,6 @@ export default function AdminLayout({
                 </SidebarMenuItem>
             ))}
           </SidebarMenu>
-          
-           <SidebarGroup>
-                <SidebarGroupLabel>Developer</SidebarGroupLabel>
-                 <SidebarMenu>
-                    {isClient && devMenuItems.map((item, index) => (
-                        <SidebarMenuItem key={index}>
-                            <Link href={item.href!}>
-                                <SidebarMenuButton
-                                isActive={getIsActive(item.href!)}
-                                tooltip={{ children: item.label }}
-                                >
-                                <item.icon />
-                                <span>{item.label}</span>
-                                </SidebarMenuButton>
-                            </Link>
-                        </SidebarMenuItem>
-                    ))}
-                </SidebarMenu>
-            </SidebarGroup>
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
