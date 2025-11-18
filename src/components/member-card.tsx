@@ -80,7 +80,7 @@ export function MemberCard({ member, onStatusChange, onSendInvite, onSendPasswor
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
+                        <DropdownMenuSubTrigger disabled={member.status !== 'active'}>
                             <ShieldQuestion className="mr-2 h-4 w-4" />
                             Change Role
                         </DropdownMenuSubTrigger>

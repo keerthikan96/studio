@@ -118,7 +118,7 @@ const getColumns = (
     header: 'Domain',
     cell: ({ row }) => <div className="capitalize">{row.getValue('domain')}</div>
   },
-  {
+   {
     accessorKey: 'country',
     header: 'Country',
     cell: ({ row }) => <div className="capitalize">{row.getValue('country')}</div>
@@ -190,7 +190,7 @@ const getColumns = (
             </DropdownMenuItem>
             <DropdownMenuSeparator />
              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
+                <DropdownMenuSubTrigger disabled={member.status !== 'active'}>
                     <ShieldQuestion className="mr-2 h-4 w-4" />
                     Change Role
                 </DropdownMenuSubTrigger>
