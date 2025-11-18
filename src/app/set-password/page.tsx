@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -106,7 +105,7 @@ export default function SetPasswordPage() {
                 <Logo />
             </div>
           <CardTitle>Create Your Password</CardTitle>
-          <CardDescription>Welcome to StaffSync! Please set a secure password for {email}.</CardDescription>
+          <CardDescription>Welcome to MDP! Please set a secure password for {email}.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>

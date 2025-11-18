@@ -11,7 +11,7 @@ export default function Home() {
             <div className="flex justify-center mb-4">
                 <Logo />
             </div>
-            <CardTitle>Welcome to StaffSync</CardTitle>
+            <CardTitle>Welcome to MDP</CardTitle>
             <CardDescription>
               Log in to access your dashboard.
             </CardDescription>

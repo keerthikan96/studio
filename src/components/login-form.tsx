@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -106,7 +105,7 @@ export default function LoginForm() {
             <FormItem>
               <FormLabel>Email Address</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="e.g. alex.doe@staffsync.com" {...field} />
+                <Input type="email" placeholder="e.g. alex.doe@mdp.com" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
