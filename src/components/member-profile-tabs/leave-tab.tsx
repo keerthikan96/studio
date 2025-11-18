@@ -18,21 +18,17 @@ export function LeaveTab({ memberId }: LeaveTabProps) {
     };
     
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-2">
-                 <Card>
-                    <CardHeader className='flex-row items-center justify-between'>
-                        <div>
-                            <CardTitle>Leave Information</CardTitle>
-                            <CardDescription>View entitlements and history.</CardDescription>
-                        </div>
-                        <LeaveRequestDialog userId={memberId} onNewRequest={handleNewRequest} />
-                    </CardHeader>
-                    <CardContent>
-                        <MemberLeaveInfo memberId={memberId} refetchTrigger={refetchTrigger} />
-                    </CardContent>
-                 </Card>
-            </div>
-        </div>
+        <Card>
+            <CardHeader className='flex-row items-center justify-between'>
+                <div>
+                    <CardTitle>Leave Information</CardTitle>
+                    <CardDescription>View entitlements and history.</CardDescription>
+                </div>
+                <LeaveRequestDialog userId={memberId} onNewRequest={handleNewRequest} />
+            </CardHeader>
+            <CardContent>
+                <MemberLeaveInfo memberId={memberId} refetchTrigger={refetchTrigger} />
+            </CardContent>
+        </Card>
     );
 }
