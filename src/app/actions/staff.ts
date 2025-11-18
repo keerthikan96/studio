@@ -23,7 +23,7 @@ export async function parseResumeAction(
   }
 }
 
-export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url'>, sendInvite: boolean, resume?: { url: string, type: string, size: number } }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
+export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'role'>, sendInvite: boolean, resume?: { url: string, type: string, size: number } }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
   await setupDatabase();
   const { staff, sendInvite, resume } = staffData;
   const { name, email, phone, domain, country, branch, experience, education, skills, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, hobbies, volunteer_work } = staff;
@@ -34,8 +34,8 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
       await client.query('BEGIN');
 
       const result = await client.query(
-        `INSERT INTO members (name, email, phone, domain, country, branch, experience, education, skills, status, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, hobbies, volunteer_work)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12, $13, $14, $15, $16, $17)
+        `INSERT INTO members (name, email, phone, domain, country, branch, experience, education, skills, status, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, hobbies, volunteer_work, role)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12, $13, $14, $15, $16, $17, 'staff')
          RETURNING *;`,
         [name, email, phone, domain, country, branch, JSON.stringify(experience), JSON.stringify(education), JSON.stringify(skills), job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, JSON.stringify(hobbies), JSON.stringify(volunteer_work)]
       );
@@ -99,7 +99,7 @@ export async function getMemberByIdAction(id: string): Promise<Member | null> {
 }
 
 export async function updateMemberAction(id: string, data: Omit<Partial<Member>, 'id' | 'created_at' | 'updated_at'>): Promise<Member | { error: string }> {
-    const { name, email, phone, domain, country, branch, experience, education, skills, status, profile_picture_url, cover_photo_url, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, hobbies, volunteer_work } = data;
+    const { name, email, phone, domain, country, branch, experience, education, skills, status, profile_picture_url, cover_photo_url, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, hobbies, volunteer_work, role } = data;
     try {
         const fields: string[] = [];
         const values: any[] = [];
@@ -125,6 +125,7 @@ export async function updateMemberAction(id: string, data: Omit<Partial<Member>,
         if (emergency_contact_phone !== undefined) { fields.push(`emergency_contact_phone = $${fieldIndex++}`); values.push(emergency_contact_phone); }
         if (hobbies !== undefined) { fields.push(`hobbies = $${fieldIndex++}`); values.push(JSON.stringify(hobbies)); }
         if (volunteer_work !== undefined) { fields.push(`volunteer_work = $${fieldIndex++}`); values.push(JSON.stringify(volunteer_work)); }
+        if (role !== undefined) { fields.push(`role = $${fieldIndex++}`); values.push(role); }
         
         if (fields.length === 0) {
             const member = await getMemberByIdAction(id);
@@ -373,5 +374,18 @@ export async function updateMemberStatusAction(id: string, status: Member['statu
     } catch (error) {
         console.error(`Error updating status for member with id ${id}:`, error);
         return { success: false };
+    }
+}
+
+export async function updateMemberRoleAction(id: string, role: Member['role']): Promise<{ success: boolean; error?: string }> {
+    try {
+        const result = await db.query('UPDATE members SET role = $1, updated_at = NOW() WHERE id = $2', [role, id]);
+         if (result.rowCount === 0) {
+            return { success: false, error: 'Member not found.' };
+        }
+        return { success: true };
+    } catch (error) {
+        console.error(`Error updating role for member with id ${id}:`, error);
+        return { success: false, error: 'Failed to update member role.' };
     }
 }

@@ -48,7 +48,7 @@ export async function loginAction(credentials: { email: string, password: string
             : password === 'password';
 
         if (isPasswordCorrect) {
-            return { user: { id: member.id, name: member.name, email: member.email, role: 'staff' } };
+            return { user: { id: member.id, name: member.name, email: member.email, role: member.role } };
         } else {
             return { error: 'Invalid password.' };
         }

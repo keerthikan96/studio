@@ -97,6 +97,7 @@ export type Member = {
     country?: 'Canada' | 'USA' | 'Sri Lanka';
     branch?: string; // Can be a state, province, or a Sri Lankan branch
     status: 'active' | 'pending' | 'inactive' | 'on-hold';
+    role: 'staff' | 'HR';
     phone?: string;
     experience?: WorkExperience[];
     education?: Education[];
@@ -155,6 +156,7 @@ export const mockMembers: Member[] = [
         country: 'USA', 
         branch: 'New York', 
         status: 'active',
+        role: 'staff',
         phone: '123-456-7890',
         experience: [{ companyName: 'Tech Solutions', role: 'Sr. Engineer', years: '2019-2023', keyResponsibilities: 'Developed cool stuff.' }],
         education: [{ institution: 'State University', degree: 'B.Sc. CS', years: '2015-2019' }],

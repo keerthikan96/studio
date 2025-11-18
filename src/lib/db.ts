@@ -53,6 +53,7 @@ export async function setupDatabase() {
                 country VARCHAR(100),
                 branch VARCHAR(100),
                 status VARCHAR(50) NOT NULL DEFAULT 'pending',
+                role VARCHAR(50) NOT NULL DEFAULT 'staff',
                 experience JSONB,
                 education JSONB,
                 skills JSONB,
@@ -249,6 +250,7 @@ export async function setupDatabase() {
             { name: 'emergency_contact_phone', type: 'VARCHAR(50)' },
             { name: 'hobbies', type: 'JSONB' },
             { name: 'volunteer_work', type: 'JSONB' },
+            { name: 'role', type: 'VARCHAR(50) NOT NULL DEFAULT \'staff\'' },
         ];
 
         for (const col of member_columns) {

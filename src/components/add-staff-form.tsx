@@ -87,7 +87,7 @@ const formSchema = z.object({
 type StaffFormValues = z.infer<typeof formSchema>;
 
 type AddStaffFormProps = {
-    onAddStaff: (staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url'>, sendInvite: boolean, resume?: { url: string, type: string, size: number } }) => Promise<{ success: boolean; error?: string }>;
+    onAddStaff: (staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'role'>, sendInvite: boolean, resume?: { url: string, type: string, size: number } }) => Promise<{ success: boolean; error?: string }>;
 };
 
 export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
@@ -721,5 +721,3 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
     </>
   );
 }
-
-    
