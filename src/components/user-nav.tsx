@@ -94,6 +94,10 @@ export default function UserNav() {
   const fallback = user.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
   const imageSrc = user.profile_picture_url;
   
+  const profileLink = user.role === 'HR' 
+    ? (user.id === 'admin-user-001' ? '/admin/dashboard' : `/admin/members/${user.id}`) 
+    : '/dashboard/profile';
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -126,7 +130,7 @@ export default function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <Link href={user.role === 'HR' ? '/admin/profile' : '/profile'}>
+          <Link href={profileLink}>
             <DropdownMenuItem>
               <User className="mr-2 h-4 w-4" />
               <span>Profile</span>
