@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 
 const statusStyles: { [key: string]: string } = {
   Pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -76,21 +77,33 @@ export function MemberLeaveInfo({ memberId, refetchTrigger }: MemberLeaveInfoPro
                     <CardTitle>My Leave Entitlements</CardTitle>
                     <CardDescription>Your available leave days for the current year.</CardDescription>
                 </CardHeader>
-                <CardContent className='space-y-4'>
-                    {entitlements.length > 0 ? entitlements.map(ent => {
-                        const usedDays = usedDaysByCategory[ent.category_id] || 0;
-                        const remaining = ent.days - usedDays;
-                        const progress = (usedDays / ent.days) * 100;
-                        return (
-                            <div key={ent.id}>
-                                <div className="flex justify-between mb-1">
-                                    <span className="text-sm font-medium">{ent.leave_category_name}</span>
-                                    <span className="text-sm text-muted-foreground">{remaining} / {ent.days} days remaining</span>
-                                </div>
-                                <Progress value={progress} />
-                            </div>
-                        )
-                    }) : <p className='text-sm text-muted-foreground'>No entitlements found for this year.</p>}
+                <CardContent>
+                     {entitlements.length > 0 ? (
+                        <Accordion type="single" collapsible className="w-full">
+                            {entitlements.map(ent => {
+                                const usedDays = usedDaysByCategory[ent.category_id] || 0;
+                                const remaining = ent.days - usedDays;
+                                const progress = (usedDays / ent.days) * 100;
+                                return (
+                                    <AccordionItem value={ent.id} key={ent.id}>
+                                        <AccordionTrigger>
+                                            <div className='flex justify-between w-full pr-4'>
+                                                <span>{ent.leave_category_name}</span>
+                                                <span className='text-muted-foreground'>{remaining} / {ent.days} days left</span>
+                                            </div>
+                                        </AccordionTrigger>
+                                        <AccordionContent className="pt-2">
+                                            <div className="flex justify-between mb-1">
+                                                <span className="text-sm text-muted-foreground">Used: {usedDays} days</span>
+                                                <span className="text-sm text-muted-foreground">Total: {ent.days} days</span>
+                                            </div>
+                                            <Progress value={progress} />
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                )
+                            })}
+                        </Accordion>
+                    ) : <p className='text-sm text-muted-foreground'>No entitlements found for this year.</p>}
                 </CardContent>
             </Card>
 
