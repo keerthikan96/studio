@@ -25,6 +25,7 @@ import {
   KeyRound,
   Loader2,
   PauseCircle,
+  ShieldQuestion,
 } from 'lucide-react';
 
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -35,7 +36,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuPortal,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
@@ -52,7 +57,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
-import { updateMemberStatusAction } from '@/app/actions/staff';
+import { updateMemberRoleAction, updateMemberStatusAction } from '@/app/actions/staff';
 import { requestPasswordResetAction } from '@/app/actions/auth';
 import { useToast } from '@/hooks/use-toast';
 import { MemberCard } from './member-card';
@@ -69,6 +74,7 @@ const getColumns = (
     onSendInvite: (member: Member) => void,
     onStatusChange: (member: Member, status: Member['status']) => void,
     onSendPasswordReset: (member: Member) => void,
+    onRoleChange: (member: Member, role: Member['role']) => void,
 ): ColumnDef<Member>[] => [
   {
     id: 'select',
@@ -95,12 +101,17 @@ const getColumns = (
   {
     accessorKey: 'name',
     header: 'Name',
-    cell: ({ row }) => <div className="capitalize">{row.getValue('name')}</div>,
+    cell: ({ row }) => <div className="capitalize font-medium">{row.getValue('name')}</div>,
   },
   {
     accessorKey: 'email',
     header: 'Email',
-    cell: ({ row }) => <div className="lowercase">{row.getValue('email')}</div>,
+    cell: ({ row }) => <div className="lowercase text-muted-foreground">{row.getValue('email')}</div>,
+  },
+  {
+    accessorKey: 'role',
+    header: 'Role',
+    cell: ({ row }) => <div className="capitalize">{row.getValue('role')}</div>
   },
   {
     accessorKey: 'domain',
@@ -108,20 +119,10 @@ const getColumns = (
     cell: ({ row }) => <div className="capitalize">{row.getValue('domain')}</div>
   },
   {
-    accessorKey: 'country',
-    header: 'Country',
-    cell: ({ row }) => <div className="capitalize">{row.getValue('country')}</div>
-  },
-  {
-    accessorKey: 'branch',
-    header: 'Branch',
-    cell: ({ row }) => <div className="capitalize">{row.getValue('branch')}</div>
-  },
-  {
     accessorKey: 'status',
     header: 'Status',
     cell: ({ row }) => (
-        <Badge variant="outline" className={cn(statusStyles[row.getValue('status')] || '')}>
+        <Badge variant="outline" className={cn("capitalize", statusStyles[row.getValue('status')] || '')}>
             {row.getValue('status')}
         </Badge>
     ),
@@ -177,6 +178,25 @@ const getColumns = (
                 <KeyRound className="mr-2 h-4 w-4" />
                 Send Password Reset
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+             <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                    <ShieldQuestion className="mr-2 h-4 w-4" />
+                    Change Role
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                    <DropdownMenuSubContent>
+                        <DropdownMenuItem onClick={() => onRoleChange(member, 'staff')} disabled={member.role === 'staff'}>
+                            <CheckCircle className={`mr-2 h-4 w-4 ${member.role === 'staff' ? 'opacity-100' : 'opacity-0'}`} />
+                            Staff
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onRoleChange(member, 'HR')} disabled={member.role === 'HR'}>
+                            <CheckCircle className={`mr-2 h-4 w-4 ${member.role === 'HR' ? 'opacity-100' : 'opacity-0'}`} />
+                            HR (Admin)
+                        </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+            </DropdownMenuSub>
           </DropdownMenuContent>
         </DropdownMenu>
       );
@@ -228,6 +248,18 @@ export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberL
         }
     });
   };
+  
+  const handleRoleChange = (member: Member, role: Member['role']) => {
+      startTransition(async () => {
+          const { success, error } = await updateMemberRoleAction(member.id, role);
+          if (success) {
+              setMembers(current => current.map(m => m.id === member.id ? {...m, role } : m));
+              toast({ title: 'Role Updated', description: `${member.name}'s role has been changed to ${role}.`});
+          } else {
+              toast({ title: 'Error', description: error || 'Failed to update role.', variant: 'destructive' });
+          }
+      });
+  }
 
   const handlePasswordResetConfirm = () => {
     if (!memberToReset) return;
@@ -242,7 +274,7 @@ export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberL
     });
   };
 
-  const columns = React.useMemo(() => getColumns(onSendInvite, handleStatusChange, setMemberToReset), [onSendInvite]);
+  const columns = React.useMemo(() => getColumns(onSendInvite, handleStatusChange, setMemberToReset, handleRoleChange), [onSendInvite]);
 
   const table = useReactTable({
     data,
@@ -375,6 +407,7 @@ export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberL
                 onStatusChange={handleStatusChange}
                 onSendInvite={onSendInvite}
                 onSendPasswordReset={setMemberToReset}
+                onRoleChange={handleRoleChange}
               />
             ))
           ) : (
