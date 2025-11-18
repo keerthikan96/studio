@@ -95,7 +95,7 @@ export default function UserNav() {
   const imageSrc = user.profile_picture_url;
   
   const profileLink = user.role === 'HR' 
-    ? (user.id === 'admin-user-001' ? '/admin/dashboard' : `/admin/members/${user.id}`) 
+    ? `/dashboard/profile` 
     : '/dashboard/profile';
 
   return (
