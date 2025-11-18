@@ -33,6 +33,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import Logo from '@/components/logo';
+import Link from 'next/link';
 
 export default function SamplePage() {
   return (
@@ -45,23 +46,29 @@ export default function SamplePage() {
           <SidebarContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton href="/admin/dashboard" isActive>
-                  <Home />
-                  <span>Dashboard</span>
-                </SidebarMenuButton>
+                <Link href="/admin/dashboard">
+                  <SidebarMenuButton isActive>
+                    <Home />
+                    <span>Dashboard</span>
+                  </SidebarMenuButton>
+                </Link>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton href="#">
-                  <Users />
-                  <span>Users</span>
-                  <SidebarMenuBadge>12</SidebarMenuBadge>
-                </SidebarMenuButton>
+                <Link href="#">
+                  <SidebarMenuButton>
+                    <Users />
+                    <span>Users</span>
+                    <SidebarMenuBadge>12</SidebarMenuBadge>
+                  </SidebarMenuButton>
+                </Link>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton href="#">
-                  <Calendar />
-                  <span>Calendar</span>
-                </SidebarMenuButton>
+                <Link href="#">
+                  <SidebarMenuButton>
+                    <Calendar />
+                    <span>Calendar</span>
+                  </SidebarMenuButton>
+                </Link>
               </SidebarMenuItem>
             </SidebarMenu>
             <SidebarSeparator />
