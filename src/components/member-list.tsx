@@ -119,6 +119,16 @@ const getColumns = (
     cell: ({ row }) => <div className="capitalize">{row.getValue('domain')}</div>
   },
   {
+    accessorKey: 'country',
+    header: 'Country',
+    cell: ({ row }) => <div className="capitalize">{row.getValue('country')}</div>
+  },
+  {
+    accessorKey: 'branch',
+    header: 'Branch',
+    cell: ({ row }) => <div className="capitalize">{row.getValue('branch')}</div>
+  },
+  {
     accessorKey: 'status',
     header: 'Status',
     cell: ({ row }) => (
