@@ -30,9 +30,7 @@ import { getLeaveCategoriesAction, getLeaveRequestsAction, updateLeaveRequestSta
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { LeaveRequestForm } from '@/components/leave/leave-request-form';
-import { MemberLeaveInfo } from '@/components/leave/member-leave-info';
-import { LeaveStatCards } from '@/components/leave/leave-stat-cards';
+import { LeaveRequestDialog } from '@/components/leave-request-dialog';
 
 const statusStyles: { [key: string]: string } = {
   Pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -146,122 +144,109 @@ export default function LeaveManagementPage() {
         return <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
 
-    // HR sees the full management dashboard
-    if (user.role === 'HR') {
-        return (
-            <div className="space-y-6">
-                <LeaveStatCards requests={requests} />
-                <Card>
-                <CardHeader>
+    return (
+        <div className="space-y-6">
+            <Card>
+            <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between">
+                <div>
                     <CardTitle>Leave Requests</CardTitle>
                     <CardDescription>Filter and manage staff time-off requests.</CardDescription>
-                    <div className="flex items-center gap-4 pt-4">
+                </div>
+                {user && <LeaveRequestDialog userId={user.id} onNewRequest={fetchLeaveData} />}
+            </CardHeader>
+            <CardContent>
+                <div className="flex items-center gap-4 pt-4 mb-4 flex-wrap">
+                <Select
+                    value={(table.getColumn('leave_category_name')?.getFilterValue() as string) ?? ''}
+                    onValueChange={value => table.getColumn('leave_category_name')?.setFilterValue(value === 'all' ? '' : value)}
+                >
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Filter by category..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories.map(cat => <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>)}
+                    </SelectContent>
+                </Select>
                     <Select
-                        value={(table.getColumn('leave_category_name')?.getFilterValue() as string) ?? ''}
-                        onValueChange={value => table.getColumn('leave_category_name')?.setFilterValue(value === 'all' ? '' : value)}
-                    >
-                        <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Filter by category..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                        <SelectItem value="all">All Categories</SelectItem>
-                        {categories.map(cat => <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                     <Select
-                        value={(table.getColumn('status')?.getFilterValue() as string) ?? ''}
-                        onValueChange={value => table.getColumn('status')?.setFilterValue(value === 'all' ? '' : value)}
-                    >
-                        <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Filter by status..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                        <SelectItem value="all">All Statuses</SelectItem>
-                        <SelectItem value="Pending">Pending</SelectItem>
-                        <SelectItem value="Approved">Approved</SelectItem>
-                        <SelectItem value="Rejected">Rejected</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border">
-                    <Table>
-                        <TableHeader>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
-                            {headerGroup.headers.map((header) => {
-                                return (
-                                <TableHead key={header.id}>
-                                    {header.isPlaceholder
-                                    ? null
-                                    : flexRender(header.column.columnDef.header, header.getContext())}
-                                </TableHead>
-                                );
-                            })}
-                            </TableRow>
-                        ))}
-                        </TableHeader>
-                        <TableBody>
-                        {isPending ? (
-                             <TableRow>
-                                <TableCell colSpan={columns.length} className="h-24 text-center">
-                                    <Loader2 className="mx-auto h-8 w-8 animate-spin" />
-                                </TableCell>
-                            </TableRow>
-                        ) : table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
-                            <TableRow key={row.id}>
-                                {row.getVisibleCells().map((cell) => (
-                                <TableCell key={cell.id}>
-                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                </TableCell>
-                                ))}
-                            </TableRow>
-                            ))
-                        ) : (
+                    value={(table.getColumn('status')?.getFilterValue() as string) ?? ''}
+                    onValueChange={value => table.getColumn('status')?.setFilterValue(value === 'all' ? '' : value)}
+                >
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Filter by status..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Approved">Approved</SelectItem>
+                    <SelectItem value="Rejected">Rejected</SelectItem>
+                    </SelectContent>
+                </Select>
+                </div>
+                <div className="rounded-md border">
+                <Table>
+                    <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                        <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => {
+                            return (
+                            <TableHead key={header.id}>
+                                {header.isPlaceholder
+                                ? null
+                                : flexRender(header.column.columnDef.header, header.getContext())}
+                            </TableHead>
+                            );
+                        })}
+                        </TableRow>
+                    ))}
+                    </TableHeader>
+                    <TableBody>
+                    {isPending ? (
                             <TableRow>
                             <TableCell colSpan={columns.length} className="h-24 text-center">
-                                No results.
+                                <Loader2 className="mx-auto h-8 w-8 animate-spin" />
                             </TableCell>
-                            </TableRow>
-                        )}
-                        </TableBody>
-                    </Table>
-                    </div>
-                    <div className="flex items-center justify-end space-x-2 py-4">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => table.previousPage()}
-                        disabled={!table.getCanPreviousPage()}
-                    >
-                        Previous
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => table.nextPage()}
-                        disabled={!table.getCanNextPage()}
-                    >
-                        Next
-                    </Button>
-                    </div>
-                </CardContent>
-                </Card>
-            </div>
-        );
-    }
-    
-    // Regular staff see their own leave dashboard
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-                <LeaveRequestForm categories={categories} userId={user.id} onNewRequest={fetchLeaveData} />
-            </div>
-            <div className="space-y-6">
-                 <MemberLeaveInfo memberId={user.id} />
-            </div>
+                        </TableRow>
+                    ) : table.getRowModel().rows?.length ? (
+                        table.getRowModel().rows.map((row) => (
+                        <TableRow key={row.id}>
+                            {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id}>
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                            ))}
+                        </TableRow>
+                        ))
+                    ) : (
+                        <TableRow>
+                        <TableCell colSpan={columns.length} className="h-24 text-center">
+                            No results.
+                        </TableCell>
+                        </TableRow>
+                    )}
+                    </TableBody>
+                </Table>
+                </div>
+                <div className="flex items-center justify-end space-x-2 py-4">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.previousPage()}
+                    disabled={!table.getCanPreviousPage()}
+                >
+                    Previous
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.nextPage()}
+                    disabled={!table.getCanNextPage()}
+                >
+                    Next
+                </Button>
+                </div>
+            </CardContent>
+            </Card>
         </div>
     );
 }

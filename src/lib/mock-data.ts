@@ -171,6 +171,9 @@ export type LeaveRequest = {
     end_date: string;
     days: number;
     reason?: string;
+    project?: string;
+    project_lead?: string;
+    direct_report?: string;
     status: 'Pending' | 'Approved' | 'Rejected';
     approved_by_id?: string;
     created_at: string;

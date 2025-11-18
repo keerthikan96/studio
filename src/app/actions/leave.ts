@@ -75,11 +75,12 @@ export async function getMemberLeaveRequestsAction(memberId: string): Promise<Le
 export async function createLeaveRequestAction(data: Omit<LeaveRequest, 'id' | 'status' | 'created_at' | 'updated_at'>): Promise<LeaveRequest | { error: string }> {
     await setupDatabase();
     try {
+        const { member_id, category_id, start_date, end_date, days, reason, project, project_lead, direct_report } = data;
         const result = await db.query(
-            `INSERT INTO leave_requests (member_id, category_id, start_date, end_date, days, reason)
-             VALUES ($1, $2, $3, $4, $5, $6)
+            `INSERT INTO leave_requests (member_id, category_id, start_date, end_date, days, reason, project, project_lead, direct_report)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
              RETURNING *`,
-            [data.member_id, data.category_id, data.start_date, data.end_date, data.days, data.reason]
+            [member_id, category_id, start_date, end_date, days, reason, project, project_lead, direct_report]
         );
         revalidatePath('/admin/leave');
         return result.rows[0];
