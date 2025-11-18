@@ -102,7 +102,9 @@ export default function AdminLayout({
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <Logo />
+          <Link href="/admin/dashboard">
+            <Logo />
+          </Link>
         </SidebarHeader>
         <SidebarContent>
            <SidebarGroup>

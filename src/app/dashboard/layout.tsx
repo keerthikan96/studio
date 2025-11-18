@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from "next/link";
@@ -67,7 +68,9 @@ export default function DashboardLayout({
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <Logo />
+          <Link href="/dashboard">
+            <Logo />
+          </Link>
         </SidebarHeader>
         <SidebarContent>
            <SidebarMenu>
