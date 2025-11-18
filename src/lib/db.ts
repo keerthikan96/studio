@@ -1,4 +1,5 @@
 
+
 import { Pool } from 'pg';
 import 'dotenv/config';
 
@@ -374,6 +375,30 @@ export async function setupDatabase() {
         `);
         if (selfEvalOtherComments.length === 0) {
             await client.query(`ALTER TABLE self_evaluations ADD COLUMN other_comments TEXT;`);
+        }
+
+        // Seed leave entitlements for a specific user
+        const targetEmail = 'keerthikan12@gmail.com';
+        const { rows: memberRows } = await client.query('SELECT id FROM members WHERE email = $1', [targetEmail]);
+
+        if (memberRows.length > 0) {
+            const memberId = memberRows[0].id;
+            const currentYear = new Date().getFullYear();
+            const { rows: categories } = await client.query('SELECT id FROM leave_categories');
+            
+            for (const category of categories) {
+                const { rows: entitlementRows } = await client.query(
+                    'SELECT id FROM leave_entitlements WHERE member_id = $1 AND category_id = $2 AND year = $3',
+                    [memberId, category.id, currentYear]
+                );
+                
+                if (entitlementRows.length === 0) {
+                    await client.query(
+                        'INSERT INTO leave_entitlements (member_id, category_id, year, days) VALUES ($1, $2, $3, $4)',
+                        [memberId, category.id, currentYear, 20]
+                    );
+                }
+            }
         }
 
     } catch (err) {
