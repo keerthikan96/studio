@@ -18,13 +18,18 @@ const statusStyles: { [key: string]: string } = {
   Rejected: 'bg-red-100 text-red-800 border-red-200',
 };
 
-export function MemberLeaveInfo({ memberId }: { memberId: string }) {
+type MemberLeaveInfoProps = {
+    memberId: string;
+    refetchTrigger: number;
+}
+
+export function MemberLeaveInfo({ memberId, refetchTrigger }: MemberLeaveInfoProps) {
     const [entitlements, setEntitlements] = React.useState<LeaveEntitlement[]>([]);
     const [requests, setRequests] = React.useState<LeaveRequest[]>([]);
     const [isPending, startTransition] = React.useTransition();
 
-    React.useEffect(() => {
-        startTransition(async () => {
+    const fetchData = React.useCallback(() => {
+         startTransition(async () => {
             const currentYear = new Date().getFullYear();
             const [ents, reqs] = await Promise.all([
                 getMemberEntitlementsAction(memberId, currentYear),
@@ -34,6 +39,10 @@ export function MemberLeaveInfo({ memberId }: { memberId: string }) {
             setRequests(reqs);
         });
     }, [memberId]);
+
+    React.useEffect(() => {
+        fetchData();
+    }, [memberId, refetchTrigger, fetchData]);
     
     const usedDaysByCategory = React.useMemo(() => {
         const used: { [key: string]: number } = {};
@@ -119,4 +128,3 @@ export function MemberLeaveInfo({ memberId }: { memberId: string }) {
         </div>
     );
 }
-
