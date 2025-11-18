@@ -147,6 +147,36 @@ export type AssessmentCategory = {
     created_at: string;
 };
 
+export type LeaveCategory = {
+    id: string;
+    name: string;
+    description?: string;
+};
+
+export type LeaveEntitlement = {
+    id: string;
+    member_id: string;
+    category_id: string;
+    year: number;
+    days: number;
+    leave_category_name?: string; // Joined from leave_categories
+};
+
+export type LeaveRequest = {
+    id: string;
+    member_id: string;
+    category_id: string;
+    leave_category_name?: string; // Joined from leave_categories
+    start_date: string;
+    end_date: string;
+    days: number;
+    reason?: string;
+    status: 'Pending' | 'Approved' | 'Rejected';
+    approved_by_id?: string;
+    created_at: string;
+    updated_at: string;
+};
+
 export const mockMembers: Member[] = [
     { 
         id: 'm_1', 

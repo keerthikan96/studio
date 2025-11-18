@@ -223,6 +223,42 @@ export async function setupDatabase() {
             );
         `);
         
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS leave_categories (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                name VARCHAR(100) UNIQUE NOT NULL,
+                description TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
+
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS leave_entitlements (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                category_id UUID NOT NULL REFERENCES leave_categories(id) ON DELETE CASCADE,
+                year INTEGER NOT NULL,
+                days REAL NOT NULL,
+                UNIQUE(member_id, category_id, year)
+            );
+        `);
+
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS leave_requests (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                category_id UUID NOT NULL REFERENCES leave_categories(id) ON DELETE CASCADE,
+                start_date DATE NOT NULL,
+                end_date DATE NOT NULL,
+                days REAL NOT NULL,
+                reason TEXT,
+                status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+                approved_by_id UUID,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
+
         // Seed default assessment categories if they don't exist
         const { rows: categoryCount } = await client.query('SELECT COUNT(*) FROM assessment_categories');
         if (parseInt(categoryCount[0].count, 10) === 0) {
@@ -235,6 +271,20 @@ export async function setupDatabase() {
             ];
             for (const categoryName of defaultCategories) {
                 await client.query('INSERT INTO assessment_categories (name) VALUES ($1)', [categoryName]);
+            }
+        }
+        
+         // Seed default leave categories if they don't exist
+        const { rows: leaveCategoryCount } = await client.query('SELECT COUNT(*) FROM leave_categories');
+        if (parseInt(leaveCategoryCount[0].count, 10) === 0) {
+            const defaultLeaveCategories = [
+                { name: 'Vacation', description: 'Paid time off for rest and relaxation.' },
+                { name: 'Sick', description: 'Paid time off for illness or injury.' },
+                { name: 'Bereavement', description: 'Paid time off to grieve the loss of a loved one.' },
+                { name: 'Personal', description: 'Paid time off for personal matters.' },
+            ];
+            for (const category of defaultLeaveCategories) {
+                await client.query('INSERT INTO leave_categories (name, description) VALUES ($1, $2)', [category.name, category.description]);
             }
         }
 
