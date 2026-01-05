@@ -25,7 +25,7 @@ export type ParseResumeToAutofillProfileInput = z.infer<
 const FieldSchema = z.object({
     value: z.any().describe("The extracted value for the field."),
     confidence: z.number().min(0).max(1).describe("The confidence score (0.0 to 1.0) of the extraction for this field. If the value cannot be found, the value should be null and the confidence should be 0."),
-    source: z.literal('cv').describe("The source of the data, which is 'cv' for resume parsing.")
+    source: z.string().describe("The source of the data. For this task, it should always be 'cv'.")
 });
 
 const WorkExperienceSchema = z.object({
