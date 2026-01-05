@@ -16,9 +16,11 @@ export async function parseResumeAction(
   try {
     const result = await parseResumeToAutofillProfile(input);
     return result;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error parsing resume:', error);
-    return { error: 'Failed to parse resume. Please check the file and try again.' };
+    // Return the specific error message from the underlying service
+    const errorMessage = error.message || 'An unknown error occurred during parsing.';
+    return { error: `Failed to parse resume: ${errorMessage}` };
   }
 }
 
@@ -415,3 +417,5 @@ export async function updateMemberRoleAction(id: string, role: Member['role']): 
         return { success: false, error: 'Failed to update member role.' };
     }
 }
+
+    
