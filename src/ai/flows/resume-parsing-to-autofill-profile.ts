@@ -15,24 +15,35 @@ const ParseResumeToAutofillProfileInputSchema = z.object({
   resumeDataUri: z
     .string()
     .describe(
-      'The resume file as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.' // Corrected typo here
+      "The resume file as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'." // Corrected typo here
     ),
 });
 export type ParseResumeToAutofillProfileInput = z.infer<
   typeof ParseResumeToAutofillProfileInputSchema
 >;
 
+const FieldSchema = z.object({
+    value: z.any().describe("The extracted value for the field."),
+    confidence: z.number().min(0).max(1).describe("The confidence score (0.0 to 1.0) of the extraction for this field. If the value cannot be found, the value should be null and the confidence should be 0."),
+    source: z.literal('cv').describe("The source of the data, which is 'cv' for resume parsing.")
+});
+
 const WorkExperienceSchema = z.object({
-  companyName: z.string().describe('The name of the company.'),
-  role: z.string().describe('The role or job title.'),
-  years: z.string().describe('The start and end dates of the employment (e.g., "2018-2022" or "Jan 2020 - Present").'),
-  keyResponsibilities: z.string().describe('A summary of key responsibilities and achievements in the role.'),
+  companyName: FieldSchema.extend({ value: z.string() }),
+  role: FieldSchema.extend({ value: z.string() }),
+  years: FieldSchema.extend({ value: z.string() }),
+  keyResponsibilities: FieldSchema.extend({ value: z.string() }),
 });
 
 const EducationSchema = z.object({
-    institution: z.string().describe('The name of the educational institution.'),
-    degree: z.string().describe('The degree or qualification obtained.'),
-    years: z.string().describe('The start and end dates of the education (e.g., "2014-2018").'),
+    institution: FieldSchema.extend({ value: z.string() }),
+    degree: FieldSchema.extend({ value: z.string() }),
+    years: FieldSchema.extend({ value: z.string() }),
+});
+
+const UnsupportedFieldSchema = z.object({
+    field: z.string().describe("The name of the field that was found in the resume but is not supported by the system."),
+    value: z.string().describe("The value associated with the unsupported field."),
 });
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
@@ -43,28 +54,29 @@ const employmentTypes = ['Full-time', 'Part-time', 'Contract', 'Intern'];
 const employeeLevels = ['L1', 'L2', 'L3', 'Manager', 'Senior Manager', 'Director'];
 
 const ParseResumeToAutofillProfileOutputSchema = z.object({
-  first_name: z.string().describe("The person's first name."),
-  middle_name: z.string().optional().describe("The person's middle name, if available."),
-  last_name: z.string().describe("The person's last name."),
-  gender: z.enum(genders as [string, ...string[]]).optional().describe("The person's gender."),
-  email: z.string().email().describe("The person's email address."),
-  phone: z.string().optional().describe("The person's phone number."),
-  street_address: z.string().optional().describe('Street name and number.'),
-  city: z.string().optional().describe('City name.'),
-  state_province: z.string().optional().describe('State or province name.'),
-  postal_code: z.string().optional().describe('Postal or Zip code.'),
-  country: z.enum(countries as [string, ...string[]]).optional().describe("Guess the most likely country based on location information in the resume. Choose from: " + countries.join(', ')),
-  citizenship: z.string().optional().describe('The person\'s citizenship.'),
-  national_id: z.string().optional().describe('The person\'s National ID number.'),
-  passport_no: z.string().optional().describe('The person\'s Passport Number.'),
-  visa_work_permit: z.string().optional().describe('Visa or Work Permit details, if any.'),
-  experience: z.array(WorkExperienceSchema).describe('The work experience of the staff member.'),
-  education: z.array(EducationSchema).describe('The education details of the staff member.'),
-  skills: z.array(z.string()).describe('A list of individual skills of the staff member.'),
-  domain: z.enum(domains as [string, ...string[]]).optional().describe("The most likely job domain/department based on the resume. Choose from: " + domains.join(', ')),
-  branch: z.string().optional().describe("Guess the most likely branch, state, or province. If the country is Sri Lanka, choose from: " + sriLankanBranches.join(', ') + ". Otherwise, provide the state or province name."),
-  employment_type: z.enum(employmentTypes as [string, ...string[]]).optional().describe("Infer the most recent or likely employment type. Choose from: " + employmentTypes.join(', ')),
-  employee_level: z.enum(employeeLevels as [string, ...string[]]).optional().describe("Infer the most likely employee level based on experience. Choose from: " + employeeLevels.join(', ')),
+  first_name: FieldSchema.extend({ value: z.string() }),
+  middle_name: FieldSchema.extend({ value: z.string().optional() }).optional(),
+  last_name: FieldSchema.extend({ value: z.string() }),
+  gender: FieldSchema.extend({ value: z.enum(genders as [string, ...string[]]).optional() }).optional(),
+  email: FieldSchema.extend({ value: z.string().email() }),
+  phone: FieldSchema.extend({ value: z.string().optional() }).optional(),
+  street_address: FieldSchema.extend({ value: z.string().optional() }).optional(),
+  city: FieldSchema.extend({ value: z.string().optional() }).optional(),
+  state_province: FieldSchema.extend({ value: z.string().optional() }).optional(),
+  postal_code: FieldSchema.extend({ value: z.string().optional() }).optional(),
+  country: FieldSchema.extend({ value: z.enum(countries as [string, ...string[]]).optional() }).optional(),
+  citizenship: FieldSchema.extend({ value: z.string().optional() }).optional(),
+  national_id: FieldSchema.extend({ value: z.string().optional() }).optional(),
+  passport_no: FieldSchema.extend({ value: z.string().optional() }).optional(),
+  visa_work_permit: FieldSchema.extend({ value: z.string().optional() }).optional(),
+  experience: FieldSchema.extend({ value: z.array(WorkExperienceSchema) }),
+  education: FieldSchema.extend({ value: z.array(EducationSchema) }),
+  skills: FieldSchema.extend({ value: z.array(z.string()) }),
+  domain: FieldSchema.extend({ value: z.enum(domains as [string, ...string[]]).optional() }).optional(),
+  branch: FieldSchema.extend({ value: z.string().optional() }).optional(),
+  employment_type: FieldSchema.extend({ value: z.enum(employmentTypes as [string, ...string[]]).optional() }).optional(),
+  employee_level: FieldSchema.extend({ value: z.enum(employeeLevels as [string, ...string[]]).optional() }).optional(),
+  unsupportedFields: z.array(UnsupportedFieldSchema).optional().describe("A list of fields found in the resume that do not map to any of the standard fields."),
 });
 
 
@@ -82,16 +94,21 @@ const prompt = ai.definePrompt({
   name: 'parseResumeToAutofillProfilePrompt',
   input: {schema: ParseResumeToAutofillProfileInputSchema},
   output: {schema: ParseResumeToAutofillProfileOutputSchema},
-  prompt: `You are an expert resume parser. Extract the following information from the resume: 
+  prompt: `You are an expert resume parser. Your task is to extract information from the provided resume and return it in a structured JSON format. For each field you extract, you MUST provide the extracted value, a confidence score between 0.0 and 1.0, and the source, which is always 'cv'.
+
+  - If you cannot find a value for a specific field, the 'value' should be null and the 'confidence' score MUST be 0.
+  - For complex fields like 'experience' and 'education', the 'value' will be an array of objects. The confidence for the parent field should be the average confidence of its child items.
+  - Carefully infer fields like 'domain', 'country', 'employment_type', and 'employee_level' based on the entire resume content.
+  - If you find any information in the resume that does not fit into the defined schema (e.g., 'Hobbies', 'Awards', 'Certifications'), add it to the 'unsupportedFields' array.
+
+  Extract the following information:
   - Personal Details: first_name, middle_name (optional), last_name, gender (optional), email, phone.
   - Address: street_address, city, state_province, postal_code, country.
   - Legal: citizenship, national_id, passport_no, visa_work_permit.
   - Professional: a list of work experiences (including companyName, role, years, and keyResponsibilities), a list of education entries (including institution, degree, and years), a list of individual skills. 
   - Inferred Fields: Infer the most appropriate 'domain', 'country', 'branch', 'employment_type', and 'employee_level' from the provided options.
 
-Return the information in JSON format.
-
-Resume: {{media url=resumeDataUri}}`,
+  Resume: {{media url=resumeDataUri}}`,
 });
 
 const parseResumeToAutofillProfileFlow = ai.defineFlow(
