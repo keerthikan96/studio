@@ -109,7 +109,7 @@ const formSchema = z.object({
 type StaffFormValues = z.infer<typeof formSchema>;
 
 type AddStaffFormProps = {
-    onAddStaff: (staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'role' | 'name' | 'hobbies' | 'volunteer_work'>, sendInvite: boolean, resume?: { url: string, type: string, size: number } }) => Promise<{ success: boolean; error?: string }>;
+    onAddStaff: (staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'role' | 'name' | 'hobbies' | 'volunteer_work'>, sendInvite: boolean, isDraft: boolean, resume?: { url: string, type: string, size: number } }) => Promise<{ success: boolean; error?: string }>;
 };
 
 export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
@@ -206,25 +206,24 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
     setShowInviteDialog(true);
   }
 
-  const handleSaveAndInvite = (sendInvite: boolean) => {
+  const handleFinalSave = (sendInvite: boolean) => {
     if (!formData) return;
 
     startTransition(async () => {
       let resumeDataForAction: { url: string; type: string; size: number } | undefined;
 
       if (resumeFile && resumeDataUri) {
-          // This is a mock upload for demonstration. In a real app, you would upload to a GCS bucket.
           const destination = `resumes/${formData.email}-${Date.now()}-${resumeFile.name}`;
           const publicUrl = `https://storage.googleapis.com/mock-bucket/${destination}`;
           resumeDataForAction = { url: publicUrl, type: resumeFile.type, size: resumeFile.size };
       }
 
-      const result = await onAddStaff({ staff: formData, sendInvite, resume: resumeDataForAction });
+      const result = await onAddStaff({ staff: formData, sendInvite, isDraft: false, resume: resumeDataForAction });
 
       if (result.success) {
           toast({
-              title: 'Member Saved',
-              description: `${formData.first_name} ${formData.last_name} has been added to the member list.`,
+              title: 'Member Added!',
+              description: `${formData.first_name} ${formData.last_name} has been added and their profile is active.`,
           });
           if(sendInvite) {
               toast({
@@ -243,6 +242,22 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
       setShowInviteDialog(false);
     });
   }
+
+  const handleDraftSave = () => {
+    const data = form.getValues();
+    setFormData(data);
+    
+    startTransition(async () => {
+      const result = await onAddStaff({ staff: data, sendInvite: false, isDraft: true });
+      if (result.success) {
+        toast({ title: "Draft Saved", description: "The member's profile has been saved as a draft." });
+        router.push('/admin/members');
+      } else {
+        toast({ title: 'Error Saving Draft', description: result.error || 'An unknown error occurred.', variant: 'destructive' });
+      }
+    });
+  }
+
 
   const handleSkillKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
@@ -331,10 +346,15 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                                 <ReviewFieldWrapper confidence={parsedData.country?.confidence}><FormField control={form.control} name="country" render={({ field }) => (<FormItem><FormLabel>Country</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a country" /></SelectTrigger></FormControl><SelectContent>{countries.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
                             </div>
                             
-                            <div className="flex justify-end">
+                            <div className="flex justify-end gap-2">
+                                <Button type="button" variant="outline" onClick={() => router.push('/admin/members')}>Cancel</Button>
+                                <Button type="button" variant="secondary" onClick={handleDraftSave} disabled={isPending || isParsing}>
+                                     {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                     Save as Draft
+                                </Button>
                                 <Button type="submit" disabled={isPending || isParsing}>
                                     {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                    Save Member
+                                    Save and Activate
                                 </Button>
                             </div>
                         </form>
@@ -349,13 +369,13 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Send Invitation?</AlertDialogTitle>
             <AlertDialogDescription>
-              The member has been saved. Would you like to send an invitation email to {formData?.first_name} {formData?.last_name} to set up their account?
+              The member profile will be activated. Would you like to send an invitation email to {formData?.first_name} {formData?.last_name} to set up their account?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => handleSaveAndInvite(false)}>No, Later</AlertDialogCancel>
-            <AlertDialogAction onClick={() => handleSaveAndInvite(true)} disabled={isPending}>
-                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Yes, Save & Send Invite'}
+            <AlertDialogCancel onClick={() => handleFinalSave(false)}>No, Just Activate</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleFinalSave(true)} disabled={isPending}>
+                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Yes, Activate & Send Invite'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

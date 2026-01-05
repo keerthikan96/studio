@@ -8,7 +8,7 @@ import { Member } from "@/lib/mock-data";
 export default function AddStaffPage() {
     const router = useRouter();
 
-    const handleAddStaff = async (staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'role' | 'name' | 'hobbies' | 'volunteer_work'>, sendInvite: boolean, resume?: { url: string, type: string, size: number } }) => {
+    const handleAddStaff = async (staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'role' | 'name' | 'hobbies' | 'volunteer_work'>, sendInvite: boolean, isDraft: boolean, resume?: { url: string, type: string, size: number } }) => {
         const result = await addStaffAction(staffData);
 
         if ('error' in result) {
