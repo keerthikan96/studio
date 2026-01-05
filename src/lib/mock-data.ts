@@ -1,4 +1,5 @@
 
+
 export type WorkExperience = {
     companyName: string;
     role: string;
@@ -91,11 +92,15 @@ export type CourseOrCertificate = {
 
 export type Member = {
     id: string;
-    name: string;
+    first_name: string;
+    middle_name?: string;
+    last_name: string;
+    name: string; // Combined name for display
+    gender?: 'Male' | 'Female' | 'Other' | 'Prefer not to say';
     email: string;
     domain?: 'Engineering' | 'Design' | 'Marketing' | 'Sales' | 'HR';
-    country?: 'Canada' | 'USA' | 'Sri Lanka';
-    branch?: string; // Can be a state, province, or a Sri Lankan branch
+    country?: string;
+    branch?: string;
     status: 'active' | 'pending' | 'inactive' | 'on-hold';
     role: 'staff' | 'HR';
     phone?: string;
@@ -107,9 +112,24 @@ export type Member = {
     job_title?: string | null;
     date_of_birth?: Date | string | null;
     start_date?: Date | string | null;
-    address?: string | null;
+    street_address?: string | null;
+    city?: string | null;
+    state_province?: string | null;
+    postal_code?: string | null;
+    address?: string | null; // For compatibility, can be deprecated
     emergency_contact_name?: string | null;
     emergency_contact_phone?: string | null;
+    emergency_contact_relationship?: string | null;
+    citizenship?: string | null;
+    national_id?: string | null;
+    passport_no?: string | null;
+    visa_work_permit?: string | null;
+    visa_work_permit_expiry?: Date | string | null;
+    employee_id?: string | null;
+    employment_type?: 'Full-time' | 'Part-time' | 'Contract' | 'Intern' | null;
+    employee_level?: string | null; // e.g., 'L1', 'L2', 'Manager'
+    reporting_supervisor_id?: string | null;
+    reporting_supervisor_history?: { supervisor_id: string; start_date: string; end_date: string | null }[];
     hobbies?: string[] | null;
     volunteer_work?: string[] | null;
     created_at?: Date;
@@ -137,7 +157,7 @@ export type WorkfeedPost = {
     content: string;
     image_url?: string | null;
     created_at: string;
-    likes: string[];
+likes: string[];
     comments: WorkfeedComment[];
 };
 
@@ -183,6 +203,8 @@ export type LeaveRequest = {
 export const mockMembers: Member[] = [
     { 
         id: 'm_1', 
+        first_name: 'John',
+        last_name: 'Doe',
         name: 'John Doe', 
         email: 'john.doe@example.com', 
         domain: 'Engineering', 

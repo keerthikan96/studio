@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -44,6 +45,10 @@ import { uploadFileToGCS } from '@/lib/gcs';
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
 const sriLankanBranches = ['Nothern', 'Central', 'Eastern'];
+const genders = ['Male', 'Female', 'Other', 'Prefer not to say'];
+const employmentTypes = ['Full-time', 'Part-time', 'Contract', 'Intern'];
+const employeeLevels = ['L1', 'L2', 'L3', 'Manager', 'Senior Manager', 'Director'];
+
 
 const workExperienceSchema = z.object({
   companyName: z.string().min(1, 'Company name is required.'),
@@ -59,21 +64,37 @@ const educationSchema = z.object({
 });
 
 const formSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
+  first_name: z.string().min(1, 'First name is required.'),
+  middle_name: z.string().optional(),
+  last_name: z.string().min(1, 'Last name is required.'),
+  gender: z.enum(genders as [string, ...string[]]).optional(),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
   phone: z.string().optional(),
-  job_title: z.string().optional(),
-  domain: z.enum(domains as [string, ...string[]]).optional(),
+  street_address: z.string().optional(),
+  city: z.string().optional(),
+  state_province: z.string().optional(),
+  postal_code: z.string().optional(),
   country: z.enum(countries as [string, ...string[]]).optional(),
+  domain: z.enum(domains as [string, ...string[]]).optional(),
   branch: z.string().optional(),
+  job_title: z.string().optional(),
+  date_of_birth: z.date().optional(),
+  start_date: z.date().optional(),
+  emergency_contact_name: z.string().optional(),
+  emergency_contact_phone: z.string().optional(),
+  emergency_contact_relationship: z.string().optional(),
+  citizenship: z.string().optional(),
+  national_id: z.string().optional(),
+  passport_no: z.string().optional(),
+  visa_work_permit: z.string().optional(),
+  visa_work_permit_expiry: z.date().optional(),
+  employee_id: z.string().optional(),
+  employment_type: z.enum(employmentTypes as [string, ...string[]]).optional(),
+  employee_level: z.enum(employeeLevels as [string, ...string[]]).optional(),
+  reporting_supervisor_id: z.string().optional(),
   experience: z.array(workExperienceSchema).optional(),
   education: z.array(educationSchema).optional(),
   skills: z.array(z.string()).optional(),
-  date_of_birth: z.date().optional(),
-  start_date: z.date().optional(),
-  address: z.string().optional(),
-  emergency_contact_name: z.string().optional(),
-  emergency_contact_phone: z.string().optional(),
 }).refine(data => {
     if (data.country === 'Sri Lanka' && data.branch) {
         return sriLankanBranches.includes(data.branch);
@@ -84,10 +105,11 @@ const formSchema = z.object({
     path: ['branch'],
 });
 
+
 type StaffFormValues = z.infer<typeof formSchema>;
 
 type AddStaffFormProps = {
-    onAddStaff: (staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'role'>, sendInvite: boolean, resume?: { url: string, type: string, size: number } }) => Promise<{ success: boolean; error?: string }>;
+    onAddStaff: (staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'role' | 'name'>, sendInvite: boolean, resume?: { url: string, type: string, size: number } }) => Promise<{ success: boolean; error?: string }>;
 };
 
 export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
@@ -105,7 +127,8 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
   const form = useForm<StaffFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
+      first_name: '',
+      last_name: '',
       email: '',
       phone: '',
       experience: [],
@@ -113,9 +136,18 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
       skills: [],
       job_title: '',
       branch: '',
-      address: '',
+      street_address: '',
+      city: '',
+      state_province: '',
+      postal_code: '',
       emergency_contact_name: '',
       emergency_contact_phone: '',
+      emergency_contact_relationship: '',
+      citizenship: '',
+      national_id: '',
+      passport_no: '',
+      visa_work_permit: '',
+      employee_id: '',
     },
   });
 
@@ -201,32 +233,12 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
     startTransition(async () => {
       let resumeData: { url: string; type: string; size: number } | undefined;
 
-      // If a resume file was selected, upload it first.
       if (resumeFile) {
         try {
           const buffer = await resumeFile.arrayBuffer();
           const destination = `resumes/${formData.email}-${Date.now()}-${resumeFile.name}`;
-          
-          // This is a temporary solution. Ideally, you would have a separate API route for this.
-          // Directly calling GCS upload from client-side is not recommended for production.
-          // For now, we assume a helper function can do this. A better way is to send the file to our backend.
-          // Let's create a temporary mock upload function.
           const publicUrl = await new Promise<string>(resolve => setTimeout(() => resolve(`https://storage.googleapis.com/mock-bucket/${destination}`), 1000));
-          
-          resumeData = {
-            url: publicUrl,
-            type: resumeFile.type,
-            size: resumeFile.size,
-          };
-          
-          // A proper implementation would look like this:
-          // const uploadFormData = new FormData();
-          // uploadFormData.append('file', resumeFile);
-          // const uploadRes = await fetch('/api/upload', { method: 'POST', body: uploadFormData });
-          // const uploadResult = await uploadRes.json();
-          // if (!uploadRes.ok) throw new Error(uploadResult.error);
-          // resumeData = { url: uploadResult.url, type: resumeFile.type, size: resumeFile.size };
-
+          resumeData = { url: publicUrl, type: resumeFile.type, size: resumeFile.size };
         } catch (error) {
            toast({ title: 'Resume Upload Failed', description: 'Could not upload resume file. Please try again.', variant: 'destructive' });
            return;
@@ -238,12 +250,12 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
       if (result.success) {
           toast({
               title: 'Member Saved',
-              description: `${formData.name} has been added to the member list.`,
+              description: `${formData.first_name} ${formData.last_name} has been added to the member list.`,
           });
           if(sendInvite) {
               toast({
                   title: 'Invitation Sent!',
-                  description: `An invitation has been sent to ${formData.name}. Check the server console for the link.`,
+                  description: `An invitation has been sent to ${formData.first_name}. Check the server console for the link.`,
               });
           }
           router.push('/admin/members');
@@ -303,398 +315,59 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                  {isParsing && <div className="absolute inset-0 bg-background/80 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
             </div>
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Jane Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email Address</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. jane.doe@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="job_title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Job Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Software Engineer" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. (123) 456-7890" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="date_of_birth"
-                render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                        <FormLabel>Date of Birth</FormLabel>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <FormControl>
-                                    <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus />
-                            </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                    </FormItem>
-                )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="start_date"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                            <FormLabel>Start Date</FormLabel>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <FormControl>
-                                        <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                        </Button>
-                                    </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                                </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <div className="md:col-span-2">
-                    <FormField
-                        control={form.control}
-                        name="address"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Address</FormLabel>
-                            <FormControl>
-                                <Textarea placeholder="123 Main St, Anytown, USA" {...field} value={field.value ?? ''} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
+            <div className="space-y-4">
+                <h3 className="text-lg font-medium border-b pb-2">Personal & Contact Information</h3>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                    <FormField control={form.control} name="first_name" render={({ field }) => (<FormItem><FormLabel>First Name <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="middle_name" render={({ field }) => (<FormItem><FormLabel>Middle Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="last_name" render={({ field }) => (<FormItem><FormLabel>Last Name <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                 </div>
-                 <FormField
-                    control={form.control}
-                    name="emergency_contact_name"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Emergency Contact Name</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g. John Smith" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="emergency_contact_phone"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Emergency Contact Phone</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g. (987) 654-3210" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-               <FormField
-                control={form.control}
-                name="domain"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Domain</FormLabel>
-                     <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                        <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a domain" />
-                            </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            {domains.map(domain => <SelectItem key={domain} value={domain}>{domain}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="country"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Country</FormLabel>
-                     <Select onValueChange={(value) => {
-                         field.onChange(value);
-                         form.setValue('branch', ''); // Reset branch on country change
-                     }} defaultValue={field.value} value={field.value}>
-                        <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a country" />
-                            </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            {countries.map(country => <SelectItem key={country} value={country}>{country}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {watchedCountry === 'Sri Lanka' ? (
-                <FormField
-                    control={form.control}
-                    name="branch"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Branch</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a branch in Sri Lanka" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {sriLankanBranches.map(branch => <SelectItem key={branch} value={branch}>{branch}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-              ) : (
-                <FormField
-                    control={form.control}
-                    name="branch"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Branch / State</FormLabel>
-                        <FormControl>
-                            <Input placeholder="e.g. New York, California" {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-              )}
-               <div className="md:col-span-2">
-                <FormItem>
-                  <FormLabel>Skills</FormLabel>
-                  <FormControl>
-                    <div>
-                      <Input 
-                        placeholder="Type a skill and press Enter"
-                        value={skillInput}
-                        onChange={(e) => setSkillInput(e.target.value)}
-                        onKeyDown={handleSkillKeyDown}
-                      />
-                       <div className="flex flex-wrap gap-2 mt-2">
-                        {skillFields.map((field, index) => (
-                          <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
-                            {form.getValues('skills')?.[index]}
-                            <button type="button" onClick={() => removeSkill(index)}>
-                              <XIcon className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </FormControl>
-                  <FormDescription>Press Enter or comma to add a skill.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              </div>
-            </div>
-            
-            <div>
-              <FormLabel>Work Experience</FormLabel>
-              <div className="space-y-4 mt-2">
-                {expFields.map((field, index) => (
-                  <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name={`experience.${index}.companyName`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Company Name</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="e.g. TechCorp" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`experience.${index}.role`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Role</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="e.g. Senior Developer" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`experience.${index}.years`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Duration</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="e.g. 2020 - Present" />
-                            </FormControl>
-                             <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                     <FormField
-                        control={form.control}
-                        name={`experience.${index}.keyResponsibilities`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Key Responsibilities</FormLabel>
-                            <FormControl>
-                              <Textarea {...field} placeholder="Describe key responsibilities..."/>
-                            </FormControl>
-                             <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button type="button" variant="destructive" size="sm" onClick={() => removeExp(index)} className="absolute top-2 right-2">
-                        <Trash className="h-4 w-4" />
-                      </Button>
-                  </div>
-                ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => appendExp({ companyName: '', role: '', years: '', keyResponsibilities: '' })}
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Work Experience
-                </Button>
-              </div>
+                 <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                    <FormField control={form.control} name="gender" render={({ field }) => (<FormItem><FormLabel>Gender</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger></FormControl><SelectContent>{genders.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="date_of_birth" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Date of Birth</FormLabel><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Work Email <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="phone" render={({ field }) => (<FormItem><FormLabel>Phone</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                </div>
+                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <FormField control={form.control} name="street_address" render={({ field }) => (<FormItem><FormLabel>Street Address</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="city" render={({ field }) => (<FormItem><FormLabel>City</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="state_province" render={({ field }) => (<FormItem><FormLabel>State / Province</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="postal_code" render={({ field }) => (<FormItem><FormLabel>Postal / Zip Code</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="country" render={({ field }) => (<FormItem><FormLabel>Country</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a country" /></SelectTrigger></FormControl><SelectContent>{countries.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                </div>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                    <FormField control={form.control} name="emergency_contact_name" render={({ field }) => (<FormItem><FormLabel>Emergency Contact Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="emergency_contact_phone" render={({ field }) => (<FormItem><FormLabel>Emergency Contact Phone</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="emergency_contact_relationship" render={({ field }) => (<FormItem><FormLabel>Emergency Contact Relationship</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                </div>
             </div>
 
-            <div>
-              <FormLabel>Education</FormLabel>
-              <div className="space-y-4 mt-2">
-                {eduFields.map((field, index) => (
-                  <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name={`education.${index}.institution`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Institution</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="e.g. University of Technology" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`education.${index}.degree`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Degree</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="e.g. B.S. in Computer Science" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                       <FormField
-                        control={form.control}
-                        name={`education.${index}.years`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Duration</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="e.g. 2014 - 2018" />
-                            </FormControl>
-                             <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                      <Button type="button" variant="destructive" size="sm" onClick={() => removeEdu(index)} className="absolute top-2 right-2">
-                        <Trash className="h-4 w-4" />
-                      </Button>
-                  </div>
-                ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => appendEdu({ institution: '', degree: '', years: '' })}
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Education
-                </Button>
-              </div>
+            <div className="space-y-4">
+                <h3 className="text-lg font-medium border-b pb-2">Legal & Identification</h3>
+                 <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                     <FormField control={form.control} name="citizenship" render={({ field }) => (<FormItem><FormLabel>Citizenship</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                     <FormField control={form.control} name="national_id" render={({ field }) => (<FormItem><FormLabel>National ID</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                     <FormField control={form.control} name="passport_no" render={({ field }) => (<FormItem><FormLabel>Passport No.</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                     <FormField control={form.control} name="visa_work_permit" render={({ field }) => (<FormItem><FormLabel>Visa / Work Permit</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                     <FormField control={form.control} name="visa_work_permit_expiry" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Visa Expiry Date</FormLabel><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                </div>
+            </div>
+
+            <div className="space-y-4">
+                <h3 className="text-lg font-medium border-b pb-2">Employment & Organizational Structure</h3>
+                 <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                    <FormField control={form.control} name="employee_id" render={({ field }) => (<FormItem><FormLabel>Employee ID</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="employment_type" render={({ field }) => (<FormItem><FormLabel>Employment Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select type..." /></SelectTrigger></FormControl><SelectContent>{employmentTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="employee_level" render={({ field }) => (<FormItem><FormLabel>Employee Level</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select level..." /></SelectTrigger></FormControl><SelectContent>{employeeLevels.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="job_title" render={({ field }) => (<FormItem><FormLabel>Job Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="domain" render={({ field }) => (<FormItem><FormLabel>Domain</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select domain..." /></SelectTrigger></FormControl><SelectContent>{domains.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="start_date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Start Date</FormLabel><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                </div>
             </div>
             
             <div className="flex justify-end">
               <Button type="submit" disabled={isPending || isParsing}>
-                {isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="mr-2 h-4 w-4" />
-                )}
+                {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Save Member
               </Button>
             </div>
@@ -707,7 +380,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Send Invitation?</AlertDialogTitle>
             <AlertDialogDescription>
-              The member has been saved. Would you like to send an invitation email to {formData?.name} to set up their account?
+              The member has been saved. Would you like to send an invitation email to {formData?.first_name} {formData?.last_name} to set up their account?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

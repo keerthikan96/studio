@@ -23,10 +23,22 @@ export async function parseResumeAction(
   }
 }
 
-export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'role'>, sendInvite: boolean, resume?: { url: string, type: string, size: number } }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
+export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'role' | 'name'>, sendInvite: boolean, resume?: { url: string, type: string, size: number } }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
   await setupDatabase();
   const { staff, sendInvite, resume } = staffData;
-  const { name, email, phone, domain, country, branch, experience, education, skills, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, hobbies, volunteer_work } = staff;
+
+  // Combine names for the 'name' column
+  const name = [staff.first_name, staff.middle_name, staff.last_name].filter(Boolean).join(' ');
+
+  const { 
+      first_name, middle_name, last_name, gender, email, phone, street_address, city, state_province, postal_code, country, 
+      domain, branch, experience, education, skills, job_title, date_of_birth, start_date, 
+      emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
+      citizenship, national_id, passport_no, visa_work_permit, visa_work_permit_expiry,
+      employee_id, employment_type, employee_level, reporting_supervisor_id,
+      hobbies, volunteer_work 
+  } = staff;
+
   try {
     // Use a database transaction
     const client = await db.connect();
@@ -34,10 +46,27 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
       await client.query('BEGIN');
 
       const result = await client.query(
-        `INSERT INTO members (name, email, phone, domain, country, branch, experience, education, skills, status, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, hobbies, volunteer_work, role)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12, $13, $14, $15, $16, $17, 'staff')
+        `INSERT INTO members (
+          name, first_name, middle_name, last_name, gender, email, phone, street_address, city, state_province, postal_code, country,
+          domain, branch, experience, education, skills, status, job_title, date_of_birth, start_date, 
+          emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
+          citizenship, national_id, passport_no, visa_work_permit, visa_work_permit_expiry,
+          employee_id, employment_type, employee_level, reporting_supervisor_id,
+          hobbies, volunteer_work, role
+         )
+         VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'pending', $18, $19, $20,
+          $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, 'staff'
+         )
          RETURNING *;`,
-        [name, email, phone, domain, country, branch, JSON.stringify(experience), JSON.stringify(education), JSON.stringify(skills), job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, JSON.stringify(hobbies), JSON.stringify(volunteer_work)]
+        [
+          name, first_name, middle_name, last_name, gender, email, phone, street_address, city, state_province, postal_code, country,
+          domain, branch, JSON.stringify(experience), JSON.stringify(education), JSON.stringify(skills), job_title, date_of_birth, start_date,
+          emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
+          citizenship, national_id, passport_no, visa_work_permit, visa_work_permit_expiry,
+          employee_id, employment_type, employee_level, reporting_supervisor_id,
+          JSON.stringify(hobbies), JSON.stringify(volunteer_work)
+        ]
       );
       const newMember = result.rows[0];
 
@@ -72,7 +101,7 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
     }
   } catch (error) {
     console.error('Error adding staff member:', error);
-    return { error: 'A member with this email may already exist.' };
+    return { error: 'A member with this email or employee ID may already exist.' };
   }
 }
 
