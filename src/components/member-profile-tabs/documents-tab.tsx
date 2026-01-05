@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -175,6 +175,7 @@ export function DocumentsTab({ memberId }: DocumentsTabProps) {
             <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
                 <DialogTitle>Add a New Document</DialogTitle>
+                <DialogDescription>Upload a document for this member.</DialogDescription>
               </DialogHeader>
               <Form {...addForm}>
                 <form onSubmit={addForm.handleSubmit(onAddSubmit)} className="space-y-4">
@@ -253,6 +254,7 @@ export function DocumentsTab({ memberId }: DocumentsTabProps) {
         <DialogContent>
             <DialogHeader>
                 <DialogTitle>Edit Document</DialogTitle>
+                <DialogDescription>Update the name and description for this document.</DialogDescription>
             </DialogHeader>
             <Form {...editForm}>
                 <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
@@ -289,5 +291,3 @@ export function DocumentsTab({ memberId }: DocumentsTabProps) {
     </>
   );
 }
-
-    
