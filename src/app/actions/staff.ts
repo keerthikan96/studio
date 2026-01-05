@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import {
@@ -23,7 +22,7 @@ export async function parseResumeAction(
   }
 }
 
-export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'role' | 'name'>, sendInvite: boolean, resume?: { url: string, type: string, size: number } }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
+export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'role' | 'name' | 'hobbies' | 'volunteer_work'>, sendInvite: boolean, resume?: { url: string, type: string, size: number } }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
   await setupDatabase();
   const { staff, sendInvite, resume } = staffData;
 
@@ -35,8 +34,7 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
       domain, branch, experience, education, skills, job_title, date_of_birth, start_date, 
       emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
       citizenship, national_id, passport_no, visa_work_permit, visa_work_permit_expiry,
-      employee_id, employment_type, employee_level, reporting_supervisor_id,
-      hobbies, volunteer_work 
+      employee_id, employment_type, employee_level, reporting_supervisor_id
   } = staff;
 
   try {
@@ -52,11 +50,11 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
           emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
           citizenship, national_id, passport_no, visa_work_permit, visa_work_permit_expiry,
           employee_id, employment_type, employee_level, reporting_supervisor_id,
-          hobbies, volunteer_work, role
+          role
          )
          VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'pending', $18, $19, $20,
-          $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, 'staff'
+          $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, 'staff'
          )
          RETURNING *;`,
         [
@@ -64,8 +62,7 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
           domain, branch, JSON.stringify(experience), JSON.stringify(education), JSON.stringify(skills), job_title, date_of_birth, start_date,
           emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
           citizenship, national_id, passport_no, visa_work_permit, visa_work_permit_expiry,
-          employee_id, employment_type, employee_level, reporting_supervisor_id,
-          JSON.stringify(hobbies), JSON.stringify(volunteer_work)
+          employee_id, employment_type, employee_level, reporting_supervisor_id
         ]
       );
       const newMember = result.rows[0];
