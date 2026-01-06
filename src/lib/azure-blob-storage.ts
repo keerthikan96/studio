@@ -1,30 +1,6 @@
 
 import { BlobServiceClient } from '@azure/storage-blob';
-
-let blobServiceClient: BlobServiceClient | null = null;
-let containerName: string | null = null;
-
-const getBlobServiceClient = () => {
-    if (!blobServiceClient) {
-        const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
-        if (!connectionString) {
-            throw new Error('Azure Storage connection string is not set in environment variables (AZURE_STORAGE_CONNECTION_STRING).');
-        }
-        blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
-    }
-    return blobServiceClient;
-};
-
-const getContainerName = () => {
-    if (!containerName) {
-        const name = process.env.AZURE_STORAGE_CONTAINER_NAME;
-        if (!name) {
-            throw new Error('Azure Storage container name is not set in environment variables (AZURE_STORAGE_CONTAINER_NAME).');
-        }
-        containerName = name;
-    }
-    return containerName;
-};
+import 'dotenv/config';
 
 /**
  * Uploads a file to Azure Blob Storage.
@@ -34,10 +10,19 @@ const getContainerName = () => {
  */
 export const uploadFileToAzure = async (buffer: Buffer, destination: string): Promise<string> => {
     try {
-        const client = getBlobServiceClient();
-        const container = getContainerName();
+        const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
+        const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME;
+
+        if (!connectionString) {
+            throw new Error('Azure Storage connection string is not set in environment variables (AZURE_STORAGE_CONNECTION_STRING).');
+        }
+        if (!containerName) {
+            throw new Error('Azure Storage container name is not set in environment variables (AZURE_STORAGE_CONTAINER_NAME).');
+        }
         
-        const containerClient = client.getContainerClient(container);
+        const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
+        
+        const containerClient = blobServiceClient.getContainerClient(containerName);
         await containerClient.createIfNotExists({ access: 'blob' });
 
         const blockBlobClient = containerClient.getBlockBlobClient(destination);
