@@ -25,7 +25,7 @@ export async function parseResumeAction(
   }
 }
 
-export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'role' | 'name' | 'hobbies' | 'volunteer_work'>, sendInvite: boolean, isDraft: boolean, resumeFile?: { file: File, dataUri: string } }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
+export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'role' | 'name' | 'hobbies'>, sendInvite: boolean, isDraft: boolean, resumeFile?: { file: File, dataUri: string } }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
   await setupDatabase();
   const { staff, sendInvite, isDraft, resumeFile } = staffData;
 
@@ -37,7 +37,7 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
       domain, branch, experience, education, skills, job_title, date_of_birth, start_date, 
       emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
       citizenship, national_id, passport_no, visa_work_permit, visa_work_permit_expiry,
-      employee_id, employment_type, employee_level, reporting_supervisor_id
+      employee_id, employment_type, employee_level, reporting_supervisor_id, volunteer_work
   } = staff;
 
   const status = isDraft ? 'pending' : 'active';
@@ -54,12 +54,12 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
           domain, branch, experience, education, skills, status, job_title, date_of_birth, start_date, 
           emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
           citizenship, national_id, passport_no, visa_work_permit, visa_work_permit_expiry,
-          employee_id, employment_type, employee_level, reporting_supervisor_id,
+          employee_id, employment_type, employee_level, reporting_supervisor_id, volunteer_work,
           role
          )
          VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
-          $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, 'staff'
+          $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, 'staff'
          )
          RETURNING *;`,
         [
@@ -67,7 +67,7 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
           domain, branch, JSON.stringify(experience || []), JSON.stringify(education || []), JSON.stringify(skills || []), status, job_title, date_of_birth, start_date,
           emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
           citizenship, national_id, passport_no, visa_work_permit, visa_work_permit_expiry,
-          employee_id, employment_type, employee_level, reporting_supervisor_id
+          employee_id, employment_type, employee_level, reporting_supervisor_id, JSON.stringify(volunteer_work || [])
         ]
       );
       const newMember = result.rows[0];
@@ -105,9 +105,12 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
     } finally {
       client.release();
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error adding staff member:', error);
-    return { error: 'A member with this email or employee ID may already exist.' };
+    if (error.code === '23505') { // Unique violation code for PostgreSQL
+        return { error: `A member with this email or employee ID already exists.` };
+    }
+    return { error: error.message || 'An unexpected error occurred while saving the member.' };
   }
 }
 
