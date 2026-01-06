@@ -1,6 +1,8 @@
 
 import { BlobServiceClient } from '@azure/storage-blob';
-import 'dotenv/config';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 /**
  * Uploads a file to Azure Blob Storage.
@@ -33,7 +35,7 @@ export const uploadFileToAzure = async (buffer: Buffer, destination: string): Pr
 
     } catch (error: any) {
         console.error('**************************************************************');
-        console.error('AZURE UPLOAD ERROR:', error.message || error);
+        console.error('AZURE UPLOAD ERROR:', error);
         console.error('**************************************************************');
         throw new Error('Failed to upload file to Azure.');
     }
