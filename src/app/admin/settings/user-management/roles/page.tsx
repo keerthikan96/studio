@@ -27,21 +27,15 @@ export default function RolesPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold tracking-tight">Roles & Permissions</h2>
-                    <p className="text-muted-foreground">
-                        Define roles and assign granular permissions for system access.
-                    </p>
-                </div>
-                <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Create New Role
-                </Button>
-            </div>
             <Card>
-                <CardHeader>
-                    <CardTitle>Existing Roles</CardTitle>
-                    <CardDescription>A list of all configured roles in the system.</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Roles & Permissions</CardTitle>
+                        <CardDescription>A list of all configured roles in the system.</CardDescription>
+                    </div>
+                     <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Create New Role
+                    </Button>
                 </CardHeader>
                 <CardContent>
                     <Table>

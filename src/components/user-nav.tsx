@@ -22,7 +22,7 @@ type UserData = {
     id: string;
     name: string;
     email: string;
-    role: 'admin' | 'staff' | 'HR';
+    role?: string | null;
     profile_picture_url?: string | null;
     cover_photo_url?: string | null;
 }
@@ -38,11 +38,12 @@ export default function UserNav() {
         if (storedUser.id === 'admin-user-001') {
              setUser({...storedUser, name: storedUser.name || 'People and Culture office', role: 'HR'});
         } else {
-            // Fetch the latest user data to get the profile picture URL
+            // Fetch the latest user data to get the profile picture URL and role
             getMemberByIdAction(storedUser.id).then(member => {
                 if (member) {
                     const fullUserData = { 
-                        ...storedUser, 
+                        ...storedUser,
+                        role: member.role,
                         profile_picture_url: member.profile_picture_url,
                         cover_photo_url: member.cover_photo_url
                     };
@@ -60,21 +61,17 @@ export default function UserNav() {
   useEffect(() => {
     loadUser();
 
-    // Listen for custom event to update profile picture
     const handleProfileUpdate = () => {
-        console.log("Profile picture updated event received!");
         loadUser();
     };
 
     const handleCoverUpdate = () => {
-        console.log("Cover photo updated event received!");
         loadUser();
     }
 
     window.addEventListener('profile-picture-updated', handleProfileUpdate);
     window.addEventListener('cover-photo-updated', handleCoverUpdate);
 
-    // Cleanup listener on component unmount
     return () => {
         window.removeEventListener('profile-picture-updated', handleProfileUpdate);
         window.removeEventListener('cover-photo-updated', handleCoverUpdate);
@@ -104,7 +101,7 @@ export default function UserNav() {
         <div className="flex items-center gap-3 cursor-pointer">
            <Avatar className="h-9 w-9">
             <AvatarImage
-              key={imageSrc} // Using key to force re-render on src change
+              key={imageSrc} 
               src={imageSrc ?? undefined}
               alt="User avatar"
               data-ai-hint="person portrait"
@@ -113,7 +110,7 @@ export default function UserNav() {
           </Avatar>
            <div className="hidden md:flex flex-col items-start">
             <p className="text-sm font-medium leading-none">{user.name}</p>
-            <p className="text-xs leading-none text-muted-foreground">
+            <p className="text-xs leading-none text-muted-foreground capitalize">
               {user.role}
             </p>
           </div>

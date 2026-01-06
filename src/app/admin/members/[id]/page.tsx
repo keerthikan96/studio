@@ -21,11 +21,11 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, PlusCircle, Save, X as XIcon, ArrowLeft, Ban, CalendarIcon, Trash, Pencil, Briefcase, MapPin, MoreHorizontal, CheckCircle, CircleSlash, PauseCircle, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Member } from '@/lib/mock-data';
+import { Member, Role } from '@/lib/mock-data';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getMemberByIdAction, updateMemberAction, updateMemberStatusAction } from '@/app/actions/staff';
+import { getMemberByIdAction, updateMemberAction, updateMemberStatusAction, getRolesAction, updateMemberRoleAction } from '@/app/actions/staff';
 import ProfilePictureUploader from '@/components/profile-picture-uploader';
 import CoverPhotoUploader from '@/components/cover-photo-uploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -76,6 +76,7 @@ const profileSchema = z.object({
   education: z.array(educationSchema).optional(),
   skills: z.array(z.string()).optional(),
   status: z.enum(['active', 'pending', 'inactive', 'on-hold']).optional(),
+  role_id: z.string().optional(),
   profile_picture_url: z.string().url().optional().nullable(),
   cover_photo_url: z.string().url().optional().nullable(),
   date_of_birth: z.date().optional().nullable(),
@@ -99,7 +100,7 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-const GeneralInfoTab = ({ form, isPending }: { form: any, isPending: boolean }) => {
+const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: boolean, roles: Role[] }) => {
   const watchedCountry = form.watch('country');
   const [skillInput, setSkillInput] = useState('');
   const [hobbyInput, setHobbyInput] = useState('');
@@ -251,6 +252,26 @@ const GeneralInfoTab = ({ form, isPending }: { form: any, isPending: boolean }) 
                                 </Popover>
                                 <FormMessage />
                             </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="role_id"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Role</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a role" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {roles.map(role => <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
                         )}
                     />
                      <FormField
@@ -562,14 +583,11 @@ const PlaceholderContent = ({ title }: { title: string }) => (
     </Card>
 );
 
-// Helper to safely parse date strings and avoid timezone issues
 const parseDateString = (dateString: string | Date | null | undefined): Date | null => {
     if (!dateString) return null;
     if (dateString instanceof Date && isValid(dateString)) return dateString;
     if (typeof dateString !== 'string') return null;
     
-    // The `new Date(string)` constructor can be unreliable due to timezone differences.
-    // Parsing the string manually avoids this.
     const date = new Date(dateString);
     return isValid(date) ? date : null;
 };
@@ -582,6 +600,7 @@ export default function MemberProfilePage() {
   const params = useParams();
   const memberId = params.id as string;
   const [member, setMember] = useState<Member | null>(null);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [nextTab, setNextTab] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<string>("General");
@@ -625,16 +644,20 @@ export default function MemberProfilePage() {
   }, [reset]);
 
   const fetchMember = useCallback(() => {
-    startTransition(() => {
-        getMemberByIdAction(memberId).then(currentMember => {
-            if (currentMember) {
-                setMember(currentMember);
-                resetFormValues(currentMember);
-            } else {
-                toast({ title: "Member not found", variant:"destructive" });
-                router.push('/admin/members');
-            }
-        });
+    startTransition(async () => {
+        const [currentMember, availableRoles] = await Promise.all([
+            getMemberByIdAction(memberId),
+            getRolesAction()
+        ]);
+        
+        if (currentMember) {
+            setMember(currentMember);
+            resetFormValues(currentMember);
+        } else {
+            toast({ title: "Member not found", variant:"destructive" });
+            router.push('/admin/members');
+        }
+        setRoles(availableRoles);
     });
   }, [memberId, resetFormValues, router, toast]);
 
@@ -717,7 +740,7 @@ export default function MemberProfilePage() {
         const result = await updateMemberStatusAction(member.id, status);
         if (result.success) {
             toast({ title: "Status Updated", description: `${member.name}'s status is now ${status}.` });
-            fetchMember(); // Refetch to get the latest member data
+            fetchMember();
         } else {
             toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
         }
@@ -771,7 +794,7 @@ export default function MemberProfilePage() {
 
     switch(tab) {
         case "General":
-            return <FormWrapper><GeneralInfoTab form={form} isPending={isPending} /></FormWrapper>;
+            return <FormWrapper><GeneralInfoTab form={form} isPending={isPending} roles={roles} /></FormWrapper>;
         case "Notes":
             return <NotesTab memberId={member.id} />;
         case "Performance":
@@ -849,16 +872,16 @@ export default function MemberProfilePage() {
                                 <span>Joined {format(new Date(member.start_date), 'PPP')}</span>
                             </div>
                         )}
-                        {member.employment_category && (
+                        {member.employment_type && (
                             <div className="flex items-center gap-1.5">
                                 <Briefcase className="h-4 w-4" />
-                                <span>{member.employment_category}</span>
+                                <span>{member.employment_type}</span>
                             </div>
                         )}
-                        {member.work_location && (
+                        {member.branch && (
                              <div className="flex items-center gap-1.5">
                                 <MapPin className="h-4 w-4" />
-                                <span>{member.work_location}</span>
+                                <span>{member.branch}</span>
                             </div>
                         )}
                     </div>

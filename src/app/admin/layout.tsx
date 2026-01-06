@@ -27,7 +27,6 @@ import { useEffect, useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import Breadcrumbs from "@/components/breadcrumbs";
 
-// Helper function to capitalize the first letter of a string
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export default function AdminLayout({
@@ -37,9 +36,14 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const [isClient, setIsClient] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     setIsClient(true);
+    const storedUser = sessionStorage.getItem('loggedInUser');
+    if (storedUser) {
+        setUserRole(JSON.parse(storedUser).role);
+    }
   }, []);
 
   const menuItems = [
@@ -75,12 +79,8 @@ export default function AdminLayout({
      return pathname === href;
   }
   
-  const isWorkfeedActive = pathname.startsWith('/admin/workfeed');
-  const isIntakeActive = pathname.startsWith('/admin/intake');
-
-  // Logic to generate page title
   const pathSegments = pathname.split('/').filter(Boolean);
-  let pageTitle = 'Dashboard'; // Default title
+  let pageTitle = 'Dashboard'; 
 
   if (pathSegments.length > 1) {
     const lastSegment = pathSegments[pathSegments.length - 1];
@@ -97,6 +97,7 @@ export default function AdminLayout({
     pageTitle = 'Dashboard';
   }
 
+  const canAccessSettings = isClient && userRole === 'HR';
 
   return (
     <SidebarProvider>
@@ -158,6 +159,19 @@ export default function AdminLayout({
                 )}
                 </SidebarMenuItem>
             ))}
+             {canAccessSettings && (
+                  <SidebarMenuItem>
+                      <Link href="/admin/settings">
+                          <SidebarMenuButton
+                              isActive={pathname.startsWith('/admin/settings')}
+                              tooltip={{ children: 'Settings' }}
+                          >
+                              <Settings />
+                              <span>Settings</span>
+                          </SidebarMenuButton>
+                      </Link>
+                  </SidebarMenuItem>
+              )}
           </SidebarMenu>
         </SidebarContent>
       </Sidebar>
