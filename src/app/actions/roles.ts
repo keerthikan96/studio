@@ -4,6 +4,7 @@
 import { db } from '@/lib/db';
 import { Role } from '@/lib/mock-data';
 import { ALL_PERMISSIONS, Permission } from '@/lib/permissions';
+import { logAuditEvent } from './audit';
 
 // ========== ROLE ACTIONS ==========
 
@@ -56,6 +57,13 @@ export async function createRoleAction(data: { name: string; description?: strin
                 );
             }
         }
+        
+        await logAuditEvent({
+            action: 'role.create',
+            resource_type: 'role',
+            resource_id: newRole.id,
+            details: { name, description, permissions }
+        }, client);
 
         await client.query('COMMIT');
         return newRole;
@@ -95,6 +103,13 @@ export async function updateRoleAction(id: string, data: { name: string; descrip
                 );
             }
         }
+
+        await logAuditEvent({
+            action: 'role.update',
+            resource_type: 'role',
+            resource_id: id,
+            details: { name, description, permissions }
+        }, client);
 
         await client.query('COMMIT');
         return roleResult.rows[0];

@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from "next/link";
@@ -19,7 +18,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, Briefcase, Award, Calendar as CalendarIcon, User, FileText, Search, Bell, Newspaper, Settings, ChevronDown, ClipboardList, FlaskConical } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, Award, Calendar as CalendarIcon, User, FileText, Search, Bell, Newspaper, Settings, ChevronDown, ClipboardList, FlaskConical, History } from "lucide-react";
 import Logo from "@/components/logo";
 import UserNav from "@/components/user-nav";
 import { Input } from "@/components/ui/input";
@@ -160,17 +159,30 @@ export default function AdminLayout({
                 </SidebarMenuItem>
             ))}
              {canAccessSettings && (
-                  <SidebarMenuItem>
-                      <Link href="/admin/settings">
-                          <SidebarMenuButton
-                              isActive={pathname.startsWith('/admin/settings')}
-                              tooltip={{ children: 'Settings' }}
-                          >
-                              <Settings />
-                              <span>Settings</span>
-                          </SidebarMenuButton>
-                      </Link>
-                  </SidebarMenuItem>
+                  <>
+                    <SidebarMenuItem>
+                        <Link href="/admin/settings">
+                            <SidebarMenuButton
+                                isActive={pathname.startsWith('/admin/settings')}
+                                tooltip={{ children: 'Settings' }}
+                            >
+                                <Settings />
+                                <span>Settings</span>
+                            </SidebarMenuButton>
+                        </Link>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <Link href="/admin/audit-log">
+                            <SidebarMenuButton
+                                isActive={pathname.startsWith('/admin/audit-log')}
+                                tooltip={{ children: 'Audit Log' }}
+                            >
+                                <History />
+                                <span>Audit Log</span>
+                            </SidebarMenuButton>
+                        </Link>
+                    </SidebarMenuItem>
+                  </>
               )}
           </SidebarMenu>
         </SidebarContent>
