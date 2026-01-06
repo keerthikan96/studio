@@ -29,17 +29,24 @@ const FieldSchema = z.object({
 });
 
 const WorkExperienceSchema = z.object({
-  companyName: FieldSchema.extend({ value: z.string() }),
-  role: FieldSchema.extend({ value: z.string() }),
-  years: FieldSchema.extend({ value: z.string() }),
-  keyResponsibilities: FieldSchema.extend({ value: z.string() }),
+  companyName: z.string(),
+  role: z.string(),
+  years: z.string(),
+  keyResponsibilities: z.string().optional(),
 });
 
 const EducationSchema = z.object({
-    institution: FieldSchema.extend({ value: z.string() }),
-    degree: FieldSchema.extend({ value: z.string() }),
-    years: FieldSchema.extend({ value: z.string() }),
+    institution: z.string(),
+    degree: z.string(),
+    years: z.string(),
 });
+
+const CertificateSchema = z.object({
+  name: z.string(),
+  issuingOrganization: z.string(),
+  date: z.string().optional(),
+});
+
 
 const UnsupportedFieldSchema = z.object({
     field: z.string().describe("The name of the field that was found in the resume but is not supported by the system."),
@@ -71,6 +78,7 @@ const ParseResumeToAutofillProfileOutputSchema = z.object({
   visa_work_permit: FieldSchema.extend({ value: z.string().optional() }).optional(),
   experience: FieldSchema.extend({ value: z.array(WorkExperienceSchema) }),
   education: FieldSchema.extend({ value: z.array(EducationSchema) }),
+  certificates: FieldSchema.extend({ value: z.array(CertificateSchema).optional() }).optional(),
   skills: FieldSchema.extend({ value: z.array(z.string()) }),
   domain: FieldSchema.extend({ value: z.enum(domains as [string, ...string[]]).optional() }).optional(),
   branch: FieldSchema.extend({ value: z.string().optional() }).optional(),
@@ -97,15 +105,15 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert resume parser. Your task is to extract information from the provided resume and return it in a structured JSON format. For each field you extract, you MUST provide the extracted value, a confidence score between 0.0 and 1.0, and the source, which is always 'cv'.
 
   - If you cannot find a value for a specific field, the 'value' should be null and the 'confidence' score MUST be 0.
-  - For complex fields like 'experience' and 'education', the 'value' will be an array of objects. The confidence for the parent field should be the average confidence of its child items.
+  - For complex fields like 'experience', 'education', and 'certificates', the 'value' will be an array of objects. The confidence for the parent field should be the average confidence of its child items.
   - Carefully infer fields like 'domain', 'country', 'employment_type', and 'employee_level' based on the entire resume content.
-  - If you find any information in the resume that does not fit into the defined schema (e.g., 'Hobbies', 'Awards', 'Certifications'), add it to the 'unsupportedFields' array.
+  - If you find any information in the resume that does not fit into the defined schema (e.g., 'Hobbies', 'Awards'), add it to the 'unsupportedFields' array.
 
   Extract the following information:
   - Personal Details: first_name, middle_name (optional), last_name, gender (optional), email, phone.
   - Address: street_address, city, state_province, postal_code, country.
   - Legal: citizenship, national_id, passport_no, visa_work_permit.
-  - Professional: a list of work experiences (including companyName, role, years, and keyResponsibilities), a list of education entries (including institution, degree, and years), a list of individual skills. 
+  - Professional: a list of work experiences (including companyName, role, years, and keyResponsibilities), a list of education entries (including institution, degree, and years), a list of certificates (including name, issuingOrganization, and date), and a list of individual skills. 
   - Inferred Fields: Infer the most appropriate 'domain', 'country', 'branch', 'employment_type', and 'employee_level' from the provided options.
 
   Resume: {{media url=resumeDataUri}}`,
