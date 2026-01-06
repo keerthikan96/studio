@@ -1,5 +1,11 @@
 
 
+export type Role = {
+    id: string;
+    name: string;
+    description: string;
+};
+
 export type WorkExperience = {
     companyName: string;
     role: string;
@@ -102,7 +108,8 @@ export type Member = {
     country?: string;
     branch?: string;
     status: 'active' | 'pending' | 'inactive' | 'on-hold';
-    role: 'staff' | 'HR';
+    role_id?: string;
+    role?: string;
     phone?: string;
     experience?: WorkExperience[];
     education?: Education[];

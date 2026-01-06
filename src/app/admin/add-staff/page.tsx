@@ -1,14 +1,25 @@
 
 'use client';
 import { useRouter } from "next/navigation";
-import { addStaffAction } from "@/app/actions/staff";
+import { addStaffAction, getRolesAction } from "@/app/actions/staff";
 import AddStaffForm from "@/components/add-staff-form";
-import { Member } from "@/lib/mock-data";
+import { Member, Role } from "@/lib/mock-data";
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 
 export default function AddStaffPage() {
     const router = useRouter();
+    const [roles, setRoles] = useState<Role[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const handleAddStaff = async (staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'role' | 'name' | 'hobbies' | 'volunteer_work'>, sendInvite: boolean, isDraft: boolean, resumeFile?: { file: File, dataUri: string } }) => {
+    useEffect(() => {
+        getRolesAction().then(fetchedRoles => {
+            setRoles(fetchedRoles);
+            setIsLoading(false);
+        });
+    }, []);
+
+    const handleAddStaff = async (staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'name' | 'hobbies' | 'volunteer_work'>, sendInvite: boolean, isDraft: boolean, resumeFile?: { file: File, dataUri: string }, role_id: string }) => {
         const result = await addStaffAction(staffData);
 
         if ('error' in result) {
@@ -19,9 +30,13 @@ export default function AddStaffPage() {
         }
     };
     
+    if (isLoading) {
+        return <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin"/></div>
+    }
+
     return (
         <div>
-            <AddStaffForm onAddStaff={handleAddStaff} />
+            <AddStaffForm onAddStaff={handleAddStaff} roles={roles} />
         </div>
     );
 }

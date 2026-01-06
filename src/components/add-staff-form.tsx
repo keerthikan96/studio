@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { parseResumeAction } from '@/app/actions/staff';
 import { Loader2, PlusCircle, Trash, UploadCloud, Save, X as XIcon, CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Member } from '@/lib/mock-data';
+import { Member, Role } from '@/lib/mock-data';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -94,16 +94,18 @@ const formSchema = z.object({
   experience: z.array(workExperienceSchema).optional(),
   education: z.array(educationSchema).optional(),
   skills: z.array(z.string()).optional(),
+  role_id: z.string().min(1, "Role is required."),
 });
 
 
 type StaffFormValues = z.infer<typeof formSchema>;
 
 type AddStaffFormProps = {
-    onAddStaff: (staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'role' | 'name' | 'hobbies' | 'volunteer_work'>, sendInvite: boolean, isDraft: boolean, resumeFile?: { file: File, dataUri: string } }) => Promise<{ success: boolean; error?: string }>;
+    onAddStaff: (staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'name' | 'hobbies' | 'volunteer_work'>, sendInvite: boolean, isDraft: boolean, resumeFile?: { file: File, dataUri: string }, role_id: string }) => Promise<{ success: boolean; error?: string }>;
+    roles: Role[];
 };
 
-export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
+export default function AddStaffForm({ onAddStaff, roles }: AddStaffFormProps) {
   const [isPending, startTransition] = useTransition();
   const [isParsing, setIsParsing] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
@@ -230,7 +232,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
           resumeData = { file: resumeFile, dataUri: resumeDataUri };
       }
 
-      const result = await onAddStaff({ staff: formDataForDialog, sendInvite, isDraft: false, resumeFile: resumeData });
+      const result = await onAddStaff({ staff: formDataForDialog, sendInvite, isDraft: false, resumeFile: resumeData, role_id: formDataForDialog.role_id });
 
       if (result.success) {
           toast({
@@ -264,7 +266,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
           resumeData = { file: resumeFile, dataUri: resumeDataUri };
       }
 
-      const result = await onAddStaff({ staff: data, sendInvite: false, isDraft: true, resumeFile: resumeData });
+      const result = await onAddStaff({ staff: data, sendInvite: false, isDraft: true, resumeFile: resumeData, role_id: data.role_id });
       if (result.success) {
         toast({ title: "Draft Saved", description: "The member's profile has been saved as a draft." });
         router.push('/admin/members');
@@ -422,6 +424,16 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                                     <AccordionTrigger className="text-lg font-medium">Employment Details</AccordionTrigger>
                                     <AccordionContent className="pt-4 space-y-4">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <FormField control={form.control} name="role_id" render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Role <span className="text-destructive">*</span></FormLabel>
+                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                        <FormControl><SelectTrigger><SelectValue placeholder="Assign a role..." /></SelectTrigger></FormControl>
+                                                        <SelectContent>{roles.map(role => <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>)}</SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )} />
                                             <ReviewFieldWrapper confidence={parsedData.domain?.confidence}><FormField control={form.control} name="domain" render={({ field }) => (<FormItem><FormLabel>Domain</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a domain" /></SelectTrigger></FormControl><SelectContent>{domains.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
                                              <ReviewFieldWrapper confidence={parsedData.branch?.confidence}><FormField control={form.control} name="branch" render={({ field }) => ( <FormItem><FormLabel>Branch</FormLabel><FormControl><Input {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
                                             <FormField control={form.control} name="job_title" render={({ field }) => (<FormItem><FormLabel>Job Title</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />

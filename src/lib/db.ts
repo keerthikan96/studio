@@ -43,6 +43,36 @@ export async function setupDatabase() {
     let client;
     try {
         client = await db.connect();
+        
+        // RBAC Tables
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS roles (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                name VARCHAR(255) UNIQUE NOT NULL,
+                description TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
+
+        // Modify members table - remove old role column if it exists
+        const { rows: roleColumnCheck } = await client.query(`
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name='members' AND column_name='role';
+        `);
+        if (roleColumnCheck.length > 0) {
+            await client.query(`ALTER TABLE members RENAME COLUMN role TO old_role;`);
+            // You might want to drop this column later after data migration
+            // ALTER TABLE members DROP COLUMN old_role;
+        }
+
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS role_members (
+                role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+                member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                PRIMARY KEY (role_id, member_id)
+            );
+        `);
+
         await client.query(`
             CREATE TABLE IF NOT EXISTS members (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -252,6 +282,22 @@ export async function setupDatabase() {
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
+        
+        // Seed default roles
+        const { rows: roleCount } = await client.query('SELECT COUNT(*) FROM roles');
+        if (parseInt(roleCount[0].count, 10) === 0) {
+            const defaultRoles = [
+                { name: 'Super Admin', description: 'Has all permissions.' },
+                { name: 'HR Admin', description: 'Manages HR functions, roles, and staff.' },
+                { name: 'HR Staff', description: 'Assists with HR tasks.' },
+                { name: 'Manager', description: 'Manages a team of employees.' },
+                { name: 'Employee', description: 'Standard employee access.' },
+                { name: 'Document Controller', description: 'Manages company documents.' },
+            ];
+            for (const role of defaultRoles) {
+                await client.query('INSERT INTO roles (name, description) VALUES ($1, $2)', [role.name, role.description]);
+            }
+        }
 
         // Seed default assessment categories if they don't exist
         const { rows: categoryCount } = await client.query('SELECT COUNT(*) FROM assessment_categories');
@@ -294,7 +340,6 @@ export async function setupDatabase() {
             { name: 'emergency_contact_phone', type: 'VARCHAR(50)' },
             { name: 'hobbies', type: 'JSONB' },
             { name: 'volunteer_work', type: 'JSONB' },
-            { name: 'role', type: 'VARCHAR(50) NOT NULL DEFAULT \'staff\'' },
             { name: 'gender', type: 'VARCHAR(50)'},
             { name: 'phone', type: 'VARCHAR(50)' },
             { name: 'street_address', type: 'VARCHAR(255)' },
@@ -334,13 +379,7 @@ export async function setupDatabase() {
             WHERE table_name='members' AND column_name='first_name';
         `);
 
-        if (firstNameCheck.length === 0) {
-            await client.query(`
-                ALTER TABLE members
-                ADD COLUMN first_name VARCHAR(255),
-                ADD COLUMN middle_name VARCHAR(255),
-                ADD COLUMN last_name VARCHAR(255);
-            `);
+        if (firstNameCheck.length > 0) {
              // This is a one-time data migration.
             await client.query(`
                 UPDATE members

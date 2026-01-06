@@ -7,7 +7,7 @@ import {
   ParseResumeToAutofillProfileOutput,
 } from '@/ai/flows/resume-parsing-to-autofill-profile';
 import { db, setupDatabase } from '@/lib/db';
-import { Member, Note, PerformanceRecord, SelfEvaluation, Document, CourseOrCertificate, AssessmentCategory } from '@/lib/mock-data';
+import { Member, Note, PerformanceRecord, SelfEvaluation, Document, CourseOrCertificate, AssessmentCategory, Role } from '@/lib/mock-data';
 import { requestPasswordResetAction } from './auth';
 import { uploadFileToAzure } from '@/lib/azure-blob-storage';
 
@@ -25,9 +25,9 @@ export async function parseResumeAction(
   }
 }
 
-export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'role' | 'name' | 'hobbies'>, sendInvite: boolean, isDraft: boolean, resumeFile?: { file: File, dataUri: string } }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
+export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'name' | 'hobbies'>, sendInvite: boolean, isDraft: boolean, resumeFile?: { file: File, dataUri: string }, role_id: string }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
   await setupDatabase();
-  const { staff, sendInvite, isDraft, resumeFile } = staffData;
+  const { staff, sendInvite, isDraft, resumeFile, role_id } = staffData;
 
   // Combine names for the 'name' column
   const name = [staff.first_name, staff.middle_name, staff.last_name].filter(Boolean).join(' ');
@@ -54,12 +54,11 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
           domain, branch, experience, education, skills, status, job_title, date_of_birth, start_date, 
           emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
           citizenship, national_id, passport_no, visa_work_permit, visa_work_permit_expiry,
-          employee_id, employment_type, employee_level, reporting_supervisor_id, volunteer_work,
-          role
+          employee_id, employment_type, employee_level, reporting_supervisor_id, volunteer_work
          )
          VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
-          $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, 'staff'
+          $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34
          )
          RETURNING *;`,
         [
@@ -71,6 +70,12 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
         ]
       );
       const newMember = result.rows[0];
+      
+      // Assign role to the new member
+      await client.query(
+        'INSERT INTO role_members (member_id, role_id) VALUES ($1, $2)',
+        [newMember.id, role_id]
+      );
 
       // If a resume was uploaded, add it to the documents table
       if (resumeFile) {
@@ -117,7 +122,13 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
 export async function getMembersAction(): Promise<Member[]> {
     await setupDatabase();
     try {
-        const result = await db.query('SELECT * FROM members ORDER BY created_at DESC');
+        const result = await db.query(`
+            SELECT m.*, r.name as role
+            FROM members m
+            LEFT JOIN role_members rm ON m.id = rm.member_id
+            LEFT JOIN roles r ON rm.role_id = r.id
+            ORDER BY m.created_at DESC
+        `);
         return result.rows;
     } catch (error) {
         console.error('Error fetching members:', error);
@@ -127,7 +138,13 @@ export async function getMembersAction(): Promise<Member[]> {
 
 export async function getMemberByIdAction(id: string): Promise<Member | null> {
     try {
-        const result = await db.query('SELECT * FROM members WHERE id = $1', [id]);
+        const result = await db.query(`
+            SELECT m.*, r.id as role_id, r.name as role
+            FROM members m
+            LEFT JOIN role_members rm ON m.id = rm.member_id
+            LEFT JOIN roles r ON rm.role_id = r.id
+            WHERE m.id = $1
+        `, [id]);
         if (result.rows.length === 0) return null;
         return result.rows[0];
     } catch (error) {
@@ -137,52 +154,66 @@ export async function getMemberByIdAction(id: string): Promise<Member | null> {
 }
 
 export async function updateMemberAction(id: string, data: Omit<Partial<Member>, 'id' | 'created_at' | 'updated_at'>): Promise<Member | { error: string }> {
-    const { name, email, phone, domain, country, branch, experience, education, skills, status, profile_picture_url, cover_photo_url, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, hobbies, volunteer_work, role } = data;
+    const { name, email, phone, domain, country, branch, experience, education, skills, status, profile_picture_url, cover_photo_url, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, hobbies, volunteer_work, role_id } = data;
     try {
-        const fields: string[] = [];
-        const values: any[] = [];
-        let fieldIndex = 1;
+        const client = await db.connect();
+        try {
+            await client.query('BEGIN');
+            const fields: string[] = [];
+            const values: any[] = [];
+            let fieldIndex = 1;
 
-        if (name !== undefined) { fields.push(`name = $${fieldIndex++}`); values.push(name); }
-        if (email !== undefined) { fields.push(`email = $${fieldIndex++}`); values.push(email); }
-        if (phone !== undefined) { fields.push(`phone = $${fieldIndex++}`); values.push(phone); }
-        if (domain !== undefined) { fields.push(`domain = $${fieldIndex++}`); values.push(domain); }
-        if (country !== undefined) { fields.push(`country = $${fieldIndex++}`); values.push(country); }
-        if (branch !== undefined) { fields.push(`branch = $${fieldIndex++}`); values.push(branch); }
-        if (experience !== undefined) { fields.push(`experience = $${fieldIndex++}`); values.push(JSON.stringify(experience)); }
-        if (education !== undefined) { fields.push(`education = $${fieldIndex++}`); values.push(JSON.stringify(education)); }
-        if (skills !== undefined) { fields.push(`skills = $${fieldIndex++}`); values.push(JSON.stringify(skills)); }
-        if (status !== undefined) { fields.push(`status = $${fieldIndex++}`); values.push(status); }
-        if (profile_picture_url !== undefined) { fields.push(`profile_picture_url = $${fieldIndex++}`); values.push(profile_picture_url); }
-        if (cover_photo_url !== undefined) { fields.push(`cover_photo_url = $${fieldIndex++}`); values.push(cover_photo_url); }
-        if (job_title !== undefined) { fields.push(`job_title = $${fieldIndex++}`); values.push(job_title); }
-        if (date_of_birth !== undefined) { fields.push(`date_of_birth = $${fieldIndex++}`); values.push(date_of_birth); }
-        if (start_date !== undefined) { fields.push(`start_date = $${fieldIndex++}`); values.push(start_date); }
-        if (address !== undefined) { fields.push(`address = $${fieldIndex++}`); values.push(address); }
-        if (emergency_contact_name !== undefined) { fields.push(`emergency_contact_name = $${fieldIndex++}`); values.push(emergency_contact_name); }
-        if (emergency_contact_phone !== undefined) { fields.push(`emergency_contact_phone = $${fieldIndex++}`); values.push(emergency_contact_phone); }
-        if (hobbies !== undefined) { fields.push(`hobbies = $${fieldIndex++}`); values.push(JSON.stringify(hobbies)); }
-        if (volunteer_work !== undefined) { fields.push(`volunteer_work = $${fieldIndex++}`); values.push(JSON.stringify(volunteer_work)); }
-        if (role !== undefined) { fields.push(`role = $${fieldIndex++}`); values.push(role); }
-        
-        if (fields.length === 0) {
-            const member = await getMemberByIdAction(id);
-            if (!member) return { error: "Member not found." };
-            return member;
+            if (name !== undefined) { fields.push(`name = $${fieldIndex++}`); values.push(name); }
+            if (email !== undefined) { fields.push(`email = $${fieldIndex++}`); values.push(email); }
+            if (phone !== undefined) { fields.push(`phone = $${fieldIndex++}`); values.push(phone); }
+            if (domain !== undefined) { fields.push(`domain = $${fieldIndex++}`); values.push(domain); }
+            if (country !== undefined) { fields.push(`country = $${fieldIndex++}`); values.push(country); }
+            if (branch !== undefined) { fields.push(`branch = $${fieldIndex++}`); values.push(branch); }
+            if (experience !== undefined) { fields.push(`experience = $${fieldIndex++}`); values.push(JSON.stringify(experience)); }
+            if (education !== undefined) { fields.push(`education = $${fieldIndex++}`); values.push(JSON.stringify(education)); }
+            if (skills !== undefined) { fields.push(`skills = $${fieldIndex++}`); values.push(JSON.stringify(skills)); }
+            if (status !== undefined) { fields.push(`status = $${fieldIndex++}`); values.push(status); }
+            if (profile_picture_url !== undefined) { fields.push(`profile_picture_url = $${fieldIndex++}`); values.push(profile_picture_url); }
+            if (cover_photo_url !== undefined) { fields.push(`cover_photo_url = $${fieldIndex++}`); values.push(cover_photo_url); }
+            if (job_title !== undefined) { fields.push(`job_title = $${fieldIndex++}`); values.push(job_title); }
+            if (date_of_birth !== undefined) { fields.push(`date_of_birth = $${fieldIndex++}`); values.push(date_of_birth); }
+            if (start_date !== undefined) { fields.push(`start_date = $${fieldIndex++}`); values.push(start_date); }
+            if (address !== undefined) { fields.push(`address = $${fieldIndex++}`); values.push(address); }
+            if (emergency_contact_name !== undefined) { fields.push(`emergency_contact_name = $${fieldIndex++}`); values.push(emergency_contact_name); }
+            if (emergency_contact_phone !== undefined) { fields.push(`emergency_contact_phone = $${fieldIndex++}`); values.push(emergency_contact_phone); }
+            if (hobbies !== undefined) { fields.push(`hobbies = $${fieldIndex++}`); values.push(JSON.stringify(hobbies)); }
+            if (volunteer_work !== undefined) { fields.push(`volunteer_work = $${fieldIndex++}`); values.push(JSON.stringify(volunteer_work)); }
+            
+            if (fields.length > 0) {
+              fields.push(`updated_at = NOW()`);
+              values.push(id);
+
+              const queryString = `
+                  UPDATE members
+                  SET ${fields.join(', ')}
+                  WHERE id = $${fieldIndex}
+                  RETURNING *;
+              `;
+              await client.query(queryString, values);
+            }
+            
+            if (role_id) {
+              await client.query('DELETE FROM role_members WHERE member_id = $1', [id]);
+              await client.query('INSERT INTO role_members (member_id, role_id) VALUES ($1, $2)', [id, role_id]);
+            }
+
+            await client.query('COMMIT');
+            
+            const updatedMember = await getMemberByIdAction(id);
+            if (!updatedMember) return { error: "Failed to retrieve updated member."};
+
+            return updatedMember;
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
         }
-
-        fields.push(`updated_at = NOW()`);
-        values.push(id);
-
-        const queryString = `
-            UPDATE members
-            SET ${fields.join(', ')}
-            WHERE id = $${fieldIndex}
-            RETURNING *;
-        `;
-
-        const result = await db.query(queryString, values);
-        return result.rows[0];
     } catch (error) {
         console.error(`Error updating member with id ${id}:`, error);
         return { error: 'Failed to update member profile.' };
@@ -415,15 +446,29 @@ export async function updateMemberStatusAction(id: string, status: Member['statu
     }
 }
 
-export async function updateMemberRoleAction(id: string, role: Member['role']): Promise<{ success: boolean; error?: string }> {
+export async function getRolesAction(): Promise<Role[]> {
     try {
-        const result = await db.query('UPDATE members SET role = $1, updated_at = NOW() WHERE id = $2', [role, id]);
-         if (result.rowCount === 0) {
-            return { success: false, error: 'Member not found.' };
+        const result = await db.query('SELECT * FROM roles ORDER BY name ASC');
+        return result.rows;
+    } catch (error) {
+        console.error('Error fetching roles:', error);
+        return [];
+    }
+}
+
+export async function updateMemberRoleAction(memberId: string, roleId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        await db.query('BEGIN');
+        await db.query('DELETE FROM role_members WHERE member_id = $1', [memberId]);
+        const result = await db.query('INSERT INTO role_members (member_id, role_id) VALUES ($1, $2)', [memberId, roleId]);
+        await db.query('COMMIT');
+        if (result.rowCount === 0) {
+            return { success: false, error: 'Failed to assign role.' };
         }
         return { success: true };
     } catch (error) {
-        console.error(`Error updating role for member with id ${id}:`, error);
+        await db.query('ROLLBACK');
+        console.error(`Error updating role for member with id ${memberId}:`, error);
         return { success: false, error: 'Failed to update member role.' };
     }
 }
