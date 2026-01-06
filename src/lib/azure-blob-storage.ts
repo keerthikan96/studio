@@ -1,6 +1,5 @@
 
 import { BlobServiceClient } from '@azure/storage-blob';
-import 'dotenv/config';
 
 let blobServiceClient: BlobServiceClient | null = null;
 let containerName: string | null = null;

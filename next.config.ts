@@ -42,6 +42,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'mdpv2storage.blob.core.windows.net',
+        port: '',
+        pathname: '/**',
+      }
     ],
   },
 };
