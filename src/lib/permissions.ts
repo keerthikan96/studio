@@ -1,7 +1,5 @@
 
 
-import { db } from './db';
-
 // =================================================================
 // PERMISSION DEFINITIONS
 // =================================================================
@@ -117,57 +115,3 @@ export const ALL_PERMISSIONS: Permission[] = [
     ...performancePermissions,
     ...selfAssessmentPermissions,
 ];
-
-// =================================================================
-// DATABASE & UTILITY FUNCTIONS
-// =================================================================
-
-/**
- * Fetches all permissions for a given role ID.
- * @param roleId - The UUID of the role.
- * @returns A promise that resolves to an array of permission strings (e.g., ['members.create', 'members.read_all']).
- */
-export async function getRolePermissions(roleId: string): Promise<string[]> {
-    try {
-        const result = await db.query(
-            'SELECT permission_id FROM role_permissions WHERE role_id = $1',
-            [roleId]
-        );
-        return result.rows.map(row => row.permission_id);
-    } catch (error) {
-        console.error(`Error fetching permissions for role ${roleId}:`, error);
-        return [];
-    }
-}
-
-/**
- * Fetches all permissions for a given member ID by checking their role.
- * @param memberId - The UUID of the member.
- * @returns A promise that resolves to an array of permission strings.
- */
-export async function getMemberPermissions(memberId: string): Promise<string[]> {
-    try {
-        const roleResult = await db.query(
-            'SELECT role_id FROM role_members WHERE member_id = $1',
-            [memberId]
-        );
-        if (roleResult.rows.length === 0) {
-            return [];
-        }
-        const roleId = roleResult.rows[0].role_id;
-        return getRolePermissions(roleId);
-    } catch (error) {
-        console.error(`Error fetching role for member ${memberId}:`, error);
-        return [];
-    }
-}
-
-/**
- * Checks if a set of user permissions includes a required permission.
- * @param userPermissions - An array of permissions the user has.
- * @param requiredPermission - The permission string to check for.
- * @returns True if the user has the permission, false otherwise.
- */
-export function checkPermission(userPermissions: string[], requiredPermission: string): boolean {
-    return userPermissions.includes(requiredPermission);
-}
