@@ -31,8 +31,10 @@ export const uploadFileToAzure = async (buffer: Buffer, destination: string): Pr
 
         return blockBlobClient.url;
 
-    } catch (error) {
-        console.error('Error uploading to Azure Blob Storage:', error);
+    } catch (error: any) {
+        console.error('**************************************************************');
+        console.error('AZURE UPLOAD ERROR:', error.message || error);
+        console.error('**************************************************************');
         throw new Error('Failed to upload file to Azure.');
     }
 };
