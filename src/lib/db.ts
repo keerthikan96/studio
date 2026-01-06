@@ -46,47 +46,18 @@ export async function setupDatabase() {
         await client.query(`
             CREATE TABLE IF NOT EXISTS members (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                first_name VARCHAR(255) NOT NULL,
+                first_name VARCHAR(255),
                 middle_name VARCHAR(255),
-                last_name VARCHAR(255) NOT NULL,
+                last_name VARCHAR(255),
                 name VARCHAR(255) NOT NULL,
-                gender VARCHAR(50),
                 email VARCHAR(255) UNIQUE NOT NULL,
-                password TEXT,
-                phone VARCHAR(50),
-                street_address VARCHAR(255),
-                city VARCHAR(100),
-                state_province VARCHAR(100),
-                postal_code VARCHAR(20),
-                country VARCHAR(100),
                 domain VARCHAR(100),
+                country VARCHAR(100),
                 branch VARCHAR(100),
                 status VARCHAR(50) NOT NULL DEFAULT 'pending',
-                role VARCHAR(50) NOT NULL DEFAULT 'staff',
                 experience JSONB,
                 education JSONB,
                 skills JSONB,
-                profile_picture_url VARCHAR(2048),
-                cover_photo_url VARCHAR(2048),
-                job_title VARCHAR(255),
-                date_of_birth DATE,
-                start_date DATE,
-                address TEXT,
-                emergency_contact_name VARCHAR(255),
-                emergency_contact_phone VARCHAR(50),
-                emergency_contact_relationship VARCHAR(100),
-                citizenship VARCHAR(100),
-                national_id VARCHAR(100),
-                passport_no VARCHAR(100),
-                visa_work_permit VARCHAR(100),
-                visa_work_permit_expiry DATE,
-                employee_id VARCHAR(100) UNIQUE,
-                employment_type VARCHAR(50),
-                employee_level VARCHAR(50),
-                reporting_supervisor_id UUID,
-                reporting_supervisor_history JSONB,
-                hobbies JSONB,
-                volunteer_work JSONB,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
@@ -324,6 +295,23 @@ export async function setupDatabase() {
             { name: 'hobbies', type: 'JSONB' },
             { name: 'volunteer_work', type: 'JSONB' },
             { name: 'role', type: 'VARCHAR(50) NOT NULL DEFAULT \'staff\'' },
+            { name: 'gender', type: 'VARCHAR(50)'},
+            { name: 'phone', type: 'VARCHAR(50)' },
+            { name: 'street_address', type: 'VARCHAR(255)' },
+            { name: 'city', type: 'VARCHAR(100)' },
+            { name: 'state_province', type: 'VARCHAR(100)' },
+            { name: 'postal_code', type: 'VARCHAR(20)' },
+            { name: 'emergency_contact_relationship', type: 'VARCHAR(100)' },
+            { name: 'citizenship', type: 'VARCHAR(100)' },
+            { name: 'national_id', type: 'VARCHAR(100)' },
+            { name: 'passport_no', type: 'VARCHAR(100)' },
+            { name: 'visa_work_permit', type: 'VARCHAR(100)' },
+            { name: 'visa_work_permit_expiry', type: 'DATE' },
+            { name: 'employee_id', type: 'VARCHAR(100) UNIQUE' },
+            { name: 'employment_type', type: 'VARCHAR(50)' },
+            { name: 'employee_level', type: 'VARCHAR(50)' },
+            { name: 'reporting_supervisor_id', type: 'UUID' },
+            { name: 'reporting_supervisor_history', type: 'JSONB' },
         ];
 
         for (const col of member_columns) {
@@ -337,6 +325,29 @@ export async function setupDatabase() {
             } else if (rows[0].data_type === 'text' && col.type === 'JSONB') {
                  await client.query(`ALTER TABLE members ALTER COLUMN ${col.name} TYPE JSONB USING ${col.name}::jsonb;`);
             }
+        }
+        
+        // This is a one-time check to ensure the first_name column exists.
+        // It's safer than adding it directly to the columns loop which might rerun.
+        const { rows: firstNameCheck } = await client.query(`
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name='members' AND column_name='first_name';
+        `);
+
+        if (firstNameCheck.length === 0) {
+            await client.query(`
+                ALTER TABLE members
+                ADD COLUMN first_name VARCHAR(255),
+                ADD COLUMN middle_name VARCHAR(255),
+                ADD COLUMN last_name VARCHAR(255);
+            `);
+             // This is a one-time data migration.
+            await client.query(`
+                UPDATE members
+                SET first_name = COALESCE(SPLIT_PART(name, ' ', 1), ''),
+                    last_name = COALESCE(SUBSTRING(name from ' .*$'), '')
+                WHERE first_name IS NULL OR last_name IS NULL;
+            `);
         }
 
         const note_columns = [
