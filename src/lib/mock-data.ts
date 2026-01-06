@@ -4,6 +4,7 @@ export type Role = {
     id: string;
     name: string;
     description: string;
+    created_at: string;
 };
 
 export type WorkExperience = {
