@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState, useTransition } from "react";
-import { getRolesAction } from "@/app/actions/staff";
+import { getRolesAction } from "@/app/actions/roles";
 import { Role } from "@/lib/mock-data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Loader2, PlusCircle, Edit, Trash2, MoreHorizontal } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
+import Link from "next/link";
 
 export default function RolesPage() {
     const [roles, setRoles] = useState<Role[]>([]);
@@ -33,8 +34,10 @@ export default function RolesPage() {
                         <CardTitle>Roles & Permissions</CardTitle>
                         <CardDescription>A list of all configured roles in the system.</CardDescription>
                     </div>
-                     <Button>
-                        <PlusCircle className="mr-2 h-4 w-4" /> Create New Role
+                     <Button asChild>
+                        <Link href="/admin/settings/user-management/roles/new">
+                            <PlusCircle className="mr-2 h-4 w-4" /> Create New Role
+                        </Link>
                     </Button>
                 </CardHeader>
                 <CardContent>
@@ -69,9 +72,11 @@ export default function RolesPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem>
-                                                        <Edit className="mr-2 h-4 w-4" />
-                                                        Edit Role
+                                                    <DropdownMenuItem asChild>
+                                                        <Link href={`/admin/settings/user-management/roles/${role.id}`}>
+                                                            <Edit className="mr-2 h-4 w-4" />
+                                                            Edit Role
+                                                        </Link>
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem className="text-destructive">
                                                         <Trash2 className="mr-2 h-4 w-4" />

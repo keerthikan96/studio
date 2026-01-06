@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import {
@@ -78,7 +79,7 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
       );
 
       // If a resume was uploaded, add it to the documents table
-      if (resumeFile) {
+      if (resumeFile && resumeFile.file.size > 0) {
         const buffer = Buffer.from(await resumeFile.file.arrayBuffer());
         const destination = `resumes/${newMember.id}/${Date.now()}-${resumeFile.file.name}`;
         const publicUrl = await uploadFileToAzure(buffer, destination);

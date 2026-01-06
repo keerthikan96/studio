@@ -98,7 +98,8 @@ export async function setupDatabase() {
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 name VARCHAR(255) UNIQUE NOT NULL,
                 description TEXT,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
 
@@ -313,6 +314,19 @@ export async function setupDatabase() {
                 approved_by_id UUID,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
+
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                actor_id VARCHAR(255),
+                actor_name VARCHAR(255),
+                action VARCHAR(255) NOT NULL,
+                resource_type VARCHAR(100),
+                resource_id VARCHAR(255),
+                details JSONB,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
         

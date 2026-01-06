@@ -1,4 +1,5 @@
 
+
 import { db } from './db';
 
 // =================================================================
@@ -7,7 +8,13 @@ import { db } from './db';
 // Using a structured format for easier management and UI generation.
 // Format: RESOURCE.ACTION
 
-const definePermissions = (resource: string, actions: string[], descriptions: { [key: string]: string }) => {
+export type Permission = {
+    id: string;
+    description: string;
+    resource: string;
+};
+
+const definePermissions = (resource: string, actions: string[], descriptions: { [key: string]: string }): Permission[] => {
     return actions.map(action => ({
         id: `${resource}.${action}`,
         description: descriptions[action],
@@ -101,7 +108,7 @@ export const PERMISSION_RESOURCES = [
     'documents', 'performance', 'self_assessment'
 ] as const;
 
-export const ALL_PERMISSIONS = [
+export const ALL_PERMISSIONS: Permission[] = [
     ...memberPermissions,
     ...rolePermissions,
     ...leavePermissions,
