@@ -9,6 +9,7 @@ import {
 import { db, setupDatabase } from '@/lib/db';
 import { Member, Note, PerformanceRecord, SelfEvaluation, Document, CourseOrCertificate, AssessmentCategory } from '@/lib/mock-data';
 import { requestPasswordResetAction } from './auth';
+import { uploadFileToAzure } from '@/lib/azure-blob-storage';
 
 export async function parseResumeAction(
   input: ParseResumeToAutofillProfileInput
@@ -24,9 +25,9 @@ export async function parseResumeAction(
   }
 }
 
-export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'role' | 'name' | 'hobbies' | 'volunteer_work'>, sendInvite: boolean, isDraft: boolean, resume?: { url: string, type: string, size: number } }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
+export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'role' | 'name' | 'hobbies' | 'volunteer_work'>, sendInvite: boolean, isDraft: boolean, resumeFile?: { file: File, dataUri: string } }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
   await setupDatabase();
-  const { staff, sendInvite, isDraft, resume } = staffData;
+  const { staff, sendInvite, isDraft, resumeFile } = staffData;
 
   // Combine names for the 'name' column
   const name = [staff.first_name, staff.middle_name, staff.last_name].filter(Boolean).join(' ');
@@ -72,11 +73,15 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
       const newMember = result.rows[0];
 
       // If a resume was uploaded, add it to the documents table
-      if (resume) {
+      if (resumeFile) {
+        const buffer = Buffer.from(await resumeFile.file.arrayBuffer());
+        const destination = `resumes/${newMember.id}/${Date.now()}-${resumeFile.file.name}`;
+        const publicUrl = await uploadFileToAzure(buffer, destination);
+        
         await client.query(
           `INSERT INTO member_documents (member_id, name, description, file_url, file_type, file_size)
            VALUES ($1, $2, $3, $4, $5, $6);`,
-          [newMember.id, 'Resume', 'Uploaded during employee creation.', resume.url, resume.type, resume.size]
+          [newMember.id, 'Resume', 'Uploaded during employee creation.', publicUrl, resumeFile.file.type, resumeFile.file.size]
         );
       }
 
@@ -419,5 +424,3 @@ export async function updateMemberRoleAction(id: string, role: Member['role']): 
         return { success: false, error: 'Failed to update member role.' };
     }
 }
-
-    

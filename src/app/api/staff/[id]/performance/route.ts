@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { uploadFileToGCS } from '@/lib/gcs';
+import { uploadFileToAzure } from '@/lib/azure-blob-storage';
 import { addPerformanceRecordAction } from '@/app/actions/staff';
 import { PerformanceRecord } from '@/lib/mock-data';
 
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       if (file.size > 0) {
         const buffer = Buffer.from(await file.arrayBuffer());
         const destination = `performance/${memberId}/${Date.now()}-${file.name}`;
-        const publicUrl = await uploadFileToGCS(buffer, destination);
+        const publicUrl = await uploadFileToAzure(buffer, destination);
         uploadedAttachments.push({ name: file.name, url: publicUrl });
       }
     }

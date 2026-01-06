@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { uploadFileToGCS } from '@/lib/gcs';
+import { uploadFileToAzure } from '@/lib/azure-blob-storage';
 import { addDocumentAction, updateDocumentAction, deleteDocumentAction } from '@/app/actions/staff';
 import { Document } from '@/lib/mock-data';
 
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const destination = `documents/${memberId}/${Date.now()}-${file.name}`;
-    const publicUrl = await uploadFileToGCS(buffer, destination);
+    const publicUrl = await uploadFileToAzure(buffer, destination);
 
     const docData: Omit<Document, 'id' | 'created_at'> = {
       member_id: memberId,
@@ -100,7 +100,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
             return NextResponse.json({ error: 'Document ID is required.' }, { status: 400 });
         }
 
-        // TODO: In a real app, you might want to delete the file from GCS as well.
+        // TODO: In a real app, you might want to delete the file from Azure Blob Storage as well.
         
         const result = await deleteDocumentAction(docId);
         

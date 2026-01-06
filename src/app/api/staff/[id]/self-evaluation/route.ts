@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { uploadFileToGCS } from '@/lib/gcs';
+import { uploadFileToAzure } from '@/lib/azure-blob-storage';
 import { addSelfEvaluationAction } from '@/app/actions/staff';
 import { SelfEvaluation } from '@/lib/mock-data';
 
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       if (file.size > 0) {
         const buffer = Buffer.from(await file.arrayBuffer());
         const destination = `self-evaluations/${memberId}/${Date.now()}-${file.name}`;
-        const publicUrl = await uploadFileToGCS(buffer, destination);
+        const publicUrl = await uploadFileToAzure(buffer, destination);
         uploadedAttachments.push({ name: file.name, url: publicUrl });
       }
     }
@@ -55,5 +55,3 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
-
-    

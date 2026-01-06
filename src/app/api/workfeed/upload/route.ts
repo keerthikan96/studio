@@ -2,7 +2,7 @@
 import 'dotenv/config';
 import { NextRequest, NextResponse } from "next/server";
 import sharp from 'sharp';
-import { uploadFileToGCS } from "@/lib/gcs";
+import { uploadFileToAzure } from "@/lib/azure-blob-storage";
 
 // POST /api/workfeed/upload
 export async function POST(req: NextRequest) {
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       .toBuffer();
 
     const destination = `workfeed-posts/${Date.now()}-${file.name.replace(/\s/g, '_')}.webp`;
-    const publicUrl = await uploadFileToGCS(processedBuffer, destination);
+    const publicUrl = await uploadFileToAzure(processedBuffer, destination);
 
     return NextResponse.json({ message: "Image uploaded successfully", url: publicUrl });
 

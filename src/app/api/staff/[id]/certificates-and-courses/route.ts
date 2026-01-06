@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { uploadFileToGCS } from '@/lib/gcs';
+import { uploadFileToAzure } from '@/lib/azure-blob-storage';
 import { addCourseOrCertificateAction } from '@/app/actions/staff';
 import { CourseOrCertificate } from '@/lib/mock-data';
 
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       }
       const buffer = Buffer.from(await file.arrayBuffer());
       const destination = `certificates/${memberId}/${Date.now()}-${file.name}`;
-      certificate_url = await uploadFileToGCS(buffer, destination);
+      certificate_url = await uploadFileToAzure(buffer, destination);
       certificate_file_type = file.type;
     }
     

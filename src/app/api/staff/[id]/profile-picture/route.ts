@@ -2,7 +2,7 @@
 import 'dotenv/config';
 import { NextRequest, NextResponse } from "next/server";
 import sharp from 'sharp';
-import { uploadFileToGCS } from "@/lib/gcs";
+import { uploadFileToAzure } from "@/lib/azure-blob-storage";
 import { updateMemberAction } from "@/app/actions/staff";
 
 // POST /api/staff/[id]/profile-picture
@@ -31,7 +31,7 @@ export async function POST(
       .toBuffer();
 
     const destination = `profile-pictures/${params.id}-${Date.now()}.webp`;
-    const publicUrl = await uploadFileToGCS(processedBuffer, destination);
+    const publicUrl = await uploadFileToAzure(processedBuffer, destination);
 
     // If it's the admin user, skip database update
     if (params.id !== 'admin-user-001') {
