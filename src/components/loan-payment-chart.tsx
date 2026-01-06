@@ -1,6 +1,7 @@
+
 "use client"
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 // Mock date-fns functions for this demo
 const format = (date, formatStr) => {
@@ -11,11 +12,8 @@ const format = (date, formatStr) => {
 };
 
 const isSameDay = (date1, date2) => {
+  if (!date1 || !date2) return false;
   return date1.toDateString() === date2.toDateString();
-};
-
-const isToday = (date) => {
-  return isSameDay(date, new Date());
 };
 
 type DashboardCalendarProps = {
@@ -25,7 +23,12 @@ type DashboardCalendarProps = {
 
 export function DashboardCalendar({ selectedDate, onDateChange }: DashboardCalendarProps) {
   const [currentDate, setCurrentDate] = useState(selectedDate || new Date());
-  const today = new Date();
+  const [today, setToday] = useState<Date | null>(null);
+
+  useEffect(() => {
+    // Set today's date only on the client-side to avoid hydration mismatch
+    setToday(new Date());
+  }, []);
   
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
@@ -47,7 +50,7 @@ export function DashboardCalendar({ selectedDate, onDateChange }: DashboardCalen
   };
   
   const isTodayDate = (date) => {
-    return date && isSameDay(date, today);
+    return date && today && isSameDay(date, today);
   };
   
   const navigateMonth = (direction) => {
