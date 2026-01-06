@@ -42,6 +42,7 @@ import { ParseResumeToAutofillProfileOutput } from '@/ai/flows/resume-parsing-to
 import { ResumeReview } from './resume-review';
 import { ReviewFieldWrapper } from './review-field-wrapper';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { Textarea } from './ui/textarea';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
