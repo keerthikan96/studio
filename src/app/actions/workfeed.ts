@@ -4,6 +4,7 @@
 import { db, setupDatabase } from '@/lib/db';
 import { WorkfeedPost, WorkfeedComment } from '@/lib/mock-data';
 import { revalidatePath } from 'next/cache';
+import { logAuditEvent } from './audit';
 
 type PostAuthor = {
     id: string;
@@ -18,9 +19,10 @@ export async function createPostAction(content: string, author: PostAuthor, imag
     if (!author) {
         return { error: 'You must be logged in to create a post.' };
     }
-
+    const client = await db.connect();
     try {
-        const result = await db.query(
+        await client.query('BEGIN');
+        const result = await client.query(
             `INSERT INTO workfeed_posts (author_id, author_name, author_role, author_avatar_url, content, image_url)
              VALUES ($1, $2, $3, $4, $5, $6)
              RETURNING *;`,
@@ -28,20 +30,27 @@ export async function createPostAction(content: string, author: PostAuthor, imag
         );
 
         const newPost = result.rows[0];
-        
-        const fullPost: WorkfeedPost = {
-            ...newPost,
-            likes: [],
-            comments: []
-        };
 
+        await logAuditEvent({
+            actorId: author.id,
+            actorName: author.name,
+            action: 'workfeed.post.create',
+            resource_type: 'workfeed_post',
+            resource_id: newPost.id
+        }, client);
+
+        await client.query('COMMIT');
+        
         revalidatePath('/admin/workfeed');
         revalidatePath('/dashboard/workfeed');
-        return fullPost;
+        return { ...newPost, likes: [], comments: [] };
 
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('Error creating post:', error);
         return { error: 'Failed to create post.' };
+    } finally {
+        client.release();
     }
 }
 
@@ -176,22 +185,37 @@ export async function addCommentAction(postId: string, content: string, author: 
     if (!author) {
         return { error: 'You must be logged in to comment.' };
     }
-
+    const client = await db.connect();
     try {
-        const result = await db.query(
+        await client.query('BEGIN');
+        const result = await client.query(
             `INSERT INTO workfeed_comments (post_id, author_id, author_name, author_avatar_url, content)
              VALUES ($1, $2, $3, $4, $5)
              RETURNING *;`,
             [postId, author.id, author.name, author.profile_picture_url, content]
         );
         const newComment = { ...result.rows[0], likes: [] };
+
+        await logAuditEvent({
+            actorId: author.id,
+            actorName: author.name,
+            action: 'workfeed.comment.create',
+            resource_type: 'workfeed_comment',
+            resource_id: newComment.id,
+            details: { post_id: postId }
+        }, client);
+        
+        await client.query('COMMIT');
         revalidatePath('/admin/workfeed');
         revalidatePath('/dashboard/workfeed');
         return newComment;
 
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('Error adding comment:', error);
         return { error: 'Failed to add comment.' };
+    } finally {
+        client.release();
     }
 }
 
@@ -227,9 +251,10 @@ export async function deletePostAction(postId: string, userId: string, userRole:
     if (!user) {
         return { success: false, error: 'You must be logged in to delete a post.' };
     }
-
+    const client = await db.connect();
     try {
-        const postResult = await db.query('SELECT author_id FROM workfeed_posts WHERE id = $1', [postId]);
+        await client.query('BEGIN');
+        const postResult = await client.query('SELECT author_id, author_name FROM workfeed_posts WHERE id = $1', [postId]);
         
         if (postResult.rows.length === 0) {
             return { success: false, error: 'Post not found.' };
@@ -241,15 +266,27 @@ export async function deletePostAction(postId: string, userId: string, userRole:
             return { success: false, error: 'You do not have permission to delete this post.' };
         }
 
-        await db.query('DELETE FROM workfeed_posts WHERE id = $1', [postId]);
+        await client.query('DELETE FROM workfeed_posts WHERE id = $1', [postId]);
         
+        await logAuditEvent({
+            actorId: user.id,
+            actorName: post.author_name,
+            action: 'workfeed.post.delete',
+            resource_type: 'workfeed_post',
+            resource_id: postId,
+        }, client);
+
+        await client.query('COMMIT');
         revalidatePath('/admin/workfeed');
         revalidatePath('/dashboard/workfeed');
         return { success: true };
 
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('Error deleting post:', error);
         return { success: false, error: 'Failed to delete post.' };
+    } finally {
+        client.release();
     }
 }
 
@@ -260,9 +297,10 @@ export async function deleteCommentAction(commentId: string, userId: string, use
     if (!user) {
         return { success: false, error: 'You must be logged in to delete a comment.' };
     }
-
+    const client = await db.connect();
     try {
-        const commentResult = await db.query('SELECT author_id FROM workfeed_comments WHERE id = $1', [commentId]);
+        await client.query('BEGIN');
+        const commentResult = await client.query('SELECT author_id, author_name FROM workfeed_comments WHERE id = $1', [commentId]);
         
         if (commentResult.rows.length === 0) {
             return { success: false, error: 'Comment not found.' };
@@ -274,33 +312,57 @@ export async function deleteCommentAction(commentId: string, userId: string, use
             return { success: false, error: 'You do not have permission to delete this comment.' };
         }
 
-        await db.query('DELETE FROM workfeed_comments WHERE id = $1', [commentId]);
+        await client.query('DELETE FROM workfeed_comments WHERE id = $1', [commentId]);
         
+        await logAuditEvent({
+            actorId: user.id,
+            actorName: comment.author_name,
+            action: 'workfeed.comment.delete',
+            resource_type: 'workfeed_comment',
+            resource_id: commentId
+        }, client);
+
+        await client.query('COMMIT');
         revalidatePath('/admin/workfeed');
         revalidatePath('/dashboard/workfeed');
         return { success: true };
 
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('Error deleting comment:', error);
         return { success: false, error: 'Failed to delete comment.' };
+    } finally {
+        client.release();
     }
 }
 
 
 export async function saveWorkfeedSettingsAction(settings: { birthday: any; anniversary: any; }): Promise<{ success: boolean; error?: string }> {
     await setupDatabase();
+    const client = await db.connect();
     try {
-        await db.query(
+        await client.query('BEGIN');
+        await client.query(
             `INSERT INTO app_settings (key, value) 
              VALUES ('workfeed_automation', $1)
              ON CONFLICT (key) 
              DO UPDATE SET value = $1;`,
              [JSON.stringify(settings)]
         );
+        await logAuditEvent({
+            action: 'workfeed.settings.update',
+            resource_type: 'app_setting',
+            resource_id: 'workfeed_automation',
+            details: settings
+        }, client);
+        await client.query('COMMIT');
         return { success: true };
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error("Failed to save workfeed settings:", error);
         return { success: false, error: "Could not save settings to the database." };
+    } finally {
+        client.release();
     }
 }
 

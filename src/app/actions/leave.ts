@@ -4,6 +4,17 @@
 import { db, setupDatabase } from '@/lib/db';
 import { LeaveCategory, LeaveEntitlement, LeaveRequest } from '@/lib/mock-data';
 import { revalidatePath } from 'next/cache';
+import { logAuditEvent } from './audit';
+import { PoolClient } from 'pg';
+
+async function logWithClient(client: PoolClient, params: any) {
+    // In a real app, actorId and actorName would come from session
+    await logAuditEvent({
+        actorId: params.actorId || 'admin-user-001',
+        actorName: params.actorName || 'People and Culture office',
+        ...params
+    }, client);
+}
 
 // ========== CATEGORY ACTIONS ==========
 
@@ -74,29 +85,47 @@ export async function getMemberLeaveRequestsAction(memberId: string): Promise<Le
 
 export async function createLeaveRequestAction(data: Omit<LeaveRequest, 'id' | 'status' | 'created_at' | 'updated_at'>): Promise<LeaveRequest | { error: string }> {
     await setupDatabase();
+    const client = await db.connect();
     try {
+        await client.query('BEGIN');
         const { member_id, category_id, start_date, end_date, days, reason, project, project_lead, direct_report } = data;
-        const result = await db.query(
+        const result = await client.query(
             `INSERT INTO leave_requests (member_id, category_id, start_date, end_date, days, reason, project, project_lead, direct_report)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
              RETURNING *`,
             [member_id, category_id, start_date, end_date, days, reason, project, project_lead, direct_report]
         );
+        const newRequest = result.rows[0];
+
+        await logAuditEvent({
+            actorId: member_id,
+            action: 'leave.request',
+            resource_type: 'leave_request',
+            resource_id: newRequest.id,
+            details: { category_id, start_date, end_date, days }
+        }, client);
+        
+        await client.query('COMMIT');
         revalidatePath('/admin/leave');
-        return result.rows[0];
+        return newRequest;
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('Error creating leave request:', error);
         return { error: 'Failed to submit leave request.' };
+    } finally {
+        client.release();
     }
 }
 
 export async function updateLeaveRequestStatusAction(id: string, status: 'Approved' | 'Rejected', approvedById: string): Promise<{ success: boolean; error?: string }> {
     await setupDatabase();
+    const client = await db.connect();
     try {
-        const result = await db.query(
+        await client.query('BEGIN');
+        const result = await client.query(
             `UPDATE leave_requests
              SET status = $1, approved_by_id = $2, updated_at = NOW()
-             WHERE id = $3`,
+             WHERE id = $3 RETURNING member_id`,
             [status, approvedById, id]
         );
 
@@ -104,12 +133,22 @@ export async function updateLeaveRequestStatusAction(id: string, status: 'Approv
             return { success: false, error: 'Leave request not found.' };
         }
         
-        // TODO: In a real app, if approved, you would deduct from entitlements here.
-
+        await logAuditEvent({
+            actorId: approvedById,
+            action: `leave.${status.toLowerCase()}`,
+            resource_type: 'leave_request',
+            resource_id: id,
+            details: { member_id: result.rows[0].member_id }
+        }, client);
+        
+        await client.query('COMMIT');
         revalidatePath('/admin/leave');
         return { success: true };
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('Error updating leave request status:', error);
         return { success: false, error: 'Failed to update leave request status.' };
+    } finally {
+        client.release();
     }
 }
