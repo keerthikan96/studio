@@ -2,6 +2,7 @@
 
 import { Pool } from 'pg';
 import 'dotenv/config';
+import { ALL_PERMISSIONS } from './permissions';
 
 let pool: Pool;
 
@@ -100,12 +101,28 @@ export async function setupDatabase() {
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
+
+        await client.query(`
+             CREATE TABLE IF NOT EXISTS permissions (
+                id VARCHAR(255) PRIMARY KEY,
+                description TEXT,
+                resource VARCHAR(100)
+            );
+        `);
         
         await client.query(`
             CREATE TABLE IF NOT EXISTS role_members (
                 role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
                 member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
                 PRIMARY KEY (role_id, member_id)
+            );
+        `);
+
+        await client.query(`
+             CREATE TABLE IF NOT EXISTS role_permissions (
+                role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+                permission_id VARCHAR(255) NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+                PRIMARY KEY (role_id, permission_id)
             );
         `);
 
@@ -312,6 +329,17 @@ export async function setupDatabase() {
             ];
             for (const role of defaultRoles) {
                 await client.query('INSERT INTO roles (name, description) VALUES ($1, $2)', [role.name, role.description]);
+            }
+        }
+        
+         // Seed permissions
+        const { rows: permCount } = await client.query('SELECT COUNT(*) FROM permissions');
+        if (parseInt(permCount[0].count, 10) === 0) {
+            for (const perm of ALL_PERMISSIONS) {
+                await client.query(
+                    'INSERT INTO permissions (id, description, resource) VALUES ($1, $2, $3)',
+                    [perm.id, perm.description, perm.resource]
+                );
             }
         }
 
