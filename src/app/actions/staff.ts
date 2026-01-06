@@ -64,7 +64,7 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
          RETURNING *;`,
         [
           name, first_name, middle_name, last_name, gender, email, phone, street_address, city, state_province, postal_code, country,
-          domain, branch, JSON.stringify(experience), JSON.stringify(education), JSON.stringify(skills), status, job_title, date_of_birth, start_date,
+          domain, branch, JSON.stringify(experience || []), JSON.stringify(education || []), JSON.stringify(skills || []), status, job_title, date_of_birth, start_date,
           emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
           citizenship, national_id, passport_no, visa_work_permit, visa_work_permit_expiry,
           employee_id, employment_type, employee_level, reporting_supervisor_id

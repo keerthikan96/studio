@@ -4,7 +4,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useFieldArray, useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useState, useTransition, KeyboardEvent, useRef } from 'react';
+import { useState, useTransition, KeyboardEvent, useRef, useEffect } from 'react';
 import {
   Form,
   FormControl,
@@ -45,9 +45,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './
 import { Textarea } from './ui/textarea';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
-const countries = ['Canada', 'USA', 'Sri Lanka'];
-const sriLankanBranches = ['Nothern', 'Central', 'Eastern'];
-const genders = ['Male', 'Female', 'Other', 'Prefer not to say'];
 const employmentTypes = ['Full-time', 'Part-time', 'Contract', 'Intern'];
 const employeeLevels = ['L1', 'L2', 'L3', 'Manager', 'Senior Manager', 'Director'];
 
@@ -56,7 +53,7 @@ const workExperienceSchema = z.object({
   companyName: z.string().min(1, 'Company name is required.'),
   role: z.string().min(1, 'Role is required.'),
   years: z.string().min(1, 'Years are required.'),
-  keyResponsibilities: z.string().min(1, 'Key responsibilities are required.'),
+  keyResponsibilities: z.string().optional(),
 });
 
 const educationSchema = z.object({
@@ -69,14 +66,14 @@ const formSchema = z.object({
   first_name: z.string().min(1, 'First name is required.'),
   middle_name: z.string().optional(),
   last_name: z.string().min(1, 'Last name is required.'),
-  gender: z.enum(genders as [string, ...string[]]).optional(),
+  gender: z.string().optional(),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
   phone: z.string().optional(),
   street_address: z.string().optional(),
   city: z.string().optional(),
   state_province: z.string().optional(),
   postal_code: z.string().optional(),
-  country: z.enum(countries as [string, ...string[]]).optional(),
+  country: z.string().optional(),
   domain: z.enum(domains as [string, ...string[]]).optional(),
   branch: z.string().optional(),
   job_title: z.string().optional(),
@@ -91,20 +88,12 @@ const formSchema = z.object({
   visa_work_permit: z.string().optional(),
   visa_work_permit_expiry: z.date().optional(),
   employee_id: z.string().min(1, "Employee ID is required."),
-  employment_type: z.enum(employmentTypes as [string, ...string[]]),
-  employee_level: z.enum(employeeLevels as [string, ...string[]]),
+  employment_type: z.enum(employmentTypes as [string, ...string[]]).optional(),
+  employee_level: z.enum(employeeLevels as [string, ...string[]]).optional(),
   reporting_supervisor_id: z.string().optional(),
   experience: z.array(workExperienceSchema).optional(),
   education: z.array(educationSchema).optional(),
   skills: z.array(z.string()).optional(),
-}).refine(data => {
-    if (data.country === 'Sri Lanka' && data.branch) {
-        return sriLankanBranches.includes(data.branch);
-    }
-    return true;
-}, {
-    message: 'Invalid branch for the selected country.',
-    path: ['branch'],
 });
 
 
@@ -118,11 +107,13 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
   const [isPending, startTransition] = useTransition();
   const [isParsing, setIsParsing] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
-  const [formData, setFormData] = useState<StaffFormValues | null>(null);
+  const [formDataForDialog, setFormDataForDialog] = useState<StaffFormValues | null>(null);
   const [resumeDataUri, setResumeDataUri] = useState<string | null>(null);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [skillInput, setSkillInput] = useState('');
   const [parsedData, setParsedData] = useState<ParseResumeToAutofillProfileOutput | null>(null);
+  const [countries, setCountries] = useState<string[]>([]);
+
   const { toast } = useToast();
   const router = useRouter();
 
@@ -137,7 +128,17 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
    const { fields: eduFields, append: appendEdu, remove: removeEdu } = useFieldArray({ control: form.control, name: "education" });
    const { fields: skillFields, append: appendSkill, remove: removeSkill } = useFieldArray({ control: form.control, name: "skills" });
   
-  const watchedCountry = form.watch('country');
+  const watchedCitizenship = form.watch('citizenship');
+
+  useEffect(() => {
+    fetch('https://restcountries.com/v3.1/all?fields=name')
+      .then(response => response.json())
+      .then((data: { name: { common: string } }[]) => {
+        const countryNames = data.map(country => country.name.common).sort();
+        setCountries(countryNames);
+      })
+      .catch(error => console.error('Error fetching countries:', error));
+  }, []);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -166,6 +167,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
       setResumeDataUri(dataUri);
       startTransition(async () => {
         const result = await parseResumeAction({ resumeDataUri: dataUri });
+        setIsParsing(false);
         if ('error' in result) {
           toast({
             variant: 'destructive',
@@ -177,21 +179,30 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
           setParsedData(result);
           
           const formValues: Partial<StaffFormValues> = {};
-          for (const key in result) {
-              const typedKey = key as keyof ParseResumeToAutofillProfileOutput;
-              if (Object.prototype.hasOwnProperty.call(result, typedKey) && typedKey !== 'unsupportedFields' && result[typedKey]) {
-                  const fieldData = result[typedKey]!;
-                  // @ts-ignore
-                  formValues[typedKey] = fieldData.value;
+          (Object.keys(result) as Array<keyof typeof result>).forEach(key => {
+            if (key !== 'unsupportedFields' && result[key]) {
+              const fieldData = result[key] as any;
+              if (fieldData && fieldData.value !== undefined) {
+                 // @ts-ignore
+                formValues[key] = fieldData.value
               }
-          }
-          form.reset(formValues);
+            }
+          });
+
+          // Handle nested arrays for experience and education
+          form.reset({
+            ...form.getValues(),
+            ...formValues,
+            experience: result.experience?.value || [],
+            education: result.education?.value || [],
+            skills: result.skills?.value || [],
+          });
+
           toast({
             title: 'Resume Parsed Successfully!',
             description: 'Please review the extracted information and complete any missing fields.',
           });
         }
-        setIsParsing(false);
       });
     };
     reader.onerror = (error) => {
@@ -205,13 +216,13 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
     }
   };
   
-  function onSubmit(data: StaffFormValues) {
-    setFormData(data);
+  const onSubmit = (data: StaffFormValues) => {
+    setFormDataForDialog(data);
     setShowInviteDialog(true);
   }
 
   const handleFinalSave = (sendInvite: boolean) => {
-    if (!formData) return;
+    if (!formDataForDialog) return;
 
     startTransition(async () => {
       let resumeData: { file: File; dataUri: string } | undefined;
@@ -219,17 +230,17 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
           resumeData = { file: resumeFile, dataUri: resumeDataUri };
       }
 
-      const result = await onAddStaff({ staff: formData, sendInvite, isDraft: false, resumeFile: resumeData });
+      const result = await onAddStaff({ staff: formDataForDialog, sendInvite, isDraft: false, resumeFile: resumeData });
 
       if (result.success) {
           toast({
               title: 'Member Added!',
-              description: `${formData.first_name} ${formData.last_name} has been added and their profile is active.`,
+              description: `${formDataForDialog.first_name} ${formDataForDialog.last_name} has been added and their profile is active.`,
           });
           if(sendInvite) {
               toast({
                   title: 'Invitation Sent!',
-                  description: `An invitation has been sent to ${formData.first_name}. Check the server console for the link.`,
+                  description: `An invitation has been sent to ${formDataForDialog.first_name}. Check the server console for the link.`,
               });
           }
           router.push('/admin/members');
@@ -246,7 +257,6 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
 
   const handleDraftSave = () => {
     const data = form.getValues();
-    setFormData(data);
     
     startTransition(async () => {
       let resumeData: { file: File; dataUri: string } | undefined;
@@ -317,7 +327,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                      <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                             
-                            <Accordion type="multiple" defaultValue={['personal-info', 'contact-info', 'employment-details']} className="w-full">
+                            <Accordion type="multiple" defaultValue={['personal-info', 'contact-info', 'employment-details', 'legal-info']} className="w-full">
                                 <AccordionItem value="personal-info">
                                     <AccordionTrigger className="text-lg font-medium">Personal Information</AccordionTrigger>
                                     <AccordionContent className="pt-4 space-y-4">
@@ -334,7 +344,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                                         </div>
                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <ReviewFieldWrapper confidence={parsedData.gender?.confidence}>
-                                                <FormField control={form.control} name="gender" render={({ field }) => (<FormItem><FormLabel>Gender</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger></FormControl><SelectContent>{genders.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                                                <FormField control={form.control} name="gender" render={({ field }) => (<FormItem><FormLabel>Gender</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger></FormControl><SelectContent>{['Male', 'Female', 'Other', 'Prefer not to say'].map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                                             </ReviewFieldWrapper>
                                             <ReviewFieldWrapper confidence={0.9}>
                                                 <FormField control={form.control} name="date_of_birth" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Date of Birth</FormLabel><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear()} mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
@@ -361,31 +371,44 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                                         </div>
                                     </AccordionContent>
                                 </AccordionItem>
-
-                                <AccordionItem value="employment-details">
-                                    <AccordionTrigger className="text-lg font-medium">Employment Details</AccordionTrigger>
-                                    <AccordionContent className="pt-4 space-y-4">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <ReviewFieldWrapper confidence={parsedData.domain?.confidence}><FormField control={form.control} name="domain" render={({ field }) => (<FormItem><FormLabel>Domain</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a domain" /></SelectTrigger></FormControl><SelectContent>{domains.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
-                                             <ReviewFieldWrapper confidence={parsedData.branch?.confidence}><FormField control={form.control} name="branch" render={({ field }) => ( <FormItem><FormLabel>Branch</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a branch" /></SelectTrigger></FormControl><SelectContent>{sriLankanBranches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
-                                            <FormField control={form.control} name="job_title" render={({ field }) => (<FormItem><FormLabel>Job Title</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                                            <FormField control={form.control} name="employee_id" render={({ field }) => (<FormItem><FormLabel>Employee ID <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                                            <FormField control={form.control} name="start_date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Start Date</FormLabel><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
-                                            <ReviewFieldWrapper confidence={parsedData.employment_type?.confidence}><FormField control={form.control} name="employment_type" render={({ field }) => (<FormItem><FormLabel>Employment Type</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger></FormControl><SelectContent>{employmentTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
-                                            <ReviewFieldWrapper confidence={parsedData.employee_level?.confidence}><FormField control={form.control} name="employee_level" render={({ field }) => (<FormItem><FormLabel>Employee Level</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a level" /></SelectTrigger></FormControl><SelectContent>{employeeLevels.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
-                                        </div>
-                                    </AccordionContent>
-                                </AccordionItem>
-
+                                
                                 <AccordionItem value="legal-info">
                                     <AccordionTrigger className="text-lg font-medium">Legal & Emergency</AccordionTrigger>
                                     <AccordionContent className="pt-4 space-y-4">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <ReviewFieldWrapper confidence={parsedData.citizenship?.confidence}><FormField control={form.control} name="citizenship" render={({ field }) => (<FormItem><FormLabel>Citizenship</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
-                                            <ReviewFieldWrapper confidence={parsedData.national_id?.confidence}><FormField control={form.control} name="national_id" render={({ field }) => (<FormItem><FormLabel>National ID</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
-                                            <ReviewFieldWrapper confidence={parsedData.passport_no?.confidence}><FormField control={form.control} name="passport_no" render={({ field }) => (<FormItem><FormLabel>Passport No</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
-                                            <ReviewFieldWrapper confidence={parsedData.visa_work_permit?.confidence}><FormField control={form.control} name="visa_work_permit" render={({ field }) => (<FormItem><FormLabel>Visa/Work Permit</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
-                                            <FormField control={form.control} name="visa_work_permit_expiry" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Visa Expiry</FormLabel><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                                            <ReviewFieldWrapper confidence={parsedData.citizenship?.confidence}>
+                                                 <FormField
+                                                    control={form.control}
+                                                    name="citizenship"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Citizenship</FormLabel>
+                                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                                <FormControl>
+                                                                    <SelectTrigger>
+                                                                        <SelectValue placeholder="Select citizenship..." />
+                                                                    </SelectTrigger>
+                                                                </FormControl>
+                                                                <SelectContent>
+                                                                    {countries.map(country => (
+                                                                        <SelectItem key={country} value={country}>{country}</SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </ReviewFieldWrapper>
+                                             {watchedCitizenship === 'Sri Lanka' ? (
+                                                <ReviewFieldWrapper confidence={parsedData.national_id?.confidence}><FormField control={form.control} name="national_id" render={({ field }) => (<FormItem><FormLabel>National ID</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
+                                            ) : watchedCitizenship ? (
+                                                <>
+                                                    <ReviewFieldWrapper confidence={parsedData.passport_no?.confidence}><FormField control={form.control} name="passport_no" render={({ field }) => (<FormItem><FormLabel>Passport No</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
+                                                    <ReviewFieldWrapper confidence={parsedData.visa_work_permit?.confidence}><FormField control={form.control} name="visa_work_permit" render={({ field }) => (<FormItem><FormLabel>Visa/Work Permit</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
+                                                    <FormField control={form.control} name="visa_work_permit_expiry" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Visa Expiry</FormLabel><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                                                </>
+                                            ) : null}
                                         </div>
                                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4 mt-4">
                                             <FormField control={form.control} name="emergency_contact_name" render={({ field }) => (<FormItem><FormLabel>Emergency Contact Name</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
@@ -395,6 +418,21 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                                     </AccordionContent>
                                 </AccordionItem>
 
+                                <AccordionItem value="employment-details">
+                                    <AccordionTrigger className="text-lg font-medium">Employment Details</AccordionTrigger>
+                                    <AccordionContent className="pt-4 space-y-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <ReviewFieldWrapper confidence={parsedData.domain?.confidence}><FormField control={form.control} name="domain" render={({ field }) => (<FormItem><FormLabel>Domain</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a domain" /></SelectTrigger></FormControl><SelectContent>{domains.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
+                                             <ReviewFieldWrapper confidence={parsedData.branch?.confidence}><FormField control={form.control} name="branch" render={({ field }) => ( <FormItem><FormLabel>Branch</FormLabel><FormControl><Input {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
+                                            <FormField control={form.control} name="job_title" render={({ field }) => (<FormItem><FormLabel>Job Title</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                                            <FormField control={form.control} name="employee_id" render={({ field }) => (<FormItem><FormLabel>Employee ID <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                                            <FormField control={form.control} name="start_date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Start Date</FormLabel><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
+                                            <ReviewFieldWrapper confidence={parsedData.employment_type?.confidence}><FormField control={form.control} name="employment_type" render={({ field }) => (<FormItem><FormLabel>Employment Type</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger></FormControl><SelectContent>{employmentTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
+                                            <ReviewFieldWrapper confidence={parsedData.employee_level?.confidence}><FormField control={form.control} name="employee_level" render={({ field }) => (<FormItem><FormLabel>Employee Level</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a level" /></SelectTrigger></FormControl><SelectContent>{employeeLevels.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                                
                                 <AccordionItem value="experience-info">
                                     <AccordionTrigger className="text-lg font-medium">Work Experience</AccordionTrigger>
                                     <AccordionContent className="pt-4 space-y-4">
@@ -406,7 +444,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
                                                         <FormField control={form.control} name={`experience.${index}.role`} render={({ field }) => (<FormItem><FormLabel>Role</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                                                         <FormField control={form.control} name={`experience.${index}.years`} render={({ field }) => (<FormItem><FormLabel>Years</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                                                     </div>
-                                                    <FormField control={form.control} name={`experience.${index}.keyResponsibilities`} render={({ field }) => (<FormItem><FormLabel>Responsibilities</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                                    <FormField control={form.control} name={`experience.${index}.keyResponsibilities`} render={({ field }) => (<FormItem><FormLabel>Responsibilities</FormLabel><FormControl><Textarea {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                                                     <Button type="button" variant="destructive" size="icon" onClick={() => removeExp(index)} className="absolute top-2 right-2 h-6 w-6"><Trash className="h-4 w-4" /></Button>
                                                 </div>
                                             ))}
@@ -485,7 +523,7 @@ export default function AddStaffForm({ onAddStaff }: AddStaffFormProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Send Invitation?</AlertDialogTitle>
             <AlertDialogDescription>
-              The member profile will be activated. Would you like to send an invitation email to {formData?.first_name} {formData?.last_name} to set up their account?
+              The member profile will be activated. Would you like to send an invitation email to {formDataForDialog?.first_name} {formDataForDialog?.last_name} to set up their account?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
