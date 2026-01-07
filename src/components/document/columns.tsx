@@ -4,7 +4,7 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { Document } from "@/app/actions/documents"
 import { Badge } from "../ui/badge"
-import { MoreHorizontal } from "lucide-react"
+import { MoreHorizontal, Eye, Share2, Trash2, History, MessageSquare, Download } from "lucide-react"
 import { Button } from "../ui/button"
 import {
   DropdownMenu,
@@ -16,7 +16,16 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { format } from "date-fns"
 
-export const columns = (): ColumnDef<Document>[] => [
+type DocumentActionsProps = {
+  onView?: (doc: Document) => void;
+  onShare?: (doc: Document) => void;
+  onDelete?: (doc: Document) => void;
+  onVersions?: (doc: Document) => void;
+  onComments?: (doc: Document) => void;
+  onDownload?: (doc: Document) => void;
+};
+
+export const columns = (actions?: DocumentActionsProps): ColumnDef<Document>[] => [
   {
     accessorKey: "title",
     header: "Title",
@@ -65,9 +74,34 @@ export const columns = (): ColumnDef<Document>[] => [
               Copy document ID
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>View details</DropdownMenuItem>
-             <DropdownMenuItem>Share</DropdownMenuItem>
-             <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => actions?.onView?.(document)}>
+              <Eye className="h-4 w-4 mr-2" />
+              View Document
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => actions?.onDownload?.(document)}>
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => actions?.onShare?.(document)}>
+              <Share2 className="h-4 w-4 mr-2" />
+              Share
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => actions?.onVersions?.(document)}>
+              <History className="h-4 w-4 mr-2" />
+              Version History
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => actions?.onComments?.(document)}>
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Comments
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              className="text-destructive"
+              onClick={() => actions?.onDelete?.(document)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )

@@ -32,6 +32,7 @@ import { DocumentCategory } from '@/app/actions/documents';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Switch } from '../ui/switch';
 import { Textarea } from '../ui/textarea';
+import { DocumentPreview } from '../document-preview';
 
 const MAX_FILE_SIZE_MB = 15;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -67,6 +68,7 @@ type DocumentUploadDialogProps = {
 export function DocumentUploadDialog({ categories, onUploadSuccess, userId }: DocumentUploadDialogProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -105,7 +107,8 @@ export function DocumentUploadDialog({ categories, onUploadSuccess, userId }: Do
         }
 
         toast({ title: 'Upload Successful', description: `"${data.title}" has been uploaded.` });
-        form.reset();
+        forSelectedFile(null);
+        setm.reset();
         setIsDialogOpen(false);
         onUploadSuccess();
       } catch (error) {
@@ -152,9 +155,26 @@ export function DocumentUploadDialog({ categories, onUploadSuccess, userId }: Do
               </FormItem>
             )} />
             <FormField control={form.control} name="file" render={({ field }) => (
-              <FormItem><FormLabel>File</FormLabel><FormControl>
-                  <Input type="file" onChange={(e) => field.onChange(e.target.files)} />
+              <FormItem><
+                    type="file" 
+                    onChange={(e) => {
+                      field.onChange(e.target.files);
+                      setSelectedFile(e.target.files?.[0] || null);
+                    }} 
+                  />
               </FormControl><FormMessage /></FormItem>
+            )} />
+
+            {/* File Preview */}
+            {selectedFile && (
+              <DocumentPreview 
+                file={selectedFile} 
+                onClear={() => {
+                  setSelectedFile(null);
+                  form.setValue('file', undefined);
+                }}
+              />
+            )}ormControl><FormMessage /></FormItem>
             )} />
 
             <DialogFooter>

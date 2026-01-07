@@ -13,6 +13,10 @@ import { columns } from '@/components/document/columns';
 import { DocumentUploadDialog } from '@/components/document/document-upload-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { CategoryDialog } from '@/components/document/category-dialog';
+import { DocumentViewerModal } from '@/components/document-viewer-modal';
+import { DocumentShareDialog } from '@/components/document-share-dialog';
+import { DocumentVersionHistory } from '@/components/document-version-history';
+import { DocumentComments } from '@/components/document-comments';
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -21,6 +25,13 @@ export default function DocumentsPage() {
   const [isPending, startTransition] = useTransition();
   const [user, setUser] = useState<{ id: string } | null>(null);
   const { toast } = useToast();
+
+  // Modal states
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
 
   const fetchData = () => {
     if (user) {
@@ -96,7 +107,60 @@ export default function DocumentsPage() {
     }
   };
 
-  const tableColumns = columns();
+  // Document action handlers
+  const handleView = (doc: Document) => {
+    setSelectedDocument(doc);
+    setViewerOpen(true);
+  };
+
+  const handleShare = (doc: Document) => {
+    setSelectedDocument(doc);
+    setShareOpen(true);
+  };
+
+  const handleDelete = async (doc: Document) => {
+    if (!user) return;
+    if (!confirm(`Are you sure you want to delete "${doc.title}"?`)) return;
+
+    try {
+      const response = await fetch(`/api/documents/${doc.id}?actorId=${user.id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error);
+      }
+
+      toast({ title: 'Document Deleted', description: 'The document has been removed successfully.' });
+      fetchData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const handleVersions = (doc: Document) => {
+    setSelectedDocument(doc);
+    setVersionsOpen(true);
+  };
+
+  const handleComments = (doc: Document) => {
+    setSelectedDocument(doc);
+    setCommentsOpen(true);
+  };
+
+  const handleDownload = (doc: Document) => {
+    window.open(doc.file_url, '_blank');
+  };
+
+  const tableColumns = columns({
+    onView: handleView,
+    onShare: handleShare,
+    onDelete: handleDelete,
+    onVersions: handleVersions,
+    onComments: handleComments,
+    onDownload: handleDownload,
+  });
 
   return (
     <Tabs defaultValue="all">
@@ -164,5 +228,37 @@ export default function DocumentsPage() {
         </Card>
       </TabsContent>
     </Tabs>
-  );
+
+    {/* Modals */}
+    {selectedDocument && (
+      <>
+        <DocumentViewerModal
+          open={viewerOpen}
+          onOpenChange={setViewerOpen}
+          document={selectedDocument}
+        />
+        <DocumentShareDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          documentId={selectedDocument.id}
+          documentTitle={selectedDocument.title}
+          onShareSuccess={fetchData}
+        />
+        <DocumentVersionHistory
+          open={versionsOpen}
+          onOpenChange={setVersionsOpen}
+          documentId={selectedDocument.id}
+          documentTitle={selectedDocument.title}
+          currentVersion={selectedDocument.version}
+          onVersionUpdate={fetchData}
+        />
+        <DocumentComments
+          open={commentsOpen}
+          onOpenChange={setCommentsOpen}
+          documentId={selectedDocument.id}
+          documentTitle={selectedDocument.title}
+        />
+      </>
+    )}
+  </>;
 }
