@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'MDP',
+  title: 'StaffSync',
   description: 'A modern staff management system.',
 };
 
