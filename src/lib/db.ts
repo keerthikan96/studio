@@ -334,7 +334,8 @@ export async function setupDatabase() {
             CREATE TABLE IF NOT EXISTS document_categories (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 name VARCHAR(255) UNIQUE NOT NULL,
-                created_by UUID REFERENCES members(id) ON DELETE SET NULL
+                created_by UUID REFERENCES members(id) ON DELETE SET NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
 
