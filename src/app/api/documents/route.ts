@@ -1,6 +1,4 @@
 
-'use server';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { uploadFileToAzure } from '@/lib/azure-blob-storage';
 import { uploadDocument } from '@/app/actions/documents';
