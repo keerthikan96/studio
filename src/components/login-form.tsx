@@ -28,7 +28,7 @@ const formSchema = z.object({
 
 type LoginFormValues = z.infer<typeof formSchema>;
 
-const handleLoginSession = (user: { id: string, name: string, email: string, role: 'admin' | 'staff' | 'HR' }) => {
+const handleLoginSession = (user: { id: string, name: string, email: string, role: string }) => {
     sessionStorage.setItem('loggedInUser', JSON.stringify(user));
 };
 
@@ -86,7 +86,8 @@ export default function LoginForm() {
           description: 'Redirecting...',
         });
         
-        if (result.user.role === 'HR') {
+        // Route to admin dashboard for admin roles
+        if (result.user.role === 'Super Admin' || result.user.role === 'HR Admin' || result.user.role === 'HR' || result.user.role === 'HR Staff' || result.user.role === 'Manager' || result.user.role === 'Document Controller') {
             router.push('/admin/dashboard');
         } else {
             router.push('/dashboard');

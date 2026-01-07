@@ -450,6 +450,29 @@ export async function setupDatabase() {
                 await client.query('INSERT INTO leave_categories (name, description) VALUES ($1, $2)', [category.name, category.description]);
             }
         }
+        
+        // Seed admin user if not exists
+        const { rows: adminCheck } = await client.query('SELECT id FROM members WHERE email = $1', ['admin@gmail.com']);
+        if (adminCheck.length === 0) {
+            // Create admin user
+            const adminResult = await client.query(`
+                INSERT INTO members (
+                    name, first_name, last_name, email, status, employee_id, job_title, domain, country, branch
+                ) VALUES (
+                    'People and Culture Office', 'People and Culture', 'Office', 'admin@gmail.com', 'active', 'ADMIN001', 'Administrator', 'HR', 'Canada', 'Head Office'
+                ) RETURNING id
+            `);
+            const adminId = adminResult.rows[0].id;
+            
+            // Assign Super Admin role to admin user
+            const { rows: superAdminRole } = await client.query('SELECT id FROM roles WHERE name = $1', ['Super Admin']);
+            if (superAdminRole.length > 0) {
+                await client.query(
+                    'INSERT INTO role_members (member_id, role_id) VALUES ($1, $2)',
+                    [adminId, superAdminRole[0].id]
+                );
+            }
+        }
 
         const { rows: firstNameCheck } = await client.query(`
             SELECT 1 FROM information_schema.columns 

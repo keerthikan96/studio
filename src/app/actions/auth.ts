@@ -14,22 +14,19 @@ async function verifyPassword(password: string, hash: string) {
     return (await hashPassword(password)) === hash;
 }
 
-export async function loginAction(credentials: { email: string, password: string }): Promise<{ user?: { id: string, name: string, email: string, role: 'staff' | 'HR' }, error?: string }> {
+export async function loginAction(credentials: { email: string, password: string }): Promise<{ user?: { id: string, name: string, email: string, role: string }, error?: string }> {
     await setupDatabase();
     const { email, password } = credentials;
-
-    // Special case for admin user
-    if (email === 'admin@gmail.com') {
-        if (password === 'password') { // In a real app, this should also be a hashed password check
-            return { user: { id: 'admin-user-001', name: 'People and Culture office', email, role: 'HR' } };
-        } else {
-            return { error: 'Invalid credentials for admin user.' };
-        }
-    }
     
     // Regular member login
     try {
-        const result = await db.query('SELECT * FROM members WHERE email = $1', [email]);
+        const result = await db.query(`
+            SELECT m.*, r.name as role
+            FROM members m
+            LEFT JOIN role_members rm ON m.id = rm.member_id
+            LEFT JOIN roles r ON rm.role_id = r.id
+            WHERE m.email = $1
+        `, [email]);
         const member: Member = result.rows[0];
 
         if (!member) {

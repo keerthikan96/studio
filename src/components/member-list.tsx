@@ -52,7 +52,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Member } from '@/lib/mock-data';
+import { Member, Role } from '@/lib/mock-data';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { cn } from '@/lib/utils';
@@ -74,7 +74,8 @@ const getColumns = (
     onSendInvite: (member: Member) => void,
     onStatusChange: (member: Member, status: Member['status']) => void,
     onSendPasswordReset: (member: Member) => void,
-    onRoleChange: (member: Member, role: Member['role']) => void,
+    onRoleChange: (member: Member, roleId: string, roleName: string) => void,
+    roles: Role[],
 ): ColumnDef<Member>[] => [
   {
     id: 'select',
@@ -196,14 +197,16 @@ const getColumns = (
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                     <DropdownMenuSubContent>
-                        <DropdownMenuItem onClick={() => onRoleChange(member, 'staff')} disabled={member.role === 'staff'}>
-                            <CheckCircle className={`mr-2 h-4 w-4 ${member.role === 'staff' ? 'opacity-100' : 'opacity-0'}`} />
-                            Staff
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onRoleChange(member, 'HR')} disabled={member.role === 'HR'}>
-                            <CheckCircle className={`mr-2 h-4 w-4 ${member.role === 'HR' ? 'opacity-100' : 'opacity-0'}`} />
-                            HR (Admin)
-                        </DropdownMenuItem>
+                        {roles.map((role) => (
+                            <DropdownMenuItem 
+                                key={role.id} 
+                                onClick={() => onRoleChange(member, role.id, role.name)} 
+                                disabled={member.role === role.name}
+                            >
+                                <CheckCircle className={`mr-2 h-4 w-4 ${member.role === role.name ? 'opacity-100' : 'opacity-0'}`} />
+                                {role.name}
+                            </DropdownMenuItem>
+                        ))}
                     </DropdownMenuSubContent>
                 </DropdownMenuPortal>
             </DropdownMenuSub>
@@ -220,6 +223,7 @@ type MemberListProps = {
     setMembers: React.Dispatch<React.SetStateAction<Member[]>>;
     onSendInvite: (member: Member) => void;
     viewMode: 'grid' | 'list';
+    roles: Role[];
 }
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
@@ -227,7 +231,7 @@ const statuses = ['active', 'pending', 'inactive', 'on-hold'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
 
 
-export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberListProps) {
+export function MemberList({ data, setMembers, onSendInvite, viewMode, roles }: MemberListProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] =
@@ -259,12 +263,12 @@ export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberL
     });
   };
   
-  const handleRoleChange = (member: Member, role: Member['role']) => {
+  const handleRoleChange = (member: Member, roleId: string, roleName: string) => {
       startTransition(async () => {
-          const { success, error } = await updateMemberRoleAction(member.id, role);
+          const { success, error } = await updateMemberRoleAction(member.id, roleId);
           if (success) {
-              setMembers(current => current.map(m => m.id === member.id ? {...m, role } : m));
-              toast({ title: 'Role Updated', description: `${member.name}'s role has been changed to ${role}.`});
+              setMembers(current => current.map(m => m.id === member.id ? {...m, role: roleName } : m));
+              toast({ title: 'Role Updated', description: `${member.name}'s role has been changed to ${roleName}.`});
           } else {
               toast({ title: 'Error', description: error || 'Failed to update role.', variant: 'destructive' });
           }
@@ -284,7 +288,7 @@ export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberL
     });
   };
 
-  const columns = React.useMemo(() => getColumns(onSendInvite, handleStatusChange, setMemberToReset, handleRoleChange), [onSendInvite]);
+  const columns = React.useMemo(() => getColumns(onSendInvite, handleStatusChange, setMemberToReset, handleRoleChange, roles), [onSendInvite, roles]);
 
   const table = useReactTable({
     data,
@@ -418,6 +422,7 @@ export function MemberList({ data, setMembers, onSendInvite, viewMode }: MemberL
                 onSendInvite={onSendInvite}
                 onSendPasswordReset={setMemberToReset}
                 onRoleChange={handleRoleChange}
+                roles={roles}
               />
             ))
           ) : (

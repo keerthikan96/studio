@@ -39,7 +39,8 @@ async function logWithClient(client: PoolClient, params: any) {
 
 export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'name' | 'hobbies'>, sendInvite: boolean, isDraft: boolean, resumeFile?: { file: File, dataUri: string }, role_id: string }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
   await setupDatabase();
-  const { staff, sendInvite, isDraft, resumeFile, role_id } = staffData;
+  const { staff, sendInvite, isDraft, resumeFile } = staffData;
+  let { role_id } = staffData;
 
   const name = [staff.first_name, staff.middle_name, staff.last_name].filter(Boolean).join(' ');
 
@@ -56,6 +57,21 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
 
   try {
     await client.query('BEGIN');
+    
+    // Auto-assign role based on email
+    if (email === 'admin@gmail.com') {
+      // Assign Super Admin role
+      const superAdminRole = await client.query('SELECT id FROM roles WHERE name = $1', ['Super Admin']);
+      if (superAdminRole.rows.length > 0) {
+        role_id = superAdminRole.rows[0].id;
+      }
+    } else if (!role_id) {
+      // Assign Employee role by default
+      const employeeRole = await client.query('SELECT id FROM roles WHERE name = $1', ['Employee']);
+      if (employeeRole.rows.length > 0) {
+        role_id = employeeRole.rows[0].id;
+      }
+    }
 
     const result = await client.query(
       `INSERT INTO members (

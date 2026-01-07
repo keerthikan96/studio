@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { MemberList } from "@/components/member-list";
 import { Button } from "@/components/ui/button";
-import { Member } from "@/lib/mock-data";
+import { Member, Role } from "@/lib/mock-data";
 import { List, PlusCircle, LayoutGrid, Loader2 } from "lucide-react";
 import { useState, useEffect, useTransition } from "react";
 import {
@@ -22,11 +22,13 @@ import { getMembersAction } from "@/app/actions/staff";
 import { requestPasswordResetAction } from "@/app/actions/auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getRolesAction } from "@/app/actions/roles";
 
 type ViewMode = 'grid' | 'list';
 
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [memberToInvite, setMemberToInvite] = useState<Member | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isInvitePending, startInviteTransition] = useTransition();
@@ -35,7 +37,10 @@ export default function MembersPage() {
 
   useEffect(() => {
     startTransition(() => {
-        getMembersAction().then(setMembers);
+        Promise.all([getMembersAction(), getRolesAction()]).then(([membersData, rolesData]) => {
+          setMembers(membersData);
+          setRoles(rolesData);
+        });
     });
   }, []);
 
@@ -113,7 +118,7 @@ export default function MembersPage() {
                 <Skeleton className="h-12 w-full" />
             </div>
         ) : (
-            <MemberList data={members} setMembers={setMembers} onSendInvite={setMemberToInvite} viewMode={viewMode} />
+            <MemberList data={members} setMembers={setMembers} onSendInvite={setMemberToInvite} viewMode={viewMode} roles={roles} />
         )}
       </div>
 

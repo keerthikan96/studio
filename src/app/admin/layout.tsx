@@ -58,8 +58,7 @@ export default function AdminLayout({
     { href: "/admin/calendar", label: "Calendar", icon: CalendarIcon },
     { href: "/admin/attendance", label: "Attendance", icon: CalendarIcon },
     { href: "/admin/department", label: "Department", icon: Briefcase },
-    { href: "/admin/members", label: "Members", icon: Users },
-    { href: "/admin/documents", label: "Documents", icon: Folder },
+    { href: "/admin/members", label: "Members", icon: Users },    { href: "/admin/intake", label: "Intake", icon: ClipboardList },    { href: "/admin/documents", label: "Documents", icon: Folder },
     { href: "/admin/award", label: "Award", icon: Award },
     { href: "/admin/leave", label: "Leave", icon: CalendarIcon },
     { href: "/admin/notice", label: "Notice", icon: FileText },
@@ -97,7 +96,7 @@ export default function AdminLayout({
     pageTitle = 'Dashboard';
   }
 
-  const canAccessSettings = isClient && userRole === 'HR';
+  const canAccessSettings = isClient && (userRole === 'Super Admin' || userRole === 'HR Admin' || userRole === 'HR');
 
   return (
     <SidebarProvider>

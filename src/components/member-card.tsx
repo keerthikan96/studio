@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal } from "@/components/ui/dropdown-menu";
-import { Member } from "@/lib/mock-data";
+import { Member, Role } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { CheckCircle, CircleSlash, Eye, Mail, MoreHorizontal, Pencil, KeyRound, PauseCircle, ShieldQuestion } from "lucide-react";
 import Link from "next/link";
@@ -17,7 +17,8 @@ type MemberCardProps = {
   onStatusChange: (member: Member, status: Member['status']) => void;
   onSendInvite: (member: Member) => void;
   onSendPasswordReset: (member: Member) => void;
-  onRoleChange: (member: Member, role: Member['role']) => void;
+  onRoleChange: (member: Member, roleId: string, roleName: string) => void;
+  roles: Role[];
 };
 
 const statusStyles: { [key: string]: string } = {
@@ -28,7 +29,7 @@ const statusStyles: { [key: string]: string } = {
 };
 
 
-export function MemberCard({ member, onStatusChange, onSendInvite, onSendPasswordReset, onRoleChange }: MemberCardProps) {
+export function MemberCard({ member, onStatusChange, onSendInvite, onSendPasswordReset, onRoleChange, roles }: MemberCardProps) {
   const fallback = member.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
 
   return (
@@ -86,14 +87,16 @@ export function MemberCard({ member, onStatusChange, onSendInvite, onSendPasswor
                         </DropdownMenuSubTrigger>
                         <DropdownMenuPortal>
                             <DropdownMenuSubContent>
-                                <DropdownMenuItem onClick={() => onRoleChange(member, 'staff')} disabled={member.role === 'staff'}>
-                                    <CheckCircle className={`mr-2 h-4 w-4 ${member.role === 'staff' ? 'opacity-100' : 'opacity-0'}`} />
-                                    Staff
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => onRoleChange(member, 'HR')} disabled={member.role === 'HR'}>
-                                    <CheckCircle className={`mr-2 h-4 w-4 ${member.role === 'HR' ? 'opacity-100' : 'opacity-0'}`} />
-                                    HR (Admin)
-                                </DropdownMenuItem>
+                                {roles.map((role) => (
+                                    <DropdownMenuItem 
+                                        key={role.id} 
+                                        onClick={() => onRoleChange(member, role.id, role.name)} 
+                                        disabled={member.role === role.name}
+                                    >
+                                        <CheckCircle className={`mr-2 h-4 w-4 ${member.role === role.name ? 'opacity-100' : 'opacity-0'}`} />
+                                        {role.name}
+                                    </DropdownMenuItem>
+                                ))}
                             </DropdownMenuSubContent>
                         </DropdownMenuPortal>
                     </DropdownMenuSub>
