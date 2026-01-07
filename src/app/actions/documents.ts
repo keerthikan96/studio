@@ -25,13 +25,15 @@ export type Document = {
     created_at: string;
     is_hidden: boolean;
     is_company_wide: boolean;
+    category_name?: string;
+    uploader_name?: string;
 };
 
 // ========================
 // Category Actions
 // ========================
 
-export async function createDocumentCategory(name: string, createdById: string): Promise<DocumentCategory> {
+export async function createDocumentCategory(name: string, createdById: string): Promise<DocumentCategory | { error: string }> {
     const client = await db.connect();
     try {
         await client.query('BEGIN');
@@ -51,10 +53,13 @@ export async function createDocumentCategory(name: string, createdById: string):
 
         await client.query('COMMIT');
         return newCategory;
-    } catch (error) {
+    } catch (error: any) {
         await client.query('ROLLBACK');
         console.error("Error creating document category:", error);
-        throw error;
+        if (error.code === '23505') {
+            return { error: 'A category with this name already exists.' };
+        }
+        return { error: 'Failed to create category.' };
     } finally {
         client.release();
     }
@@ -65,7 +70,7 @@ export async function getDocumentCategories(): Promise<DocumentCategory[]> {
     return result.rows;
 }
 
-export async function updateDocumentCategory(id: string, name: string, actorId: string): Promise<DocumentCategory> {
+export async function updateDocumentCategory(id: string, name: string, actorId: string): Promise<DocumentCategory | { error: string }> {
      const client = await db.connect();
     try {
         await client.query('BEGIN');
@@ -74,7 +79,7 @@ export async function updateDocumentCategory(id: string, name: string, actorId: 
             [name, id]
         );
          if (result.rows.length === 0) {
-            throw new Error("Category not found.");
+            return { error: "Category not found." };
         }
         const updatedCategory = result.rows[0];
         
@@ -88,22 +93,31 @@ export async function updateDocumentCategory(id: string, name: string, actorId: 
 
         await client.query('COMMIT');
         return updatedCategory;
-    } catch (error) {
+    } catch (error: any) {
         await client.query('ROLLBACK');
         console.error("Error updating document category:", error);
-        throw error;
+         if (error.code === '23505') {
+            return { error: 'A category with this name already exists.' };
+        }
+        return { error: 'Failed to update category.' };
     } finally {
         client.release();
     }
 }
 
-export async function deleteDocumentCategory(id: string, actorId: string): Promise<{ success: boolean }> {
+export async function deleteDocumentCategory(id: string, actorId: string): Promise<{ success: boolean, error?: string }> {
     const client = await db.connect();
     try {
         await client.query('BEGIN');
+        // Check if category is in use
+        const usageCheck = await client.query('SELECT 1 FROM documents WHERE category_id = $1 LIMIT 1', [id]);
+        if (usageCheck.rows.length > 0) {
+            return { success: false, error: 'Cannot delete category as it is currently in use by one or more documents.' };
+        }
+
         const result = await client.query('DELETE FROM document_categories WHERE id = $1', [id]);
         if (result.rowCount === 0) {
-            throw new Error("Category not found.");
+            return { success: false, error: "Category not found." };
         }
         
         await logAuditEvent({
@@ -118,7 +132,7 @@ export async function deleteDocumentCategory(id: string, actorId: string): Promi
     } catch (error) {
         await client.query('ROLLBACK');
         console.error("Error deleting document category:", error);
-        throw error;
+        return { success: false, error: 'An unexpected error occurred while deleting the category.' };
     } finally {
         client.release();
     }
@@ -181,20 +195,31 @@ type GetDocumentsFilter = {
 
 export async function getDocuments(filter: GetDocumentsFilter, actorId: string): Promise<Document[]> {
     // This is a simplified version. A real implementation would have complex permission checks.
-    let query = 'SELECT * FROM documents';
+    let query = `
+        SELECT 
+            d.*, 
+            dc.name as category_name,
+            m.name as uploader_name 
+        FROM documents d
+        LEFT JOIN document_categories dc ON d.category_id = dc.id
+        LEFT JOIN members m ON d.uploaded_by = m.id
+    `;
     const params = [];
     const whereClauses = [];
 
     if (filter.ownerId) {
         params.push(filter.ownerId);
-        whereClauses.push(`uploaded_by = $${params.length}`);
+        whereClauses.push(`d.uploaded_by = $${params.length}`);
+    }
+     if (filter.isCompanyWide) {
+        whereClauses.push(`d.is_company_wide = true`);
     }
     
     if (whereClauses.length > 0) {
         query += ' WHERE ' + whereClauses.join(' AND ');
     }
     
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY d.created_at DESC';
 
     const result = await db.query(query, params);
     return result.rows;
