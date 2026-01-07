@@ -136,7 +136,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
         .filter(v => v && !fieldValues?.includes(v));
 
       if (valuesToAdd.length > 0) {
-        appendFn(valuesToAdd);
+        appendFn(valuesToAdd.map(v => ({ value: v })));
         setInputValue('');
       }
     }
@@ -163,7 +163,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                         <FormItem>
                             <FormLabel>Full Name</FormLabel>
                             <FormControl>
-                            <Input placeholder="e.g. Alex Doe" {...field} />
+                            <Input placeholder="e.g. Alex Doe" {...field} value={field.value ?? ''}/>
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -176,7 +176,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                         <FormItem>
                             <FormLabel>Email Address</FormLabel>
                             <FormControl>
-                            <Input placeholder="e.g. alex.doe@example.com" {...field} />
+                            <Input placeholder="e.g. alex.doe@example.com" {...field} value={field.value ?? ''} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -361,7 +361,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                         render={({ field }) => (
                         <FormItem>
                             <FormLabel>Domain</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a domain" />
@@ -384,7 +384,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                             <Select onValueChange={(value) => {
                                 field.onChange(value);
                                 form.setValue('branch', ''); // Reset branch on country change
-                            }} defaultValue={field.value} value={field.value}>
+                            }} value={field.value}>
                                 <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a country" />
@@ -405,7 +405,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                             render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Branch</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select a branch in Sri Lanka" />

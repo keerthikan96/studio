@@ -7,6 +7,14 @@ import { Member, Role } from "@/lib/mock-data";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
+type StaffFormData = { 
+    staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'name' | 'hobbies' | 'volunteer_work'>; 
+    sendInvite: boolean; 
+    isDraft: boolean; 
+    resumeFile?: { file: File, dataUri: string }; 
+    role_id: string; 
+};
+
 export default function AddStaffPage() {
     const router = useRouter();
     const [roles, setRoles] = useState<Role[]>([]);
@@ -19,7 +27,7 @@ export default function AddStaffPage() {
         });
     }, []);
 
-    const handleAddStaff = async (staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'name' | 'hobbies' | 'volunteer_work'>, sendInvite: boolean, isDraft: boolean, resumeFile?: { file: File, dataUri: string }, role_id: string }) => {
+    const handleAddStaff = async (staffData: StaffFormData) => {
         const result = await addStaffAction(staffData);
 
         if ('error' in result) {

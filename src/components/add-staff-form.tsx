@@ -100,8 +100,16 @@ const formSchema = z.object({
 
 type StaffFormValues = z.infer<typeof formSchema>;
 
+type StaffFormData = { 
+    staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'name' | 'hobbies' | 'volunteer_work'>; 
+    sendInvite: boolean; 
+    isDraft: boolean; 
+    resumeFile?: { file: File, dataUri: string }; 
+    role_id: string; 
+};
+
 type AddStaffFormProps = {
-    onAddStaff: (staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'name' | 'hobbies' | 'volunteer_work'>, sendInvite: boolean, isDraft: boolean, resumeFile?: { file: File, dataUri: string }, role_id: string }) => Promise<{ success: boolean; error?: string }>;
+    onAddStaff: (staffData: StaffFormData) => Promise<{ success: boolean; error?: string }>;
     roles: Role[];
 };
 
@@ -335,13 +343,13 @@ export default function AddStaffForm({ onAddStaff, roles }: AddStaffFormProps) {
                                     <AccordionContent className="pt-4 space-y-4">
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <ReviewFieldWrapper confidence={parsedData.first_name?.confidence}>
-                                                <FormField control={form.control} name="first_name" render={({ field }) => (<FormItem><FormLabel>First Name <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                                <FormField control={form.control} name="first_name" render={({ field }) => (<FormItem><FormLabel>First Name <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                                             </ReviewFieldWrapper>
                                             <ReviewFieldWrapper confidence={parsedData.middle_name?.confidence}>
                                                 <FormField control={form.control} name="middle_name" render={({ field }) => (<FormItem><FormLabel>Middle Name</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                                             </ReviewFieldWrapper>
                                             <ReviewFieldWrapper confidence={parsedData.last_name?.confidence}>
-                                                <FormField control={form.control} name="last_name" render={({ field }) => (<FormItem><FormLabel>Last Name <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                                <FormField control={form.control} name="last_name" render={({ field }) => (<FormItem><FormLabel>Last Name <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                                             </ReviewFieldWrapper>
                                         </div>
                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -359,7 +367,7 @@ export default function AddStaffForm({ onAddStaff, roles }: AddStaffFormProps) {
                                     <AccordionTrigger className="text-lg font-medium">Contact & Address</AccordionTrigger>
                                     <AccordionContent className="pt-4 space-y-4">
                                          <ReviewFieldWrapper confidence={parsedData.email?.confidence}>
-                                            <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Work Email <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                            <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Work Email <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                                         </ReviewFieldWrapper>
                                         <ReviewFieldWrapper confidence={parsedData.phone?.confidence}>
                                             <FormField control={form.control} name="phone" render={({ field }) => (<FormItem><FormLabel>Phone</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
