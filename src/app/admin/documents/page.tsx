@@ -4,8 +4,9 @@
 import { useState, useEffect, useTransition } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Loader2 } from 'lucide-react';
-import { getDocuments, getDocumentCategories, Document, DocumentCategory, createDocumentCategory, updateDocumentCategory, deleteDocumentCategory } from '@/app/actions/documents';
+import { Loader2 } from 'lucide-react';
+import { Document, DocumentCategory } from '@/app/actions/documents';
+import { getDocuments } from '@/app/actions/documents';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DataTable } from '@/components/ui/data-table';
 import { columns } from '@/components/document/columns';
@@ -24,14 +25,22 @@ export default function DocumentsPage() {
   const fetchData = () => {
     if (user) {
       startTransition(async () => {
-        const [docs, compDocs, cats] = await Promise.all([
-          getDocuments({}, user.id),
-          getDocuments({ isCompanyWide: true }, user.id),
-          getDocumentCategories(),
-        ]);
-        setDocuments(docs);
-        setCompanyDocuments(compDocs);
-        setCategories(cats);
+        try {
+          const [docs, compDocs, catsResponse] = await Promise.all([
+            getDocuments({}, user.id),
+            getDocuments({ isCompanyWide: true }, user.id),
+            fetch('/api/document-categories'),
+          ]);
+          
+          if (!catsResponse.ok) throw new Error('Failed to fetch categories');
+          const cats = await catsResponse.json();
+
+          setDocuments(docs);
+          setCompanyDocuments(compDocs);
+          setCategories(cats);
+        } catch (error) {
+          toast({ title: 'Error', description: 'Failed to fetch document data.', variant: 'destructive' });
+        }
       });
     }
   };
@@ -46,28 +55,44 @@ export default function DocumentsPage() {
   useEffect(fetchData, [user]);
   
   const handleCategorySubmit = async (values: { name: string }, id?: string) => {
-    if (!user) return;
-    const action = id ? updateDocumentCategory : createDocumentCategory;
-    const result = id ? await action(id, values.name, user.id) : await action(values.name, user.id);
+    if (!user) return false;
 
-    if ('error' in result) {
-      toast({ title: 'Error', description: result.error, variant: 'destructive' });
+    const url = id ? `/api/document-categories?id=${id}` : '/api/document-categories';
+    const method = id ? 'PUT' : 'POST';
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...values, actorId: user.id }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+
+      toast({ title: `Category ${id ? 'Updated' : 'Created'}`, description: `The category "${values.name}" has been saved.` });
+      fetchData();
+      return true;
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
       return false;
     }
-    
-    toast({ title: `Category ${id ? 'Updated' : 'Created'}`, description: `The category "${values.name}" has been saved.` });
-    fetchData();
-    return true;
   };
 
   const handleCategoryDelete = async (id: string) => {
     if (!user) return;
-    const result = await deleteDocumentCategory(id, user.id);
-    if (!result.success) {
-      toast({ title: 'Error', description: result.error, variant: 'destructive' });
-    } else {
+     try {
+      const response = await fetch(`/api/document-categories?id=${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actorId: user.id }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+
       toast({ title: 'Category Deleted', description: 'The category has been removed.' });
       fetchData();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
 

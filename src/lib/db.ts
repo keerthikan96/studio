@@ -89,7 +89,8 @@ export async function setupDatabase() {
                 employment_type VARCHAR(50),
                 employee_level VARCHAR(50),
                 reporting_supervisor_id UUID,
-                reporting_supervisor_history JSONB
+                reporting_supervisor_history JSONB,
+                role VARCHAR(255)
             );
         `);
         
@@ -334,7 +335,7 @@ export async function setupDatabase() {
             CREATE TABLE IF NOT EXISTS document_categories (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 name VARCHAR(255) UNIQUE NOT NULL,
-                created_by UUID REFERENCES members(id) ON DELETE SET NULL,
+                created_by VARCHAR(255),
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
@@ -349,7 +350,7 @@ export async function setupDatabase() {
                 file_type VARCHAR(100),
                 file_size BIGINT,
                 version INTEGER DEFAULT 1,
-                uploaded_by UUID REFERENCES members(id) ON DELETE SET NULL,
+                uploaded_by VARCHAR(255),
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 is_hidden BOOLEAN DEFAULT false,
                 is_company_wide BOOLEAN DEFAULT false
@@ -362,7 +363,7 @@ export async function setupDatabase() {
                 document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
                 version_number INTEGER NOT NULL,
                 file_url VARCHAR(2048) NOT NULL,
-                uploaded_by UUID REFERENCES members(id) ON DELETE SET NULL,
+                uploaded_by VARCHAR(255),
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
@@ -371,11 +372,11 @@ export async function setupDatabase() {
             CREATE TABLE IF NOT EXISTS document_shares (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-                shared_with_user_id UUID REFERENCES members(id) ON DELETE CASCADE,
-                shared_with_role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
+                shared_with_user_id UUID,
+                shared_with_role_id UUID,
                 access_mode VARCHAR(20) NOT NULL DEFAULT 'read_only', -- e.g., 'read_only'
                 expiry_date TIMESTAMPTZ,
-                shared_by UUID REFERENCES members(id) ON DELETE SET NULL,
+                shared_by VARCHAR(255),
                 shared_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 CONSTRAINT single_share_target CHECK (
                     (shared_with_user_id IS NOT NULL AND shared_with_role_id IS NULL) OR
@@ -388,7 +389,7 @@ export async function setupDatabase() {
             CREATE TABLE IF NOT EXISTS document_comments (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-                user_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                user_id VARCHAR(255) NOT NULL,
                 comment_text TEXT NOT NULL,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );

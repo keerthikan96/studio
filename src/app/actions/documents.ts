@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { db } from '@/lib/db';
@@ -162,7 +163,7 @@ export async function uploadDocument(data: UploadDocumentData): Promise<Document
         const result = await client.query(
             `INSERT INTO documents (title, description, file_url, file_type, file_size, uploaded_by, category_id, is_company_wide)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-            [title, description, fileUrl, fileType, fileSize, uploadedBy, categoryId, !!isCompanyWide]
+            [title, description, fileUrl, fileType, fileSize, uploadedBy, categoryId || null, !!isCompanyWide]
         );
         const newDocument = result.rows[0];
 
