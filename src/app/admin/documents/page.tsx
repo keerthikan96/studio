@@ -163,102 +163,104 @@ export default function DocumentsPage() {
   });
 
   return (
-    <Tabs defaultValue="all">
-      <div className="flex items-center justify-between mb-4">
-        <TabsList>
-          <TabsTrigger value="all">All Documents</TabsTrigger>
-          <TabsTrigger value="company">Company-wide</TabsTrigger>
-          <TabsTrigger value="categories">Manage Categories</TabsTrigger>
-        </TabsList>
-        <DocumentUploadDialog categories={categories} onUploadSuccess={fetchData} userId={user?.id} />
-      </div>
+    <>
+      <Tabs defaultValue="all">
+        <div className="flex items-center justify-between mb-4">
+          <TabsList>
+            <TabsTrigger value="all">All Documents</TabsTrigger>
+            <TabsTrigger value="company">Company-wide</TabsTrigger>
+            <TabsTrigger value="categories">Manage Categories</TabsTrigger>
+          </TabsList>
+          <DocumentUploadDialog categories={categories} onUploadSuccess={fetchData} userId={user?.id} />
+        </div>
 
-      <TabsContent value="all">
-        <Card>
-          <CardHeader>
-            <CardTitle>All Documents</CardTitle>
-            <CardDescription>A list of all documents in the system.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isPending ? <Loader2 className="mx-auto h-8 w-8 animate-spin" /> : <DataTable columns={tableColumns} data={documents} />}
-          </CardContent>
-        </Card>
-      </TabsContent>
-
-      <TabsContent value="company">
-        <Card>
-          <CardHeader>
-            <CardTitle>Company-wide Documents</CardTitle>
-            <CardDescription>Documents accessible to everyone in the company.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isPending ? <Loader2 className="mx-auto h-8 w-8 animate-spin" /> : <DataTable columns={tableColumns} data={companyDocuments} />}
-          </CardContent>
-        </Card>
-      </TabsContent>
-      
-      <TabsContent value="categories">
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                    <CardTitle>Document Categories</CardTitle>
-                    <CardDescription>Organize your documents by creating categories.</CardDescription>
-                </div>
-                <CategoryDialog onSubmit={handleCategorySubmit} />
+        <TabsContent value="all">
+          <Card>
+            <CardHeader>
+              <CardTitle>All Documents</CardTitle>
+              <CardDescription>A list of all documents in the system.</CardDescription>
             </CardHeader>
             <CardContent>
-               {isPending ? (
-                    <Loader2 className="mx-auto h-8 w-8 animate-spin" />
-               ) : (
-                <div className="max-w-2xl">
-                    <ul className="space-y-2">
-                        {categories.map(cat => (
-                            <li key={cat.id} className="flex items-center justify-between p-2 border rounded-md">
-                                <span className="font-medium">{cat.name}</span>
-                                <div className="space-x-2">
-                                    <CategoryDialog category={cat} onSubmit={handleCategorySubmit} />
-                                    <Button variant="destructive" size="sm" onClick={() => handleCategoryDelete(cat.id)}>Delete</Button>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-               )}
+              {isPending ? <Loader2 className="mx-auto h-8 w-8 animate-spin" /> : <DataTable columns={tableColumns} data={documents} />}
             </CardContent>
-        </Card>
-      </TabsContent>
-    </Tabs>
+          </Card>
+        </TabsContent>
 
-    {/* Modals */}
-    {selectedDocument && (
-      <>
-        <DocumentViewerModal
-          open={viewerOpen}
-          onOpenChange={setViewerOpen}
-          document={selectedDocument}
-        />
-        <DocumentShareDialog
-          open={shareOpen}
-          onOpenChange={setShareOpen}
-          documentId={selectedDocument.id}
-          documentTitle={selectedDocument.title}
-          onShareSuccess={fetchData}
-        />
-        <DocumentVersionHistory
-          open={versionsOpen}
-          onOpenChange={setVersionsOpen}
-          documentId={selectedDocument.id}
-          documentTitle={selectedDocument.title}
-          currentVersion={selectedDocument.version}
-          onVersionUpdate={fetchData}
-        />
-        <DocumentComments
-          open={commentsOpen}
-          onOpenChange={setCommentsOpen}
-          documentId={selectedDocument.id}
-          documentTitle={selectedDocument.title}
-        />
-      </>
-    )}
-  </>;
+        <TabsContent value="company">
+          <Card>
+            <CardHeader>
+              <CardTitle>Company-wide Documents</CardTitle>
+              <CardDescription>Documents accessible to everyone in the company.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isPending ? <Loader2 className="mx-auto h-8 w-8 animate-spin" /> : <DataTable columns={tableColumns} data={companyDocuments} />}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="categories">
+          <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                      <CardTitle>Document Categories</CardTitle>
+                      <CardDescription>Organize your documents by creating categories.</CardDescription>
+                  </div>
+                  <CategoryDialog onSubmit={handleCategorySubmit} />
+              </CardHeader>
+              <CardContent>
+                {isPending ? (
+                      <Loader2 className="mx-auto h-8 w-8 animate-spin" />
+                ) : (
+                  <div className="max-w-2xl">
+                      <ul className="space-y-2">
+                          {categories.map(cat => (
+                              <li key={cat.id} className="flex items-center justify-between p-2 border rounded-md">
+                                  <span className="font-medium">{cat.name}</span>
+                                  <div className="space-x-2">
+                                      <CategoryDialog category={cat} onSubmit={handleCategorySubmit} />
+                                      <Button variant="destructive" size="sm" onClick={() => handleCategoryDelete(cat.id)}>Delete</Button>
+                                  </div>
+                              </li>
+                          ))}
+                      </ul>
+                  </div>
+                )}
+              </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Modals */}
+      {selectedDocument && (
+        <>
+          <DocumentViewerModal
+            open={viewerOpen}
+            onOpenChange={setViewerOpen}
+            document={selectedDocument}
+          />
+          <DocumentShareDialog
+            open={shareOpen}
+            onOpenChange={setShareOpen}
+            documentId={selectedDocument.id}
+            documentTitle={selectedDocument.title}
+            onShareSuccess={fetchData}
+          />
+          <DocumentVersionHistory
+            open={versionsOpen}
+            onOpenChange={setVersionsOpen}
+            documentId={selectedDocument.id}
+            documentTitle={selectedDocument.title}
+            currentVersion={selectedDocument.version}
+            onVersionUpdate={fetchData}
+          />
+          <DocumentComments
+            open={commentsOpen}
+            onOpenChange={setCommentsOpen}
+            documentId={selectedDocument.id}
+            documentTitle={selectedDocument.title}
+          />
+        </>
+      )}
+    </>
+  );
 }

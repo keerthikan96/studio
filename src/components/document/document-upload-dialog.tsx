@@ -107,8 +107,8 @@ export function DocumentUploadDialog({ categories, onUploadSuccess, userId }: Do
         }
 
         toast({ title: 'Upload Successful', description: `"${data.title}" has been uploaded.` });
-        forSelectedFile(null);
-        setm.reset();
+        setSelectedFile(null);
+        form.reset();
         setIsDialogOpen(false);
         onUploadSuccess();
       } catch (error) {
@@ -155,17 +155,21 @@ export function DocumentUploadDialog({ categories, onUploadSuccess, userId }: Do
               </FormItem>
             )} />
             <FormField control={form.control} name="file" render={({ field }) => (
-              <FormItem><
-                    type="file" 
-                    onChange={(e) => {
-                      field.onChange(e.target.files);
-                      setSelectedFile(e.target.files?.[0] || null);
-                    }} 
-                  />
-              </FormControl><FormMessage /></FormItem>
+                <FormItem>
+                    <FormLabel>File</FormLabel>
+                    <FormControl>
+                        <Input
+                            type="file"
+                            onChange={(e) => {
+                                field.onChange(e.target.files);
+                                setSelectedFile(e.target.files?.[0] || null);
+                            }}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
             )} />
 
-            {/* File Preview */}
             {selectedFile && (
               <DocumentPreview 
                 file={selectedFile} 
@@ -174,9 +178,8 @@ export function DocumentUploadDialog({ categories, onUploadSuccess, userId }: Do
                   form.setValue('file', undefined);
                 }}
               />
-            )}ormControl><FormMessage /></FormItem>
-            )} />
-
+            )}
+            
             <DialogFooter>
               <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
               <Button type="submit" disabled={isPending}>
