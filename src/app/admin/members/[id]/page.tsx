@@ -665,13 +665,11 @@ export default function MemberProfilePage() {
 
   const fetchMember = useCallback(() => {
     startTransition(async () => {
+        const storedUser = sessionStorage.getItem('loggedInUser');
+        const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
         const [currentMember, availableRoles] = await Promise.all([
-            const storedUser = sessionStorage.getItem('loggedInUser');
-            const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
-            return Promise.all([
-                getMemberByIdAction(memberId, currentUserId),
-                getRolesAction(currentUserId)
-            ]);
+            getMemberByIdAction(memberId, currentUserId),
+            getRolesAction(currentUserId)
         ]);
         
         if (currentMember) {

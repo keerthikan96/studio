@@ -38,7 +38,7 @@ async function logWithClient(client: PoolClient, params: any) {
     }, client);
 }
 
-export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'name' | 'hobbies'>, sendInvite: boolean, isDraft: boolean, resumeFile?: { file: File, dataUri: string }, role_id: string, currentUserId: string }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
+export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'name' | 'hobbies'>, sendInvite: boolean, isDraft: boolean, resumeFile?: { file: File, dataUri: string }, role_id: string, currentUserId: string }): Promise<{ success: true, member: Member, invitationLink?: string } | { success: false, error: string }> {
   await setupDatabase();
   const { staff, sendInvite, isDraft, resumeFile, currentUserId } = staffData;
   let { role_id } = staffData;
@@ -46,7 +46,7 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
   // Check permission
   const canCreate = await hasPermission(currentUserId, 'members.create');
   if (!canCreate) {
-    return { error: 'You do not have permission to create members.' };
+    return { success: false, error: 'You do not have permission to create members.' };
   }
 
   const name = [staff.first_name, staff.middle_name, staff.last_name].filter(Boolean).join(' ');
@@ -127,26 +127,35 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
         details: { email: newMember.email, name: newMember.name, status: newMember.status }
     });
 
+    // Commit the transaction first before sending emails
+    await client.query('COMMIT');
+    
+    // Send invitation email AFTER committing the transaction
+    // This prevents email timeouts from blocking the database transaction
     let invitationLink: string | undefined = undefined;
     if (sendInvite && !isDraft) {
-        const inviteResult = await requestPasswordResetAction(newMember.email, true);
-        if (inviteResult.success && inviteResult.invitationLink) {
-            invitationLink = inviteResult.invitationLink;
-        } else {
-            console.error("Failed to generate invitation link for new member:", inviteResult.error);
+        try {
+            const inviteResult = await requestPasswordResetAction(newMember.email, true);
+            if (inviteResult.success && inviteResult.invitationLink) {
+                invitationLink = inviteResult.invitationLink;
+            } else {
+                console.error("Failed to generate invitation link for new member:", inviteResult.error);
+            }
+        } catch (emailError) {
+            // Log the error but don't fail the entire operation since member was created successfully
+            console.error("Error sending invitation email:", emailError);
         }
     }
 
-    await client.query('COMMIT');
-    return { member: newMember, invitationLink };
+    return { success: true, member: newMember, invitationLink };
 
   } catch (error: any) {
     await client.query('ROLLBACK');
     console.error('Error adding staff member:', error);
     if (error.code === '23505') {
-        return { error: `A member with this email or employee ID already exists.` };
+        return { success: false, error: `A member with this email or employee ID already exists.` };
     }
-    return { error: error.message || 'An unexpected error occurred while saving the member.' };
+    return { success: false, error: error.message || 'An unexpected error occurred while saving the member.' };
   } finally {
       client.release();
   }
@@ -155,9 +164,9 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
 export async function getMembersAction(currentUserId: string): Promise<Member[] | { error: string }> {
     await setupDatabase();
     
-    // Check permission - user needs either read_all or read_public_profile
+    // Check permission - user needs either read_all or read_basic
     const canReadAll = await hasPermission(currentUserId, 'members.read_all');
-    const canReadPublic = await hasPermission(currentUserId, 'members.read_public_profile');
+    const canReadPublic = await hasPermission(currentUserId, 'members.read_basic');
     
     if (!canReadAll && !canReadPublic) {
         return { error: 'You do not have permission to view members.' } as any;
@@ -198,8 +207,8 @@ export async function getMembersAction(currentUserId: string): Promise<Member[] 
 export async function getMemberByIdAction(id: string, currentUserId: string): Promise<Member | { error: string } | null> {
     // Check permission
     const canReadAll = await hasPermission(currentUserId, 'members.read_all');
-    const canReadPublic = await hasPermission(currentUserId, 'members.read_public_profile');
-    const canReadSensitive = await hasPermission(currentUserId, 'members.read_sensitive_profile');
+    const canReadPublic = await hasPermission(currentUserId, 'members.read_basic');
+    const canReadSensitive = await hasPermission(currentUserId, 'members.read_sensitive');
     
     if (!canReadAll && !canReadPublic) {
         return { error: 'You do not have permission to view member profiles.' } as any;

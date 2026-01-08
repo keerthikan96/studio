@@ -4,6 +4,7 @@
 import { db, setupDatabase } from '@/lib/db';
 import { Member } from '@/lib/mock-data';
 import crypto from 'crypto';
+import { sendInviteEmail, sendPasswordResetEmail } from '@/lib/email-service';
 
 // In a real app, you'd use a robust hashing library like bcrypt
 async function hashPassword(password: string) {
@@ -60,16 +61,20 @@ export async function requestPasswordResetAction(email: string, isInvitation = f
     await setupDatabase();
     try {
         let memberId: string | null = null;
+        let memberName: string = '';
+        
         if (email === 'admin@gmail.com') {
             memberId = 'admin-user-001';
+            memberName = 'Administrator';
         } else {
-            const memberResult = await db.query('SELECT id FROM members WHERE email = $1', [email]);
+            const memberResult = await db.query('SELECT id, name FROM members WHERE email = $1', [email]);
             if (memberResult.rows.length === 0) {
                  console.log(`Password reset/invitation requested for non-existent user: ${email}. Silently failing.`);
                  // Still return success to prevent user enumeration
                  return { success: true };
             }
             memberId = memberResult.rows[0].id;
+            memberName = memberResult.rows[0].name;
         }
 
         const token = crypto.randomBytes(32).toString('hex');
@@ -82,24 +87,48 @@ export async function requestPasswordResetAction(email: string, isInvitation = f
             [email, token, otp, expires_at, type]
         );
         
-        const baseUrl = baseUrlR || 'http://localhost:9000';
+        const baseUrl = baseUrlR || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9000';
         const resetLink = `${baseUrl}/reset-password?token=${token}`;
         const invitationLink = `${baseUrl}/set-password?token=${token}&email=${encodeURIComponent(email)}`;
 
         if (isInvitation) {
-            console.log('--- INVITATION LINK (for existing employee) ---');
-            console.log(`To: ${email}`);
-            console.log(invitationLink);
-            console.log('-----------------------------------------------');
+            // Send invitation email via MailerSend
+            const emailResult = await sendInviteEmail({
+                recipientEmail: email,
+                recipientName: memberName,
+                inviteLink: invitationLink,
+                inviterName: process.env.EMAIL_SENDER_NAME || 'Your Company',
+                organizationName: process.env.EMAIL_ORGANIZATION_NAME || 'Your Organization',
+            });
+
+            if (!emailResult.success) {
+                console.error('Failed to send invitation email:', emailResult.error);
+                // Log the link as fallback
+                console.log('--- INVITATION LINK (for existing employee) ---');
+                console.log(`To: ${email}`);
+                console.log(invitationLink);
+                console.log('-----------------------------------------------');
+            }
+            
             return { success: true, invitationLink };
         }
 
-        // In a real app, you would send an email here. For now, log to console.
-        console.log('--- PASSWORD RESET ---');
-        console.log(`To: ${email}`);
-        console.log(`Reset Link: ${resetLink}`);
-        console.log(`OTP: ${otp}`);
-        console.log('--------------------');
+        // Send password reset email via MailerSend
+        const emailResult = await sendPasswordResetEmail({
+            recipientEmail: email,
+            recipientName: memberName,
+            resetLink: resetLink,
+        });
+
+        if (!emailResult.success) {
+            console.error('Failed to send password reset email:', emailResult.error);
+            // Log the link as fallback
+            console.log('--- PASSWORD RESET ---');
+            console.log(`To: ${email}`);
+            console.log(`Reset Link: ${resetLink}`);
+            console.log(`OTP: ${otp}`);
+            console.log('--------------------');
+        }
 
         return { success: true };
 

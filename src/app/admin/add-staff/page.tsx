@@ -36,12 +36,8 @@ export default function AddStaffPage() {
         
         const result = await addStaffAction({ ...staffData, currentUserId });
 
-        if ('error' in result) {
-            // The form will show the toast with the error
-            return { success: false, error: result.error };
-        } else {
-            return { success: true };
-        }
+        // Return the result with success flag
+        return result;
     };
     
     if (isLoading) {
