@@ -26,6 +26,7 @@ import {
   Loader2,
   PauseCircle,
   ShieldQuestion,
+  Eye,
 } from 'lucide-react';
 
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -156,8 +157,8 @@ const getColumns = (
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <Link href={`/admin/members/${member.id}`}>
               <DropdownMenuItem>
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
+                <Eye className="mr-2 h-4 w-4" />
+                View
               </DropdownMenuItem>
             </Link>
             <DropdownMenuSeparator />

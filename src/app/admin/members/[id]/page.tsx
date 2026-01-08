@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, Save, X as XIcon, ArrowLeft, Ban, CalendarIcon, Trash, Pencil, Briefcase, MapPin, MoreHorizontal, CheckCircle, CircleSlash, PauseCircle, Trash2 } from 'lucide-react';
+import { Loader2, PlusCircle, Save, X as XIcon, ArrowLeft, Ban, CalendarIcon, Trash, Pencil, Briefcase, MapPin, MoreHorizontal, CheckCircle, CircleSlash, PauseCircle, Trash2, Edit } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Member, Role } from '@/lib/mock-data';
 import { useRouter, useParams } from 'next/navigation';
@@ -100,7 +100,7 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: boolean, roles: Role[] }) => {
+const GeneralInfoTab = ({ form, isPending, roles, isEditMode }: { form: any, isPending: boolean, roles: Role[], isEditMode: boolean }) => {
   const watchedCountry = form.watch('country');
   const [skillInput, setSkillInput] = useState('');
   const [hobbyInput, setHobbyInput] = useState('');
@@ -163,7 +163,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                         <FormItem>
                             <FormLabel>Full Name</FormLabel>
                             <FormControl>
-                            <Input placeholder="e.g. Alex Doe" {...field} value={field.value ?? ''}/>
+                            <Input placeholder="e.g. Alex Doe" {...field} value={field.value ?? ''} disabled={!isEditMode}/>
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -176,7 +176,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                         <FormItem>
                             <FormLabel>Email Address</FormLabel>
                             <FormControl>
-                            <Input placeholder="e.g. alex.doe@example.com" {...field} value={field.value ?? ''} />
+                            <Input placeholder="e.g. alex.doe@example.com" {...field} value={field.value ?? ''} disabled={!isEditMode} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -189,7 +189,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                         <FormItem>
                             <FormLabel>Job Title</FormLabel>
                             <FormControl>
-                            <Input placeholder="e.g. Software Engineer" {...field} value={field.value ?? ''} />
+                            <Input placeholder="e.g. Software Engineer" {...field} value={field.value ?? ''} disabled={!isEditMode} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -202,7 +202,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                         <FormItem>
                             <FormLabel>Phone Number</FormLabel>
                             <FormControl>
-                            <Input placeholder="e.g. (123) 456-7890" {...field} value={field.value ?? ''}/>
+                            <Input placeholder="e.g. (123) 456-7890" {...field} value={field.value ?? ''} disabled={!isEditMode}/>
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -215,9 +215,9 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                             <FormItem className="flex flex-col">
                                 <FormLabel>Date of Birth</FormLabel>
                                 <Popover>
-                                    <PopoverTrigger asChild>
+                                    <PopoverTrigger asChild disabled={!isEditMode}>
                                         <FormControl>
-                                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled={!isEditMode}>
                                                 {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                             </Button>
@@ -238,9 +238,9 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                             <FormItem className="flex flex-col">
                                 <FormLabel>Start Date</FormLabel>
                                 <Popover>
-                                    <PopoverTrigger asChild>
+                                    <PopoverTrigger asChild disabled={!isEditMode}>
                                         <FormControl>
-                                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled={!isEditMode}>
                                                 {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                             </Button>
@@ -260,7 +260,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                         render={({ field }) => (
                         <FormItem>
                             <FormLabel>Role</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!isEditMode}>
                                 <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a role" />
@@ -280,7 +280,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                         render={({ field }) => (
                         <FormItem>
                             <FormLabel>Employment Category</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!isEditMode}>
                                 <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a category" />
@@ -300,7 +300,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                         render={({ field }) => (
                         <FormItem>
                             <FormLabel>Work Location</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!isEditMode}>
                                 <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a location" />
@@ -322,7 +322,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                             <FormItem>
                                 <FormLabel>Address</FormLabel>
                                 <FormControl>
-                                <Textarea placeholder="123 Main St, Anytown, USA" {...field} value={field.value ?? ''} />
+                                <Textarea placeholder="123 Main St, Anytown, USA" {...field} value={field.value ?? ''} disabled={!isEditMode} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -336,7 +336,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                         <FormItem>
                             <FormLabel>Emergency Contact Name</FormLabel>
                             <FormControl>
-                                <Input placeholder="e.g. John Smith" {...field} value={field.value ?? ''} />
+                                <Input placeholder="e.g. John Smith" {...field} value={field.value ?? ''} disabled={!isEditMode} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -349,7 +349,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                         <FormItem>
                             <FormLabel>Emergency Contact Phone</FormLabel>
                             <FormControl>
-                                <Input placeholder="e.g. (987) 654-3210" {...field} value={field.value ?? ''} />
+                                <Input placeholder="e.g. (987) 654-3210" {...field} value={field.value ?? ''} disabled={!isEditMode} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -361,7 +361,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                         render={({ field }) => (
                         <FormItem>
                             <FormLabel>Domain</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value} disabled={!isEditMode}>
                                 <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a domain" />
@@ -384,7 +384,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                             <Select onValueChange={(value) => {
                                 field.onChange(value);
                                 form.setValue('branch', ''); // Reset branch on country change
-                            }} value={field.value}>
+                            }} value={field.value} disabled={!isEditMode}>
                                 <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a country" />
@@ -405,7 +405,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                             render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Branch</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value} disabled={!isEditMode}>
                                     <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select a branch in Sri Lanka" />
@@ -427,7 +427,7 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                             <FormItem>
                                 <FormLabel>Branch / State</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="e.g. New York, California" {...field} value={field.value ?? ''} />
+                                    <Input placeholder="e.g. New York, California" {...field} value={field.value ?? ''} disabled={!isEditMode} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -443,17 +443,21 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                                 {expFields.map((field, index) => (
                                     <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
                                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                            <FormField control={form.control} name={`experience.${index}.companyName`} render={({ field }) => (<FormItem><FormLabel>Company</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                            <FormField control={form.control} name={`experience.${index}.role`} render={({ field }) => (<FormItem><FormLabel>Role</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                            <FormField control={form.control} name={`experience.${index}.years`} render={({ field }) => (<FormItem><FormLabel>Years</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                            <FormField control={form.control} name={`experience.${index}.companyName`} render={({ field }) => (<FormItem><FormLabel>Company</FormLabel><FormControl><Input {...field} disabled={!isEditMode} /></FormControl><FormMessage /></FormItem>)} />
+                                            <FormField control={form.control} name={`experience.${index}.role`} render={({ field }) => (<FormItem><FormLabel>Role</FormLabel><FormControl><Input {...field} disabled={!isEditMode} /></FormControl><FormMessage /></FormItem>)} />
+                                            <FormField control={form.control} name={`experience.${index}.years`} render={({ field }) => (<FormItem><FormLabel>Years</FormLabel><FormControl><Input {...field} disabled={!isEditMode} /></FormControl><FormMessage /></FormItem>)} />
                                         </div>
-                                        <FormField control={form.control} name={`experience.${index}.keyResponsibilities`} render={({ field }) => (<FormItem><FormLabel>Responsibilities</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                        <Button type="button" variant="destructive" size="icon" onClick={() => removeExp(index)} className="absolute top-2 right-2 h-6 w-6"><Trash className="h-4 w-4" /></Button>
+                                        <FormField control={form.control} name={`experience.${index}.keyResponsibilities`} render={({ field }) => (<FormItem><FormLabel>Responsibilities</FormLabel><FormControl><Textarea {...field} disabled={!isEditMode} /></FormControl><FormMessage /></FormItem>)} />
+                                        {isEditMode && (
+                                            <Button type="button" variant="destructive" size="icon" onClick={() => removeExp(index)} className="absolute top-2 right-2 h-6 w-6"><Trash className="h-4 w-4" /></Button>
+                                        )}
                                     </div>
                                 ))}
-                                <Button type="button" variant="outline" onClick={() => appendExp({ companyName: '', role: '', years: '', keyResponsibilities: '' })}>
-                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Experience
-                                </Button>
+                                {isEditMode && (
+                                    <Button type="button" variant="outline" onClick={() => appendExp({ companyName: '', role: '', years: '', keyResponsibilities: '' })}>
+                                        <PlusCircle className="mr-2 h-4 w-4" /> Add Experience
+                                    </Button>
+                                )}
                             </AccordionContent>
                         </AccordionItem>
 
@@ -463,16 +467,20 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                                 {eduFields.map((field, index) => (
                                     <div key={field.id} className="p-4 border rounded-md space-y-4 relative">
                                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                            <FormField control={form.control} name={`education.${index}.institution`} render={({ field }) => (<FormItem><FormLabel>Institution</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                            <FormField control={form.control} name={`education.${index}.degree`} render={({ field }) => (<FormItem><FormLabel>Degree</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                            <FormField control={form.control} name={`education.${index}.institution`} render={({ field }) => (<FormItem><FormLabel>Institution</FormLabel><FormControl><Input {...field} disabled={!isEditMode} /></FormControl><FormMessage /></FormItem>)} />
+                                            <FormField control={form.control} name={`education.${index}.degree`} render={({ field }) => (<FormItem><FormLabel>Degree</FormLabel><FormControl><Input {...field} disabled={!isEditMode} /></FormControl><FormMessage /></FormItem>)} />
                                         </div>
-                                        <FormField control={form.control} name={`education.${index}.years`} render={({ field }) => (<FormItem><FormLabel>Years</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                        <Button type="button" variant="destructive" size="icon" onClick={() => removeEdu(index)} className="absolute top-2 right-2 h-6 w-6"><Trash className="h-4 w-4" /></Button>
+                                        <FormField control={form.control} name={`education.${index}.years`} render={({ field }) => (<FormItem><FormLabel>Years</FormLabel><FormControl><Input {...field} disabled={!isEditMode} /></FormControl><FormMessage /></FormItem>)} />
+                                        {isEditMode && (
+                                            <Button type="button" variant="destructive" size="icon" onClick={() => removeEdu(index)} className="absolute top-2 right-2 h-6 w-6"><Trash className="h-4 w-4" /></Button>
+                                        )}
                                     </div>
                                 ))}
-                                <Button type="button" variant="outline" onClick={() => appendEdu({ institution: '', degree: '', years: '' })}>
-                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Education
-                                </Button>
+                                {isEditMode && (
+                                    <Button type="button" variant="outline" onClick={() => appendEdu({ institution: '', degree: '', years: '' })}>
+                                        <PlusCircle className="mr-2 h-4 w-4" /> Add Education
+                                    </Button>
+                                )}
                             </AccordionContent>
                         </AccordionItem>
 
@@ -487,14 +495,17 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                                             value={skillInput}
                                             onChange={(e) => setSkillInput(e.target.value)}
                                             onKeyDown={handleSkillKeyDown}
+                                            disabled={!isEditMode}
                                         />
                                         <div className="flex flex-wrap gap-2 mt-2">
                                             {skillFields.map((field, index) => (
                                             <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
                                                 {form.getValues('skills')?.[index]}
-                                                <button type="button" onClick={() => removeSkill(index)}>
-                                                <XIcon className="h-3 w-3" />
-                                                </button>
+                                                {isEditMode && (
+                                                    <button type="button" onClick={() => removeSkill(index)}>
+                                                    <XIcon className="h-3 w-3" />
+                                                    </button>
+                                                )}
                                             </Badge>
                                             ))}
                                         </div>
@@ -516,14 +527,17 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                                             value={hobbyInput}
                                             onChange={(e) => setHobbyInput(e.target.value)}
                                             onKeyDown={handleHobbyKeyDown}
+                                            disabled={!isEditMode}
                                         />
                                         <div className="flex flex-wrap gap-2 mt-2">
                                             {hobbyFields.map((field, index) => (
                                             <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
                                                 {form.getValues('hobbies')?.[index]}
-                                                <button type="button" onClick={() => removeHobby(index)}>
-                                                <XIcon className="h-3 w-3" />
-                                                </button>
+                                                {isEditMode && (
+                                                    <button type="button" onClick={() => removeHobby(index)}>
+                                                    <XIcon className="h-3 w-3" />
+                                                    </button>
+                                                )}
                                             </Badge>
                                             ))}
                                         </div>
@@ -545,14 +559,17 @@ const GeneralInfoTab = ({ form, isPending, roles }: { form: any, isPending: bool
                                             value={volunteerInput}
                                             onChange={(e) => setVolunteerInput(e.target.value)}
                                             onKeyDown={handleVolunteerKeyDown}
+                                            disabled={!isEditMode}
                                         />
                                         <div className="flex flex-wrap gap-2 mt-2">
                                             {volunteerFields.map((field, index) => (
                                             <Badge key={field.id} variant="secondary" className="flex items-center gap-1">
                                                 {form.getValues('volunteer_work')?.[index]}
-                                                <button type="button" onClick={() => removeVolunteer(index)}>
-                                                <XIcon className="h-3 w-3" />
-                                                </button>
+                                                {isEditMode && (
+                                                    <button type="button" onClick={() => removeVolunteer(index)}>
+                                                    <XIcon className="h-3 w-3" />
+                                                    </button>
+                                                )}
                                             </Badge>
                                             ))}
                                         </div>
@@ -604,6 +621,9 @@ export default function MemberProfilePage() {
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [nextTab, setNextTab] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<string>("General");
+  const [user, setUser] = useState<{id: string, role: string} | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [canEdit, setCanEdit] = useState(false);
 
 
   const form = useForm<ProfileFormValues>({
@@ -666,6 +686,18 @@ export default function MemberProfilePage() {
         fetchMember();
     }
   }, [memberId, fetchMember]);
+
+  useEffect(() => {
+    const storedUser = sessionStorage.getItem('loggedInUser');
+    if (storedUser) {
+      const userData = JSON.parse(storedUser);
+      setUser(userData);
+      // Check if user has permission to edit (basic or sensitive)
+      // For now, allow HR, HR Admin, Super Admin, and Manager roles to edit
+      const editableRoles = ['Super Admin', 'HR Admin', 'HR', 'Manager'];
+      setCanEdit(editableRoles.includes(userData.role));
+    }
+  }, []);
 
   
   const handleCoverUploadSuccess = (newUrl: string) => {
@@ -784,17 +816,19 @@ export default function MemberProfilePage() {
             <Form {...form}>
                 {children}
             </Form>
-            <div className="flex justify-end items-center gap-2 pt-4">
-                <Button type="submit" disabled={isPending || !isDirty}>
-                    {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Save Changes
-                </Button>
-            </div>
+            {isEditMode && (
+                <div className="flex justify-end items-center gap-2 pt-4">
+                    <Button type="submit" disabled={isPending || !isDirty}>
+                        {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Save Changes
+                    </Button>
+                </div>
+            )}
         </form>
     );
 
     switch(tab) {
         case "General":
-            return <FormWrapper><GeneralInfoTab form={form} isPending={isPending} roles={roles} /></FormWrapper>;
+            return <FormWrapper><GeneralInfoTab form={form} isPending={isPending} roles={roles} isEditMode={isEditMode} /></FormWrapper>;
         case "Notes":
             return <NotesTab memberId={member.id} />;
         case "Performance":
@@ -830,7 +864,7 @@ export default function MemberProfilePage() {
                 memberId={member.id}
                 currentImageUrl={member.cover_photo_url}
                 onUploadSuccess={handleCoverUploadSuccess}
-                isEditable={true}
+                isEditable={canEdit && isEditMode}
             />
             <CardHeader className='pt-0'>
                 <div className="flex items-end justify-between gap-4 -mt-12">
@@ -839,10 +873,20 @@ export default function MemberProfilePage() {
                         currentImageUrl={member.profile_picture_url}
                         onUploadSuccess={handleProfilePicUploadSuccess}
                         userName={member.name}
-                        isEditable={true}
+                        isEditable={canEdit && isEditMode}
                         className='w-24 h-24 text-3xl border-4 border-card'
                     />
                      <div className="flex items-center gap-2 pb-4">
+                        {canEdit && !isEditMode && (
+                            <Button onClick={() => setIsEditMode(true)} variant="default">
+                                <Edit className="mr-2 h-4 w-4" /> Edit Profile
+                            </Button>
+                        )}
+                        {canEdit && isEditMode && (
+                            <Button onClick={() => setIsEditMode(false)} variant="outline">
+                                Cancel
+                            </Button>
+                        )}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="outline" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
