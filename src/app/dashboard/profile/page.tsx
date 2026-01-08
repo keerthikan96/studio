@@ -621,7 +621,8 @@ export default function ProfilePage() {
     if (storedUser) {
         const user = JSON.parse(storedUser);
         startTransition(() => {
-            getMemberByIdAction(user.id).then(currentMember => {
+            getMemberByIdAction(user.id, user.id).then(result => {
+                const currentMember = result && 'error' in result ? null : result;
                 if (currentMember) {
                     setMember(currentMember);
                     resetFormValues(currentMember);
@@ -682,7 +683,9 @@ export default function ProfilePage() {
         return;
     }
 
-    const result = await updateMemberAction(member.id, dataToUpdate);
+    const storedUser = sessionStorage.getItem('loggedInUser');
+    const currentUserId = storedUser ? JSON.parse(storedUser).id : member.id;
+    const result = await updateMemberAction(member.id, dataToUpdate, currentUserId);
 
     if ('error' in result) {
         toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });

@@ -39,7 +39,8 @@ export default function UserNav() {
              setUser({...storedUser, name: storedUser.name || 'People and Culture office', role: 'HR'});
         } else {
             // Fetch the latest user data to get the profile picture URL and role
-            getMemberByIdAction(storedUser.id).then(member => {
+            getMemberByIdAction(storedUser.id, storedUser.id).then(result => {
+                const member = result && 'error' in result ? null : result;
                 if (member) {
                     const fullUserData = { 
                         ...storedUser,

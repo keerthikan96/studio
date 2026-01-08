@@ -46,7 +46,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       file_size: file.size,
     };
 
-    const result = await addDocumentAction(docData);
+    // TODO: Get currentUserId from authenticated session/token
+    const currentUserId = memberId; // Temporary: using memberId as currentUserId
+    const result = await addDocumentAction(docData, currentUserId);
 
     if ('error' in result) {
       return NextResponse.json({ error: result.error }, { status: 500 });
@@ -101,8 +103,10 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
         }
 
         // TODO: In a real app, you might want to delete the file from Azure Blob Storage as well.
+        // TODO: Get currentUserId from authenticated session/token
+        const currentUserId = memberId; // Temporary: using memberId as currentUserId
         
-        const result = await deleteDocumentAction(docId);
+        const result = await deleteDocumentAction(docId, currentUserId);
         
         if (!result.success) {
             return NextResponse.json({ error: result.error || 'Failed to delete document.' }, { status: result.error === 'Document not found.' ? 404 : 500 });

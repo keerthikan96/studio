@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Loader2, PlusCircle, Eye, Trash2, Edit, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Document } from '@/lib/mock-data';
-import { getDocumentsAction, deleteDocumentAction } from '@/app/actions/staff';
+import { getDocumentsAction } from '@/app/actions/staff';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
@@ -81,7 +81,9 @@ export function DocumentsTab({ memberId }: DocumentsTabProps) {
       const formData = new FormData();
       formData.append('name', data.name);
       formData.append('description', data.description);
-      formData.append('file', data.file);
+      if (data.file) {
+        formData.append('file', data.file);
+      }
 
       try {
         const response = await fetch(`/api/staff/${memberId}/documents`, {

@@ -5,10 +5,17 @@ import { db } from '@/lib/db';
 import { Role } from '@/lib/mock-data';
 import { ALL_PERMISSIONS, Permission } from '@/lib/permissions';
 import { logAuditEvent } from './audit';
+import { hasPermission } from '@/lib/permission-utils';
 
 // ========== ROLE ACTIONS ==========
 
-export async function getRolesAction(): Promise<Role[]> {
+export async function getRolesAction(currentUserId: string): Promise<Role[] | { error: string }> {
+    // Check permission
+    const canRead = await hasPermission(currentUserId, 'roles.read');
+    if (!canRead) {
+        return { error: 'You do not have permission to view roles.' } as any;
+    }
+    
     try {
         const result = await db.query('SELECT * FROM roles ORDER BY name ASC');
         return result.rows;
@@ -37,8 +44,15 @@ export async function getRoleAction(id: string): Promise<(Role & { permissions: 
 }
 
 
-export async function createRoleAction(data: { name: string; description?: string; permissions?: string[] }): Promise<Role | { error: string }> {
-    const { name, description, permissions = [] } = data;
+export async function createRoleAction(data: { name: string; description?: string; permissions?: string[]; currentUserId: string }): Promise<Role | { error: string }> {
+    const { name, description, permissions = [], currentUserId } = data;
+    
+    // Check permission
+    const canCreate = await hasPermission(currentUserId, 'roles.create');
+    if (!canCreate) {
+        return { error: 'You do not have permission to create roles.' };
+    }
+    
     const client = await db.connect();
     try {
         await client.query('BEGIN');
@@ -79,8 +93,15 @@ export async function createRoleAction(data: { name: string; description?: strin
     }
 }
 
-export async function updateRoleAction(id: string, data: { name: string; description?: string; permissions?: string[] }): Promise<Role | { error: string }> {
-    const { name, description, permissions = [] } = data;
+export async function updateRoleAction(id: string, data: { name: string; description?: string; permissions?: string[]; currentUserId: string }): Promise<Role | { error: string }> {
+    const { name, description, permissions = [], currentUserId } = data;
+    
+    // Check permission
+    const canUpdate = await hasPermission(currentUserId, 'roles.update');
+    if (!canUpdate) {
+        return { error: 'You do not have permission to update roles.' };
+    }
+    
     const client = await db.connect();
     try {
         await client.query('BEGIN');

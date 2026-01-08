@@ -422,6 +422,29 @@ export async function setupDatabase() {
             }
         }
 
+        // Assign all permissions to Super Admin role
+        const { rows: superAdminRole } = await client.query('SELECT id FROM roles WHERE name = $1', ['Super Admin']);
+        if (superAdminRole.length > 0) {
+            const superAdminRoleId = superAdminRole[0].id;
+            
+            // Check if permissions are already assigned
+            const { rows: existingPerms } = await client.query(
+                'SELECT COUNT(*) FROM role_permissions WHERE role_id = $1',
+                [superAdminRoleId]
+            );
+            
+            // Only assign if no permissions exist for Super Admin
+            if (parseInt(existingPerms[0].count, 10) === 0) {
+                for (const perm of ALL_PERMISSIONS) {
+                    await client.query(
+                        'INSERT INTO role_permissions (role_id, permission_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                        [superAdminRoleId, perm.id]
+                    );
+                }
+                console.log('✓ All permissions assigned to Super Admin role');
+            }
+        }
+
         // Seed default assessment categories if they don't exist
         const { rows: categoryCount } = await client.query('SELECT COUNT(*) FROM assessment_categories');
         if (parseInt(categoryCount[0].count, 10) === 0) {

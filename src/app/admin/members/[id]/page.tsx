@@ -666,8 +666,12 @@ export default function MemberProfilePage() {
   const fetchMember = useCallback(() => {
     startTransition(async () => {
         const [currentMember, availableRoles] = await Promise.all([
-            getMemberByIdAction(memberId),
-            getRolesAction()
+            const storedUser = sessionStorage.getItem('loggedInUser');
+            const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
+            return Promise.all([
+                getMemberByIdAction(memberId, currentUserId),
+                getRolesAction(currentUserId)
+            ]);
         ]);
         
         if (currentMember) {
@@ -742,7 +746,9 @@ export default function MemberProfilePage() {
         return;
     }
 
-    const result = await updateMemberAction(memberId, dataToUpdate);
+    const storedUser = sessionStorage.getItem('loggedInUser');
+    const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
+    const result = await updateMemberAction(memberId, dataToUpdate, currentUserId);
 
     if ('error' in result) {
         toast({ title: 'Update Failed', description: result.error, variant: 'destructive' });

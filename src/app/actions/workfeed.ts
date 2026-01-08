@@ -5,6 +5,7 @@ import { db, setupDatabase } from '@/lib/db';
 import { WorkfeedPost, WorkfeedComment } from '@/lib/mock-data';
 import { revalidatePath } from 'next/cache';
 import { logAuditEvent } from './audit';
+import { hasPermission } from '@/lib/permission-utils';
 
 type PostAuthor = {
     id: string;
@@ -19,6 +20,13 @@ export async function createPostAction(content: string, author: PostAuthor, imag
     if (!author) {
         return { error: 'You must be logged in to create a post.' };
     }
+    
+    // Check permission
+    const canCreatePost = await hasPermission(author.id, 'workfeed.create_post');
+    if (!canCreatePost) {
+        return { error: 'You do not have permission to create posts.' };
+    }
+    
     const client = await db.connect();
     try {
         await client.query('BEGIN');
@@ -262,7 +270,9 @@ export async function deletePostAction(postId: string, userId: string, userRole:
 
         const post = postResult.rows[0];
 
-        if (post.author_id !== user.id && user.role !== 'HR') {
+        // Check permission - user can delete their own posts or have delete_any_post permission
+        const canDeleteAny = await hasPermission(user.id, 'workfeed.delete_any_post');
+        if (post.author_id !== user.id && !canDeleteAny) {
             return { success: false, error: 'You do not have permission to delete this post.' };
         }
 
@@ -308,7 +318,9 @@ export async function deleteCommentAction(commentId: string, userId: string, use
 
         const comment = commentResult.rows[0];
 
-        if (comment.author_id !== user.id && user.role !== 'HR') {
+        // Check permission - user can delete their own comments or have delete_any_comment permission
+        const canDeleteAny = await hasPermission(user.id, 'workfeed.delete_any_comment');
+        if (comment.author_id !== user.id && !canDeleteAny) {
             return { success: false, error: 'You do not have permission to delete this comment.' };
         }
 
@@ -337,8 +349,15 @@ export async function deleteCommentAction(commentId: string, userId: string, use
 }
 
 
-export async function saveWorkfeedSettingsAction(settings: { birthday: any; anniversary: any; }): Promise<{ success: boolean; error?: string }> {
+export async function saveWorkfeedSettingsAction(settings: { birthday: any; anniversary: any; }, currentUserId: string): Promise<{ success: boolean; error?: string }> {
     await setupDatabase();
+    
+    // Check permission
+    const canManage = await hasPermission(currentUserId, 'workfeed.manage_automated_posts');
+    if (!canManage) {
+        return { success: false, error: 'You do not have permission to manage workfeed settings.' };
+    }
+    
     const client = await db.connect();
     try {
         await client.query('BEGIN');

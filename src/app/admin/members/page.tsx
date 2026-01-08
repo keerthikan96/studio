@@ -23,6 +23,7 @@ import { requestPasswordResetAction } from "@/app/actions/auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getRolesAction } from "@/app/actions/roles";
+import { PermissionGate } from "@/contexts/PermissionContext";
 
 type ViewMode = 'grid' | 'list';
 
@@ -37,9 +38,12 @@ export default function MembersPage() {
 
   useEffect(() => {
     startTransition(() => {
-        Promise.all([getMembersAction(), getRolesAction()]).then(([membersData, rolesData]) => {
-          setMembers(membersData);
-          setRoles(rolesData);
+        const storedUser = sessionStorage.getItem('loggedInUser');
+        const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
+        
+        Promise.all([getMembersAction(currentUserId), getRolesAction(currentUserId)]).then(([membersData, rolesData]) => {
+          setMembers(Array.isArray(membersData) ? membersData : []);
+          setRoles(Array.isArray(rolesData) ? rolesData : []);
         });
     });
   }, []);
@@ -103,12 +107,14 @@ export default function MembersPage() {
                 </Tooltip>
             </TooltipProvider>
 
-            <Link href="/admin/add-staff">
-                <Button>
-                    <PlusCircle className="mr-2"/>
-                    Add Member
-                </Button>
-            </Link>
+            <PermissionGate permission="members.create">
+              <Link href="/admin/add-staff">
+                  <Button>
+                      <PlusCircle className="mr-2"/>
+                      Add Member
+                  </Button>
+              </Link>
+            </PermissionGate>
           </div>
         </div>
         {isPending ? (

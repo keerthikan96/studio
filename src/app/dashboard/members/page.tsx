@@ -24,7 +24,11 @@ export default function EmployeeDirectoryPage() {
 
     useEffect(() => {
         startTransition(() => {
-            getMembersAction().then(setMembers);
+            const storedUser = sessionStorage.getItem('loggedInUser');
+            const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
+            getMembersAction(currentUserId).then(result => {
+                setMembers(Array.isArray(result) ? result : []);
+            });
         });
     }, []);
     

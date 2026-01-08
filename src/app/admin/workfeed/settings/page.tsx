@@ -74,7 +74,9 @@ export default function WorkfeedSettingsPage() {
 
         startTransition(async () => {
             const settingsPromise = getWorkfeedSettingsAction();
-            const membersPromise = getMembersAction();
+            const storedUser = sessionStorage.getItem('loggedInUser');
+            const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
+            const membersPromise = getMembersAction(currentUserId);
             
             const [settings, memberList] = await Promise.all([settingsPromise, membersPromise]);
 

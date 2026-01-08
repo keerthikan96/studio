@@ -35,7 +35,9 @@ export async function POST(
 
     // If it's the admin user, skip database update
     if (params.id !== 'admin-user-001') {
-        const result = await updateMemberAction(params.id, { cover_photo_url: publicUrl });
+        // TODO: Get currentUserId from authenticated session/token
+        const currentUserId = params.id; // Temporary: using memberId as currentUserId
+        const result = await updateMemberAction(params.id, { cover_photo_url: publicUrl }, currentUserId);
         if ('error' in result) {
             throw new Error(result.error);
         }

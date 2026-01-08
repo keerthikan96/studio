@@ -46,8 +46,8 @@ export function MemberCard({ member, onStatusChange, onSendInvite, onSendPasswor
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                     <Link href={`/admin/members/${member.id}`}>
                       <DropdownMenuItem>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit
+                        <Eye className="mr-2 h-4 w-4" />
+                        View
                       </DropdownMenuItem>
                     </Link>
                     <DropdownMenuSeparator />

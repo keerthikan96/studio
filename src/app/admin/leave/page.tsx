@@ -100,7 +100,10 @@ export default function LeaveManagementPage() {
     const fetchLeaveData = () => {
         startTransition(async () => {
             const [reqs, cats] = await Promise.all([
-                getLeaveRequestsAction(),
+                const storedUser = sessionStorage.getItem('loggedInUser');
+                const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
+                return Promise.all([
+                    getLeaveRequestsAction(currentUserId),
                 getLeaveCategoriesAction()
             ]);
             setRequests(reqs);

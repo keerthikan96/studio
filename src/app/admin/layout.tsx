@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import Breadcrumbs from "@/components/breadcrumbs";
+import { usePermissions } from "@/contexts/PermissionContext";
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -36,6 +37,7 @@ export default function AdminLayout({
   const pathname = usePathname();
   const [isClient, setIsClient] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const { hasPermission, hasAnyPermission, loading: permissionsLoading } = usePermissions();
 
   useEffect(() => {
     setIsClient(true);
@@ -46,24 +48,62 @@ export default function AdminLayout({
   }, []);
 
   const menuItems = [
-    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, permission: null }, // No permission required for dashboard
     { 
+      href: "/admin/workfeed",
       label: "Workfeed", 
       icon: Newspaper,
+      permission: 'workfeed.create_post',
       subItems: [
-        { href: "/admin/workfeed", label: "Posts" },
-        { href: "/admin/workfeed/settings", label: "Settings" }
+        { href: "/admin/workfeed", label: "Posts", permission: 'workfeed.create_post' },
+        { href: "/admin/workfeed/settings", label: "Settings", permission: 'workfeed.manage_automated_posts' }
       ]
     },
-    { href: "/admin/calendar", label: "Calendar", icon: CalendarIcon },
-    { href: "/admin/attendance", label: "Attendance", icon: CalendarIcon },
-    { href: "/admin/department", label: "Department", icon: Briefcase },
-    { href: "/admin/members", label: "Members", icon: Users },    { href: "/admin/intake", label: "Intake", icon: ClipboardList },    { href: "/admin/documents", label: "Documents", icon: Folder },
-    { href: "/admin/award", label: "Award", icon: Award },
-    { href: "/admin/leave", label: "Leave", icon: CalendarIcon },
-    { href: "/admin/notice", label: "Notice", icon: FileText },
-    { href: "/dashboard/profile", label: "Profile", icon: User },
+    { href: "/admin/calendar", label: "Calendar", icon: CalendarIcon, permission: null }, // Add calendar permission if needed
+    { href: "/admin/attendance", label: "Attendance", icon: CalendarIcon, permission: null }, // Add attendance permission if needed
+    { href: "/admin/department", label: "Department", icon: Briefcase, permission: null }, // Add department permission if needed
+    { href: "/admin/members", label: "Members", icon: Users, permission: 'members.read_all' },    
+    { href: "/admin/intake", label: "Intake", icon: ClipboardList, permission: null }, // Add intake permission if needed    
+    { href: "/admin/documents", label: "Documents", icon: Folder, permission: 'documents.view_all' },
+    { href: "/admin/award", label: "Award", icon: Award, permission: null }, // Add award permission if needed
+    { href: "/admin/leave", label: "Leave", icon: CalendarIcon, permission: 'leave.read_all' },
+    { href: "/admin/notice", label: "Notice", icon: FileText, permission: null }, // Add notice permission if needed
+    { href: "/dashboard/profile", label: "Profile", icon: User, permission: null }, // No permission required for own profile
   ];
+  
+  // Filter menu items based on permissions - only filter when permissions are loaded
+  const filteredMenuItems = isClient && !permissionsLoading ? menuItems.filter(item => {
+    if (!item.permission) return true; // No permission required, always show
+    
+    // Check main item permission
+    const hasMainPermission = hasPermission(item.permission);
+    
+    // If item has subItems, filter them too
+    if (item.subItems) {
+      const filteredSubItems = item.subItems.filter(subItem => 
+        !subItem.permission || hasPermission(subItem.permission)
+      );
+      
+      // Update item with filtered subItems
+      if (filteredSubItems.length > 0) {
+        return true;
+      }
+      return false;
+    }
+    
+    return hasMainPermission;
+  }).map(item => {
+    // Filter subItems if they exist
+    if (item.subItems) {
+      return {
+        ...item,
+        subItems: item.subItems.filter(subItem => 
+          !subItem.permission || hasPermission(subItem.permission)
+        )
+      };
+    }
+    return item;
+  }) : menuItems; // Show all items while loading
   
   const getIsActive = (href: string, subItems?: any[]) => {
      if (subItems) {
@@ -96,7 +136,7 @@ export default function AdminLayout({
     pageTitle = 'Dashboard';
   }
 
-  const canAccessSettings = isClient && (userRole === 'Super Admin' || userRole === 'HR Admin' || userRole === 'HR');
+  const canAccessSettings = isClient && !permissionsLoading ? hasAnyPermission(['roles.read', 'leave.manage_categories', 'performance.create_review_record']) : false;
 
   return (
     <SidebarProvider>
@@ -114,7 +154,7 @@ export default function AdminLayout({
             </div>
            </SidebarGroup>
           <SidebarMenu>
-            {isClient && menuItems.map((item, index) => (
+            {isClient && filteredMenuItems.map((item, index) => (
                 <SidebarMenuItem key={index}>
                 {item.subItems ? (
                   <Collapsible defaultOpen={getIsActive(item.href!, item.subItems)}>

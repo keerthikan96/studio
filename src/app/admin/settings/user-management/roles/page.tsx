@@ -18,7 +18,17 @@ export default function RolesPage() {
 
     const fetchRoles = () => {
         startTransition(() => {
-            getRolesAction().then(setRoles);
+            const storedUser = sessionStorage.getItem('loggedInUser');
+            const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
+            
+            getRolesAction(currentUserId).then((result) => {
+                if (Array.isArray(result)) {
+                    setRoles(result);
+                } else {
+                    console.error('Failed to fetch roles:', result.error);
+                    setRoles([]);
+                }
+            });
         });
     };
 

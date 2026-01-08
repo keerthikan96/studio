@@ -21,14 +21,20 @@ export default function AddStaffPage() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        getRolesAction().then(fetchedRoles => {
+        const storedUser = sessionStorage.getItem('loggedInUser');
+        const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
+        getRolesAction(currentUserId).then(result => {
+            const fetchedRoles = Array.isArray(result) ? result : [];
             setRoles(fetchedRoles);
             setIsLoading(false);
         });
     }, []);
 
     const handleAddStaff = async (staffData: StaffFormData) => {
-        const result = await addStaffAction(staffData);
+        const storedUser = sessionStorage.getItem('loggedInUser');
+        const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
+        
+        const result = await addStaffAction({ ...staffData, currentUserId });
 
         if ('error' in result) {
             // The form will show the toast with the error

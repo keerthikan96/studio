@@ -13,6 +13,7 @@ import { requestPasswordResetAction } from './auth';
 import { uploadFileToAzure } from '@/lib/azure-blob-storage';
 import { logAuditEvent } from './audit';
 import { PoolClient } from 'pg';
+import { hasPermission, hasAnyPermission } from '@/lib/permission-utils';
 
 export async function parseResumeAction(
   input: ParseResumeToAutofillProfileInput
@@ -37,10 +38,16 @@ async function logWithClient(client: PoolClient, params: any) {
     }, client);
 }
 
-export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'name' | 'hobbies'>, sendInvite: boolean, isDraft: boolean, resumeFile?: { file: File, dataUri: string }, role_id: string }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
+export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'name' | 'hobbies'>, sendInvite: boolean, isDraft: boolean, resumeFile?: { file: File, dataUri: string }, role_id: string, currentUserId: string }): Promise<{ member: Member, invitationLink?: string } | { error: string }> {
   await setupDatabase();
-  const { staff, sendInvite, isDraft, resumeFile } = staffData;
+  const { staff, sendInvite, isDraft, resumeFile, currentUserId } = staffData;
   let { role_id } = staffData;
+
+  // Check permission
+  const canCreate = await hasPermission(currentUserId, 'members.create');
+  if (!canCreate) {
+    return { error: 'You do not have permission to create members.' };
+  }
 
   const name = [staff.first_name, staff.middle_name, staff.last_name].filter(Boolean).join(' ');
 
@@ -145,8 +152,17 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
   }
 }
 
-export async function getMembersAction(): Promise<Member[]> {
+export async function getMembersAction(currentUserId: string): Promise<Member[] | { error: string }> {
     await setupDatabase();
+    
+    // Check permission - user needs either read_all or read_public_profile
+    const canReadAll = await hasPermission(currentUserId, 'members.read_all');
+    const canReadPublic = await hasPermission(currentUserId, 'members.read_public_profile');
+    
+    if (!canReadAll && !canReadPublic) {
+        return { error: 'You do not have permission to view members.' } as any;
+    }
+    
     try {
         const result = await db.query(`
             SELECT m.*, r.name as role
@@ -155,6 +171,23 @@ export async function getMembersAction(): Promise<Member[]> {
             LEFT JOIN roles r ON rm.role_id = r.id
             ORDER BY m.created_at DESC
         `);
+        
+        // If user can only read public profiles, filter sensitive data
+        if (!canReadAll && canReadPublic) {
+            return result.rows.map((member: any) => ({
+                ...member,
+                // Hide sensitive fields
+                salary: null,
+                national_id: null,
+                passport_no: null,
+                visa_work_permit: null,
+                visa_work_permit_expiry: null,
+                emergency_contact_name: null,
+                emergency_contact_phone: null,
+                emergency_contact_relationship: null,
+            }));
+        }
+        
         return result.rows;
     } catch (error) {
         console.error('Error fetching members:', error);
@@ -162,7 +195,16 @@ export async function getMembersAction(): Promise<Member[]> {
     }
 }
 
-export async function getMemberByIdAction(id: string): Promise<Member | null> {
+export async function getMemberByIdAction(id: string, currentUserId: string): Promise<Member | { error: string } | null> {
+    // Check permission
+    const canReadAll = await hasPermission(currentUserId, 'members.read_all');
+    const canReadPublic = await hasPermission(currentUserId, 'members.read_public_profile');
+    const canReadSensitive = await hasPermission(currentUserId, 'members.read_sensitive_profile');
+    
+    if (!canReadAll && !canReadPublic) {
+        return { error: 'You do not have permission to view member profiles.' } as any;
+    }
+    
     try {
         const result = await db.query(`
             SELECT m.*, r.id as role_id, r.name as role
@@ -172,15 +214,50 @@ export async function getMemberByIdAction(id: string): Promise<Member | null> {
             WHERE m.id = $1
         `, [id]);
         if (result.rows.length === 0) return null;
-        return result.rows[0];
+        
+        const member = result.rows[0];
+        
+        // If user cannot read sensitive data, filter it out
+        if (!canReadSensitive && !canReadAll) {
+            return {
+                ...member,
+                salary: null,
+                national_id: null,
+                passport_no: null,
+                visa_work_permit: null,
+                visa_work_permit_expiry: null,
+                emergency_contact_name: null,
+                emergency_contact_phone: null,
+                emergency_contact_relationship: null,
+            };
+        }
+        
+        return member;
     } catch (error) {
         console.error(`Error fetching member with id ${id}:`, error);
         return null;
     }
 }
 
-export async function updateMemberAction(id: string, data: Omit<Partial<Member>, 'id' | 'created_at' | 'updated_at'>): Promise<Member | { error: string }> {
+export async function updateMemberAction(id: string, data: Omit<Partial<Member>, 'id' | 'created_at' | 'updated_at'>, currentUserId: string): Promise<Member | { error: string }> {
+    // Check permissions
+    const canUpdateBasic = await hasPermission(currentUserId, 'members.update_basic');
+    const canUpdateSensitive = await hasPermission(currentUserId, 'members.update_sensitive');
+    
+    if (!canUpdateBasic && !canUpdateSensitive) {
+        return { error: 'You do not have permission to update member profiles.' };
+    }
+    
     const { name, email, phone, domain, country, branch, experience, education, skills, status, profile_picture_url, cover_photo_url, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, hobbies, volunteer_work, role_id } = data;
+    
+    // Sensitive fields that require special permission
+    const sensitiveFields = ['salary', 'national_id', 'passport_no', 'visa_work_permit', 'visa_work_permit_expiry', 'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relationship'];
+    const hasSensitiveData = Object.keys(data).some(key => sensitiveFields.includes(key));
+    
+    if (hasSensitiveData && !canUpdateSensitive) {
+        return { error: 'You do not have permission to update sensitive member information.' };
+    }
+    
     const client = await db.connect();
     try {
         await client.query('BEGIN');
@@ -410,7 +487,13 @@ export async function getDocumentsAction(memberId: string): Promise<Document[]> 
   }
 }
 
-export async function addDocumentAction(data: Omit<Document, 'id' | 'created_at'>): Promise<Document | { error: string }> {
+export async function addDocumentAction(data: Omit<Document, 'id' | 'created_at'>, currentUserId: string): Promise<Document | { error: string }> {
+  // Check permission
+  const canUpload = await hasPermission(currentUserId, 'documents.upload_for_member');
+  if (!canUpload) {
+    return { error: 'You do not have permission to upload documents.' };
+  }
+  
   const { member_id, name, description, file_url, file_type, file_size } = data;
    const client = await db.connect();
   try {
@@ -439,7 +522,13 @@ export async function addDocumentAction(data: Omit<Document, 'id' | 'created_at'
   }
 }
 
-export async function updateDocumentAction(docId: string, data: { name: string, description: string }): Promise<Document | { error: string }> {
+export async function updateDocumentAction(docId: string, data: { name: string, description: string }, currentUserId: string): Promise<Document | { error: string }> {
+  // Check permission
+  const canEdit = await hasPermission(currentUserId, 'documents.edit');
+  if (!canEdit) {
+    return { error: 'You do not have permission to edit documents.' };
+  }
+  
   const { name, description } = data;
    const client = await db.connect();
   try {
@@ -468,7 +557,13 @@ export async function updateDocumentAction(docId: string, data: { name: string, 
   }
 }
 
-export async function deleteDocumentAction(docId: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteDocumentAction(docId: string, currentUserId: string): Promise<{ success: boolean; error?: string }> {
+  // Check permission
+  const canDelete = await hasPermission(currentUserId, 'documents.delete');
+  if (!canDelete) {
+    return { success: false, error: 'You do not have permission to delete documents.' };
+  }
+  
   const client = await db.connect();
   try {
     await client.query('BEGIN');

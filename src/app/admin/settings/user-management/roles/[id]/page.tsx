@@ -72,7 +72,10 @@ export function RoleEditor({ isNewRole = false }: RoleEditorProps) {
     
     const onSubmit = (data: RoleFormValues) => {
         startTransition(async () => {
-            const result = await updateRoleAction(roleId, data);
+            const storedUser = sessionStorage.getItem('loggedInUser');
+            const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
+            
+            const result = await updateRoleAction(roleId, { ...data, currentUserId });
             
             if ('error' in result) {
                 toast({ title: "Error", description: result.error, variant: "destructive"});
@@ -82,6 +85,7 @@ export function RoleEditor({ isNewRole = false }: RoleEditorProps) {
                     description: `The role "${data.name}" has been saved.`
                 });
                 router.push('/admin/settings/user-management/roles');
+            }
             }
         });
     };

@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check-permissions": "NODE_OPTIONS='--require dotenv/config' tsx scripts/check-super-admin-permissions.ts"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.18.0",

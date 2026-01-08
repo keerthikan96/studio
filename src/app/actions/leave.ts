@@ -6,6 +6,7 @@ import { LeaveCategory, LeaveEntitlement, LeaveRequest } from '@/lib/mock-data';
 import { revalidatePath } from 'next/cache';
 import { logAuditEvent } from './audit';
 import { PoolClient } from 'pg';
+import { hasPermission, hasAnyPermission } from '@/lib/permission-utils';
 
 async function logWithClient(client: PoolClient, params: any) {
     // In a real app, actorId and actorName would come from session
@@ -49,8 +50,15 @@ export async function getMemberEntitlementsAction(memberId: string, year: number
 
 // ========== REQUEST ACTIONS ==========
 
-export async function getLeaveRequestsAction(): Promise<(LeaveRequest & { member_name: string })[]> {
+export async function getLeaveRequestsAction(currentUserId: string): Promise<(LeaveRequest & { member_name: string })[] | { error: string }> {
     await setupDatabase();
+    
+    // Check permission
+    const canReadAll = await hasPermission(currentUserId, 'leave.read_all');
+    if (!canReadAll) {
+        return { error: 'You do not have permission to view all leave requests.' } as any;
+    }
+    
     try {
         const result = await db.query(`
             SELECT lr.*, m.name as member_name, lc.name as leave_category_name
@@ -66,8 +74,17 @@ export async function getLeaveRequestsAction(): Promise<(LeaveRequest & { member
     }
 }
 
-export async function getMemberLeaveRequestsAction(memberId: string): Promise<LeaveRequest[]> {
+export async function getMemberLeaveRequestsAction(memberId: string, currentUserId: string): Promise<LeaveRequest[] | { error: string }> {
      await setupDatabase();
+     
+     // Check permission - users can view their own leave requests or need permission
+     const canReadAll = await hasPermission(currentUserId, 'leave.read_all');
+     const isOwnProfile = memberId === currentUserId;
+     
+     if (!canReadAll && !isOwnProfile) {
+         return { error: 'You do not have permission to view these leave requests.' } as any;
+     }
+     
     try {
         const result = await db.query(`
             SELECT lr.*, lc.name as leave_category_name
@@ -119,6 +136,15 @@ export async function createLeaveRequestAction(data: Omit<LeaveRequest, 'id' | '
 
 export async function updateLeaveRequestStatusAction(id: string, status: 'Approved' | 'Rejected', approvedById: string): Promise<{ success: boolean; error?: string }> {
     await setupDatabase();
+    
+    // Check permission based on action
+    const requiredPermission = status === 'Approved' ? 'leave.approve' : 'leave.reject';
+    const hasRequiredPermission = await hasPermission(approvedById, requiredPermission);
+    
+    if (!hasRequiredPermission) {
+        return { success: false, error: `You do not have permission to ${status.toLowerCase()} leave requests.` };
+    }
+    
     const client = await db.connect();
     try {
         await client.query('BEGIN');

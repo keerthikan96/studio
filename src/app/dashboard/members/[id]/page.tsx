@@ -146,7 +146,10 @@ export default function PublicMemberProfilePage() {
 
     const fetchMember = useCallback(() => {
         startTransition(() => {
-            getMemberByIdAction(memberId).then(currentMember => {
+            const storedUser = sessionStorage.getItem('loggedInUser');
+            const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
+            getMemberByIdAction(memberId, currentUserId).then(result => {
+                const currentMember = result && 'error' in result ? null : result;
                 if (currentMember) {
                     setMember(currentMember);
                 } else {

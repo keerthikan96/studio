@@ -75,7 +75,10 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     startTransition(() => {
-        getMembersAction().then(members => {
+        const storedUser = sessionStorage.getItem('loggedInUser');
+        const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
+        getMembersAction(currentUserId).then(result => {
+            const members = Array.isArray(result) ? result : [];
             const events = generateEventsFromMembers(members);
             setAllEvents(events);
         });
