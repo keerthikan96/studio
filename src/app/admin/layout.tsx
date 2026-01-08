@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   SidebarProvider,
   Sidebar,
@@ -140,8 +141,8 @@ export default function AdminLayout({
 
   return (
     <SidebarProvider>
-      <Sidebar>
-        <SidebarHeader>
+      <Sidebar className="border-r border-border/50 bg-card/50 backdrop-blur-sm">
+        <SidebarHeader className="border-b border-border/50 p-4">
           <Link href="/admin/dashboard">
             <Logo />
           </Link>
@@ -228,25 +229,64 @@ export default function AdminLayout({
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-16 items-center justify-between border-b bg-background px-6">
+        <header className="flex h-16 items-center justify-between border-b bg-card/50 backdrop-blur-sm px-6 sticky top-0 z-10 shadow-soft">
           <div className="flex items-center gap-4">
             <SidebarTrigger className="lg:hidden" />
           </div>
            <div className="relative md:w-1/3 lg:w-1/4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search here..." className="pl-9 bg-muted border-none focus-visible:ring-primary" />
+                <Input placeholder="Search here..." className="pl-9 bg-background/50 border-border/50 focus-visible:ring-primary transition-all" />
             </div>
           <div className="flex items-center gap-4">
-            <Bell className="h-5 w-5 text-muted-foreground" />
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative"
+            >
+              <Bell className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors" />
+              <span className="absolute -top-1 -right-1 h-4 w-4 bg-destructive rounded-full text-[10px] text-white flex items-center justify-center font-semibold">3</span>
+            </motion.button>
             <UserNav />
           </div>
         </header>
-        <main className="flex-1 p-6 bg-muted/30">
-            <div className="mb-4">
-              <h1 className="text-2xl font-bold tracking-tight mb-2">{pageTitle}</h1>
-               {isClient && <Breadcrumbs />}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-background via-primary/[0.02] to-accent/[0.02] relative overflow-hidden">
+            {/* Ambient background effects */}
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+              <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
             </div>
-            {children}
+            
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="mb-6 relative z-10"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
+                  className="w-1 h-8 bg-gradient-to-b from-primary to-accent rounded-full"
+                />
+                <h1 className="text-3xl font-bold tracking-tight text-foreground">
+                  {pageTitle}
+                </h1>
+              </div>
+               {isClient && <Breadcrumbs />}
+            </motion.div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={pathname}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="relative z-10"
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
         </main>
       </SidebarInset>
     </SidebarProvider>

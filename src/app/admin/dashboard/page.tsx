@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useTransition } from 'react';
+import { motion } from 'framer-motion';
 import {
   Card,
   CardContent,
@@ -29,6 +30,21 @@ import { getMembersAction } from '@/app/actions/staff';
 import { Member } from '@/lib/mock-data';
 import { differenceInYears } from 'date-fns';
 import DashboardCarousel from '@/components/dashboard-carousel';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+};
 
 const notices = [
   {
@@ -133,12 +149,39 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 relative">
+      {/* Ambient Background Effects */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.4 }}
+          transition={{ duration: 2 }}
+          className="absolute top-20 right-20 w-96 h-96 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full blur-3xl"
+        />
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.3 }}
+          transition={{ duration: 2, delay: 0.5 }}
+          className="absolute bottom-20 left-20 w-96 h-96 bg-gradient-to-tr from-accent/20 to-primary/20 rounded-full blur-3xl"
+        />
+      </div>
+
       {/* Header: Dynamic Information Banner */}
-      <DashboardCarousel />
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <DashboardCarousel />
+      </motion.div>
       
       {/* Row 1: At-a-Glance Summary - Key Metrics */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
+      >
         <DashboardStatCard
             title="Total employee"
             value="127"
@@ -172,10 +215,15 @@ export default function AdminDashboard() {
             detailsData={workFromHomeData}
             detailsCta={{ href: '/admin/attendance', text: 'Go to Attendance' }}
         />
-      </div>
+      </motion.div>
 
       {/* Row 2: Timely Information - Calendar & Events + Notice Board */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 gap-6 lg:grid-cols-3"
+      >
         {/* Left: Calendar & Events (Related Time-Sensitive Information) */}
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -201,17 +249,23 @@ export default function AdminDashboard() {
         </Card>
 
         {/* Right: Notice Board (Static Important Information) */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+        <Card className="relative overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between relative z-10">
             <CardTitle>Notice Board</CardTitle>
             <Button variant="ghost" size="icon" className="h-6 w-6">
               <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
             </Button>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 relative z-10">
             <div className="space-y-4 max-h-[320px] overflow-auto">
               {notices.map((notice, index) => (
-                <div key={index} className="flex items-start justify-between gap-4 p-3 bg-gray-50 rounded-lg">
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="flex items-start justify-between gap-4 p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-all duration-200 border border-border/50"
+                >
                   <div className="flex-1">
                     <p className="font-medium text-sm">{notice.title}</p>
                     <p className="text-xs text-muted-foreground mt-1">{notice.description}</p>
@@ -220,7 +274,7 @@ export default function AdminDashboard() {
                     <p className="text-xs text-muted-foreground">{notice.date}</p>
                     {notice.isStarred && <Star className="h-4 w-4 text-yellow-400 fill-yellow-400 inline-block mt-1" />}
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
             <div className="flex justify-between items-center pt-4 border-t">
@@ -229,10 +283,15 @@ export default function AdminDashboard() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
 
       {/* Row 3: Performance & Business Intelligence - Key Charts */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 gap-6 lg:grid-cols-2"
+      >
         {/* Left: Main Performance Chart */}
         <Card>
           <CardHeader>
@@ -298,10 +357,15 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </motion.div>
 
       {/* Row 4: Detailed Information - Employee Lists */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 gap-6 lg:grid-cols-2"
+      >
         {/* Left: Employee List */}
         <Card>
           <CardHeader>
@@ -331,7 +395,7 @@ export default function AdminDashboard() {
             <EmployeeAwardList />
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
     </div>
   );
 }

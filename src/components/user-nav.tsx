@@ -89,8 +89,8 @@ export default function UserNav() {
     return null; // Or a loading skeleton
   }
   
-  const fallback = user.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
   const imageSrc = user.profile_picture_url;
+  const hasProfilePicture = imageSrc && imageSrc.trim() !== '';
   
   const profileLink = user.role === 'HR' 
     ? `/dashboard/profile` 
@@ -99,23 +99,31 @@ export default function UserNav() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <div className="flex items-center gap-3 cursor-pointer">
-           <Avatar className="h-9 w-9">
-            <AvatarImage
-              key={imageSrc} 
-              src={imageSrc ?? undefined}
-              alt="User avatar"
-              data-ai-hint="person portrait"
-            />
-            <AvatarFallback>{fallback}</AvatarFallback>
-          </Avatar>
-           <div className="hidden md:flex flex-col items-start">
+        <Button variant="ghost" className="flex items-center gap-3 h-auto p-2 hover:bg-muted/50 transition-all group">
+          <div className="relative">
+            {hasProfilePicture ? (
+              <Avatar className="h-10 w-10 border-2 border-primary/20 group-hover:border-primary/50 transition-all">
+                <AvatarImage
+                  key={imageSrc} 
+                  src={imageSrc}
+                  alt="User avatar"
+                  data-ai-hint="person portrait"
+                />
+              </Avatar>
+            ) : (
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-soft group-hover:shadow-medium transition-all">
+                <User className="h-5 w-5 text-white" />
+              </div>
+            )}
+            <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-emerald-500 border-2 border-background rounded-full" />
+          </div>
+          <div className="hidden md:flex flex-col items-start">
             <p className="text-sm font-medium leading-none">{user.name}</p>
             <p className="text-xs leading-none text-muted-foreground capitalize">
               {user.role}
             </p>
           </div>
-        </div>
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
