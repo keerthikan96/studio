@@ -16,10 +16,11 @@ import {
   SidebarTrigger,
   SidebarInput,
   SidebarGroup,
+  SidebarGroupLabel,
   SidebarMenuSub,
   SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, Briefcase, Award, Calendar as CalendarIcon, User, FileText, Search, Bell, Newspaper, Settings, ChevronDown, ClipboardList, FlaskConical, History, Folder } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, Award, Calendar as CalendarIcon, FileText, Search, Bell, Newspaper, Settings, ChevronDown, ClipboardList, History, Folder, UserCheck } from "lucide-react";
 import Logo from "@/components/logo";
 import UserNav from "@/components/user-nav";
 import { Input } from "@/components/ui/input";
@@ -48,63 +49,82 @@ export default function AdminLayout({
     }
   }, []);
 
-  const menuItems = [
-    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, permission: null }, // No permission required for dashboard
-    { 
-      href: "/admin/workfeed",
-      label: "Workfeed", 
-      icon: Newspaper,
-      permission: 'workfeed.create_post',
-      subItems: [
-        { href: "/admin/workfeed", label: "Posts", permission: 'workfeed.create_post' },
-        { href: "/admin/workfeed/settings", label: "Settings", permission: 'workfeed.manage_automated_posts' }
+  const menuCategories = [
+    {
+      label: "Overview",
+      items: [
+        { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, permission: null },
       ]
     },
-    { href: "/admin/calendar", label: "Calendar", icon: CalendarIcon, permission: null }, // Add calendar permission if needed
-    { href: "/admin/attendance", label: "Attendance", icon: CalendarIcon, permission: null }, // Add attendance permission if needed
-    { href: "/admin/department", label: "Department", icon: Briefcase, permission: null }, // Add department permission if needed
-    { href: "/admin/members", label: "Members", icon: Users, permission: 'members.read_all' },    
-    { href: "/admin/intake", label: "Intake", icon: ClipboardList, permission: null }, // Add intake permission if needed    
-    { href: "/admin/documents", label: "Documents", icon: Folder, permission: 'documents.view_all' },
-    { href: "/admin/award", label: "Award", icon: Award, permission: null }, // Add award permission if needed
-    { href: "/admin/leave", label: "Leave", icon: CalendarIcon, permission: 'leave.read_all' },
-    { href: "/admin/notice", label: "Notice", icon: FileText, permission: null }, // Add notice permission if needed
-    { href: "/dashboard/profile", label: "Profile", icon: User, permission: null }, // No permission required for own profile
+    {
+      label: "Communication",
+      items: [
+        { 
+          href: "/admin/workfeed",
+          label: "Workfeed", 
+          icon: Newspaper,
+          permission: 'workfeed.create_post',
+          subItems: [
+            { href: "/admin/workfeed", label: "Posts", permission: 'workfeed.create_post' },
+            { href: "/admin/workfeed/settings", label: "Settings", permission: 'workfeed.manage_automated_posts' }
+          ]
+        },
+        { href: "/admin/notice", label: "Notice", icon: FileText, permission: null },
+      ]
+    },
+    {
+      label: "People Management",
+      items: [
+        { href: "/admin/members", label: "Members", icon: Users, permission: 'members.read_all' },
+        { href: "/admin/department", label: "Department", icon: Briefcase, permission: null },
+        { href: "/admin/intake", label: "Intake", icon: ClipboardList, permission: null },
+        { href: "/admin/attendance", label: "Attendance", icon: UserCheck, permission: null },
+      ]
+    },
+    {
+      label: "Time & Leave",
+      items: [
+        { href: "/admin/calendar", label: "Calendar", icon: CalendarIcon, permission: null },
+        { href: "/admin/leave", label: "Leave", icon: CalendarIcon, permission: 'leave.read_all' },
+      ]
+    },
+    {
+      label: "Resources",
+      items: [
+        { href: "/admin/documents", label: "Documents", icon: Folder, permission: 'documents.view_all' },
+        { href: "/admin/award", label: "Award", icon: Award, permission: null },
+      ]
+    },
   ];
   
-  // Filter menu items based on permissions - only filter when permissions are loaded
-  const filteredMenuItems = isClient && !permissionsLoading ? menuItems.filter(item => {
-    if (!item.permission) return true; // No permission required, always show
-    
-    // Check main item permission
-    const hasMainPermission = hasPermission(item.permission);
-    
-    // If item has subItems, filter them too
-    if (item.subItems) {
-      const filteredSubItems = item.subItems.filter(subItem => 
-        !subItem.permission || hasPermission(subItem.permission)
-      );
+  // Filter menu items based on permissions
+  const filteredMenuCategories = isClient && !permissionsLoading ? menuCategories.map(category => ({
+    ...category,
+    items: category.items.filter(item => {
+      if (!item.permission) return true;
       
-      // Update item with filtered subItems
-      if (filteredSubItems.length > 0) {
-        return true;
-      }
-      return false;
-    }
-    
-    return hasMainPermission;
-  }).map(item => {
-    // Filter subItems if they exist
-    if (item.subItems) {
-      return {
-        ...item,
-        subItems: item.subItems.filter(subItem => 
+      const hasMainPermission = hasPermission(item.permission);
+      
+      if (item.subItems) {
+        const filteredSubItems = item.subItems.filter(subItem => 
           !subItem.permission || hasPermission(subItem.permission)
-        )
-      };
-    }
-    return item;
-  }) : menuItems; // Show all items while loading
+        );
+        return filteredSubItems.length > 0;
+      }
+      
+      return hasMainPermission;
+    }).map(item => {
+      if (item.subItems) {
+        return {
+          ...item,
+          subItems: item.subItems.filter(subItem => 
+            !subItem.permission || hasPermission(subItem.permission)
+          )
+        };
+      }
+      return item;
+    })
+  })).filter(category => category.items.length > 0) : menuCategories;
   
   const getIsActive = (href: string, subItems?: any[]) => {
      if (subItems) {
@@ -112,9 +132,6 @@ export default function AdminLayout({
      }
      if (href === '/admin/members') {
         return pathname.startsWith("/admin/members") || pathname === "/admin/add-staff";
-     }
-     if (href === '/dashboard/profile') {
-        return pathname.startsWith('/dashboard/profile');
      }
      return pathname === href;
   }
@@ -154,82 +171,96 @@ export default function AdminLayout({
                 <SidebarInput placeholder="Search..." className="pl-8" />
             </div>
            </SidebarGroup>
-          <SidebarMenu>
-            {isClient && filteredMenuItems.map((item, index) => (
-                <SidebarMenuItem key={index}>
-                {item.subItems ? (
-                  <Collapsible defaultOpen={getIsActive(item.href!, item.subItems)}>
-                    <CollapsibleTrigger asChild>
-                       <SidebarMenuButton
-                          isActive={getIsActive(item.href!, item.subItems)}
-                          tooltip={{ children: item.label }}
-                          className="justify-between"
-                        >
-                          <div className="flex items-center gap-2">
-                             <item.icon />
-                             <span>{item.label}</span>
-                          </div>
-                          <ChevronDown className="h-4 w-4 transition-transform [&[data-state=open]]:rotate-180" />
-                        </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                        <SidebarMenuSub>
-                          {item.subItems.map(subItem => (
-                             <SidebarMenuItem key={subItem.href}>
+          
+          {isClient && filteredMenuCategories.map((category, categoryIndex) => (
+            <SidebarGroup key={categoryIndex}>
+              <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-2">
+                {category.label}
+              </SidebarGroupLabel>
+              <SidebarMenu>
+                {category.items.map((item, index) => (
+                  <SidebarMenuItem key={index}>
+                    {item.subItems ? (
+                      <Collapsible defaultOpen={getIsActive(item.href!, item.subItems)}>
+                        <CollapsibleTrigger asChild>
+                          <SidebarMenuButton
+                            isActive={getIsActive(item.href!, item.subItems)}
+                            tooltip={{ children: item.label }}
+                            className="justify-between"
+                          >
+                            <div className="flex items-center gap-2">
+                              <item.icon />
+                              <span>{item.label}</span>
+                            </div>
+                            <ChevronDown className="h-4 w-4 transition-transform [&[data-state=open]]:rotate-180" />
+                          </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarMenuSub>
+                            {item.subItems.map(subItem => (
+                              <SidebarMenuItem key={subItem.href}>
                                 <SidebarMenuSubButton asChild isActive={pathname.startsWith(subItem.href)}>
                                   <Link href={subItem.href}>
                                     {subItem.label}
                                   </Link>
                                 </SidebarMenuSubButton>
                               </SidebarMenuItem>
-                          ))}
-                        </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </Collapsible>
-                ) : (
-                    <Link href={item.href!}>
+                            ))}
+                          </SidebarMenuSub>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    ) : (
+                      <Link href={item.href!}>
                         <SidebarMenuButton
-                        isActive={getIsActive(item.href!)}
-                        tooltip={{ children: item.label }}
+                          isActive={getIsActive(item.href!)}
+                          tooltip={{ children: item.label }}
                         >
-                        <item.icon />
-                        <span>{item.label}</span>
+                          <item.icon />
+                          <span>{item.label}</span>
                         </SidebarMenuButton>
-                    </Link>
-                )}
+                      </Link>
+                    )}
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+          ))}
+
+          {canAccessSettings && (
+            <SidebarGroup>
+              <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-2">
+                Administration
+              </SidebarGroupLabel>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <Link href="/admin/settings">
+                    <SidebarMenuButton
+                      isActive={pathname.startsWith('/admin/settings')}
+                      tooltip={{ children: 'Settings' }}
+                    >
+                      <Settings />
+                      <span>Settings</span>
+                    </SidebarMenuButton>
+                  </Link>
                 </SidebarMenuItem>
-            ))}
-             {canAccessSettings && (
-                  <>
-                    <SidebarMenuItem>
-                        <Link href="/admin/settings">
-                            <SidebarMenuButton
-                                isActive={pathname.startsWith('/admin/settings')}
-                                tooltip={{ children: 'Settings' }}
-                            >
-                                <Settings />
-                                <span>Settings</span>
-                            </SidebarMenuButton>
-                        </Link>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                        <Link href="/admin/audit-log">
-                            <SidebarMenuButton
-                                isActive={pathname.startsWith('/admin/audit-log')}
-                                tooltip={{ children: 'Audit Log' }}
-                            >
-                                <History />
-                                <span>Audit Log</span>
-                            </SidebarMenuButton>
-                        </Link>
-                    </SidebarMenuItem>
-                  </>
-              )}
-          </SidebarMenu>
+                <SidebarMenuItem>
+                  <Link href="/admin/audit-log">
+                    <SidebarMenuButton
+                      isActive={pathname.startsWith('/admin/audit-log')}
+                      tooltip={{ children: 'Audit Log' }}
+                    >
+                      <History />
+                      <span>Audit Log</span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroup>
+          )}
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-16 items-center justify-between border-b bg-card/50 backdrop-blur-sm px-6 sticky top-0 z-10 shadow-soft">
+        <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90 px-6 shadow-soft">
           <div className="flex items-center gap-4">
             <SidebarTrigger className="lg:hidden" />
           </div>
@@ -249,9 +280,9 @@ export default function AdminLayout({
             <UserNav />
           </div>
         </header>
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-background via-primary/[0.02] to-accent/[0.02] relative overflow-hidden">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-background via-primary/[0.02] to-accent/[0.02] relative overflow-auto">
             {/* Ambient background effects */}
-            <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute inset-0 pointer-events-none z-0">
               <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
               <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
             </div>
