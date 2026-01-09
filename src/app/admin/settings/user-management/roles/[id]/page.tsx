@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter, useParams } from "next/navigation";
-import { getRoleAction, getPermissionsAction, updateRoleAction } from "@/app/actions/roles";
+import { getRoleAction, getPermissionsAction, createRoleAction, updateRoleAction } from "@/app/actions/roles";
 import { Role } from "@/lib/mock-data";
 import { Permission } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
@@ -75,13 +75,15 @@ export function RoleEditor({ isNewRole = false }: RoleEditorProps) {
             const storedUser = sessionStorage.getItem('loggedInUser');
             const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
             
-            const result = await updateRoleAction(roleId, { ...data, currentUserId });
+            const result = isNewRole 
+                ? await createRoleAction({ ...data, currentUserId })
+                : await updateRoleAction(roleId, { ...data, currentUserId });
             
             if ('error' in result) {
                 toast({ title: "Error", description: result.error, variant: "destructive"});
             } else {
                 toast({
-                    title: `Role updated!`,
+                    title: `Role ${isNewRole ? 'created' : 'updated'}!`,
                     description: `The role "${data.name}" has been saved.`
                 });
                 router.push('/admin/settings/user-management/roles');
