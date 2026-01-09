@@ -27,16 +27,27 @@ export function MemberLeaveInfo({ memberId, refetchTrigger }: MemberLeaveInfoPro
     const [entitlements, setEntitlements] = React.useState<LeaveEntitlement[]>([]);
     const [requests, setRequests] = React.useState<LeaveRequest[]>([]);
     const [isPending, startTransition] = React.useTransition();
+    const [error, setError] = React.useState<string | null>(null);
 
     const fetchData = React.useCallback(() => {
          startTransition(async () => {
             const currentYear = new Date().getFullYear();
+            const storedUser = sessionStorage.getItem('loggedInUser');
+            const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
+
             const [ents, reqs] = await Promise.all([
                 getMemberEntitlementsAction(memberId, currentYear),
-                getMemberLeaveRequestsAction(memberId),
+                getMemberLeaveRequestsAction(memberId, currentUserId),
             ]);
-            setEntitlements(ents);
-            setRequests(reqs);
+
+            setEntitlements(Array.isArray(ents) ? ents : []);
+            if (Array.isArray(reqs)) {
+                setRequests(reqs);
+                setError(null);
+            } else {
+                setRequests([]);
+                setError(reqs.error);
+            }
         });
     }, [memberId]);
 
@@ -46,12 +57,14 @@ export function MemberLeaveInfo({ memberId, refetchTrigger }: MemberLeaveInfoPro
     
     const usedDaysByCategory = React.useMemo(() => {
         const used: { [key: string]: number } = {};
-        requests.filter(r => r.status === 'Approved').forEach(r => {
-            if (!used[r.category_id]) {
-                used[r.category_id] = 0;
-            }
-            used[r.category_id] += r.days;
-        });
+        if (Array.isArray(requests)) {
+            requests.filter(r => r.status === 'Approved').forEach(r => {
+                if (!used[r.category_id]) {
+                    used[r.category_id] = 0;
+                }
+                used[r.category_id] += r.days;
+            });
+        }
         return used;
     }, [requests]);
 
@@ -60,7 +73,7 @@ export function MemberLeaveInfo({ memberId, refetchTrigger }: MemberLeaveInfoPro
         return (
              <Card>
                 <CardHeader>
-                    <CardTitle>My Leave Info</CardTitle>
+                    <CardTitle>Leave Info</CardTitle>
                 </CardHeader>
                 <CardContent className="flex justify-center items-center h-64">
                     <Loader2 className="h-8 w-8 animate-spin" />
@@ -74,7 +87,7 @@ export function MemberLeaveInfo({ memberId, refetchTrigger }: MemberLeaveInfoPro
             <Accordion type="single" collapsible className="w-full" defaultValue='item-1'>
                 <AccordionItem value="item-1">
                     <AccordionTrigger className="text-lg font-semibold">
-                        My Leave Entitlements
+                        Leave Entitlements
                     </AccordionTrigger>
                     <AccordionContent>
                          {isPending ? <div className='flex justify-center p-4'><Loader2 className="h-6 w-6 animate-spin" /></div> : (
@@ -111,8 +124,8 @@ export function MemberLeaveInfo({ memberId, refetchTrigger }: MemberLeaveInfoPro
             
             <Card>
                  <CardHeader>
-                    <CardTitle>My Leave Requests</CardTitle>
-                    <CardDescription>History of your submitted leave requests.</CardDescription>
+                    <CardTitle>Leave Requests</CardTitle>
+                    <CardDescription>History of submitted leave requests.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -127,6 +140,10 @@ export function MemberLeaveInfo({ memberId, refetchTrigger }: MemberLeaveInfoPro
                             {isPending && requests.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={3} className="text-center h-24"><Loader2 className="h-6 w-6 animate-spin" /></TableCell>
+                                </TableRow>
+                            ) : error ? (
+                                 <TableRow>
+                                    <TableCell colSpan={3} className="h-24 text-center text-destructive">{error}</TableCell>
                                 </TableRow>
                             ) : requests.length > 0 ? (
                                 requests.slice(0, 5).map(req => ( // Show recent 5
