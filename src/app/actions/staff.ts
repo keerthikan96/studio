@@ -15,6 +15,38 @@ import { logAuditEvent } from './audit';
 import { PoolClient } from 'pg';
 import { hasPermission, hasAnyPermission } from '@/lib/permission-utils';
 
+export async function getNextEmployeeIdAction(): Promise<{ employeeId: string }> {
+  await setupDatabase();
+  const client = await db.connect();
+  
+  try {
+    // Get the last employee ID that starts with 'INV-'
+    const result = await client.query(
+      `SELECT employee_id FROM members 
+       WHERE employee_id LIKE 'INV-%' 
+       ORDER BY CAST(SUBSTRING(employee_id FROM 5) AS INTEGER) DESC 
+       LIMIT 1`
+    );
+    
+    if (result.rows.length > 0) {
+      const lastId = result.rows[0].employee_id;
+      const numberPart = parseInt(lastId.split('-')[1]);
+      const nextNumber = numberPart + 1;
+      const nextId = `INV-${nextNumber.toString().padStart(3, '0')}`;
+      return { employeeId: nextId };
+    } else {
+      // If no employee exists with INV- prefix, start with INV-001
+      return { employeeId: 'INV-001' };
+    }
+  } catch (error) {
+    console.error('Error getting next employee ID:', error);
+    // Default to INV-001 if there's an error
+    return { employeeId: 'INV-001' };
+  } finally {
+    client.release();
+  }
+}
+
 export async function parseResumeAction(
   input: ParseResumeToAutofillProfileInput
 ): Promise<ParseResumeToAutofillProfileOutput | { error: string }> {
@@ -38,9 +70,9 @@ async function logWithClient(client: PoolClient, params: any) {
     }, client);
 }
 
-export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'name' | 'hobbies'>, sendInvite: boolean, isDraft: boolean, resumeFile?: { file: File, dataUri: string }, role_id: string, currentUserId: string }): Promise<{ success: true, member: Member, invitationLink?: string } | { success: false, error: string }> {
+export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'name' | 'hobbies'>, sendInvite: boolean, isDraft: boolean, resumeData?: { url: string, fileName: string, fileType: string, fileSize: number }, role_id: string, currentUserId: string }): Promise<{ success: true, member: Member, invitationLink?: string } | { success: false, error: string }> {
   await setupDatabase();
-  const { staff, sendInvite, isDraft, resumeFile, currentUserId } = staffData;
+  const { staff, sendInvite, isDraft, resumeData, currentUserId } = staffData;
   let { role_id } = staffData;
 
   // Check permission
@@ -60,6 +92,9 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
   } = staff;
   
   const department_id = (staff as any).department_id; // Handle department_id
+
+  // Extract domain from email or use default
+  const memberDomain = domain || (email ? email.split('@')[1] : 'company.com');
 
   const status = isDraft ? 'pending' : 'active';
   const client = await db.connect();
@@ -97,7 +132,7 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
         RETURNING *;`,
       [
         name, first_name, middle_name, last_name, gender, email, phone, street_address, city, state_province, postal_code, country,
-        domain, branch, JSON.stringify(experience || []), JSON.stringify(education || []), JSON.stringify(skills || []), status, job_title, date_of_birth, start_date,
+        memberDomain, branch, JSON.stringify(experience || []), JSON.stringify(education || []), JSON.stringify(skills || []), status, job_title, date_of_birth, start_date,
         emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
         citizenship, national_id, passport_no, visa_work_permit, visa_work_permit_expiry,
         employee_id, employment_type, employee_level, reporting_supervisor_id, JSON.stringify(volunteer_work || [])
@@ -118,15 +153,11 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
       );
     }
 
-    if (resumeFile && resumeFile.file.size > 0) {
-      const buffer = Buffer.from(await resumeFile.file.arrayBuffer());
-      const destination = `resumes/${newMember.id}/${Date.now()}-${resumeFile.file.name}`;
-      const publicUrl = await uploadFileToAzure(buffer, destination);
-      
+    if (resumeData) {
       await client.query(
         `INSERT INTO member_documents (member_id, name, description, file_url, file_type, file_size)
           VALUES ($1, $2, $3, $4, $5, $6);`,
-        [newMember.id, 'Resume', 'Uploaded during employee creation.', publicUrl, resumeFile.file.type, resumeFile.file.size]
+        [newMember.id, 'Resume', 'Uploaded during employee creation.', resumeData.url, resumeData.fileType, resumeData.fileSize]
       );
     }
 
@@ -140,21 +171,32 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
     // Commit the transaction first before sending emails
     await client.query('COMMIT');
     
-    // Send invitation email AFTER committing the transaction
-    // This prevents email timeouts from blocking the database transaction
+    // Send invitation email AFTER committing the transaction (non-blocking)
+    // Fire and forget - don't wait for email to send to avoid blocking the response
     let invitationLink: string | undefined = undefined;
     if (sendInvite && !isDraft) {
-        try {
-            const inviteResult = await requestPasswordResetAction(newMember.email, true);
-            if (inviteResult.success && inviteResult.invitationLink) {
-                invitationLink = inviteResult.invitationLink;
-            } else {
-                console.error("Failed to generate invitation link for new member:", inviteResult.error);
-            }
-        } catch (emailError) {
-            // Log the error but don't fail the entire operation since member was created successfully
+        // Generate the invitation link synchronously
+        const token = require('crypto').randomBytes(32).toString('hex');
+        const expires_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9000';
+        invitationLink = `${baseUrl}/set-password?token=${token}&email=${encodeURIComponent(newMember.email)}`;
+        
+        // Insert token into database
+        db.query(
+            'INSERT INTO password_resets (email, token, otp, expires_at, type) VALUES ($1, $2, $3, $4, $5)',
+            [newMember.email, token, require('crypto').randomInt(100000, 999999).toString(), expires_at, 'invitation']
+        ).catch(err => console.error('Error saving invitation token:', err));
+        
+        // Send email asynchronously without blocking (fire and forget)
+        requestPasswordResetAction(newMember.email, true).catch(emailError => {
             console.error("Error sending invitation email:", emailError);
-        }
+        });
+        
+        // Log the invitation link for fallback
+        console.log('--- INVITATION LINK (for new employee) ---');
+        console.log(`To: ${newMember.email}`);
+        console.log(invitationLink);
+        console.log('-------------------------------------------');
     }
 
     return { success: true, member: newMember, invitationLink };

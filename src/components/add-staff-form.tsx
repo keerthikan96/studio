@@ -17,7 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { parseResumeAction } from '@/app/actions/staff';
+import { parseResumeAction, getNextEmployeeIdAction } from '@/app/actions/staff';
 import { Loader2, PlusCircle, Trash, UploadCloud, Save, X as XIcon, CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Member, Role } from '@/lib/mock-data';
@@ -103,7 +103,7 @@ type StaffFormData = {
     staff: Omit<Member, 'id' | 'status' | 'profile_picture_url' | 'cover_photo_url' | 'name' | 'hobbies' | 'volunteer_work'>; 
     sendInvite: boolean; 
     isDraft: boolean; 
-    resumeFile?: { file: File, dataUri: string }; 
+    resumeData?: { url: string, fileName: string, fileType: string, fileSize: number }; 
     role_id: string; 
 };
 
@@ -140,6 +140,15 @@ export default function AddStaffForm({ onAddStaff, roles }: AddStaffFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: { experience: [], education: [], skills: [] },
   });
+
+  // Fetch and set the next Employee ID on component mount
+  useEffect(() => {
+    const fetchNextEmployeeId = async () => {
+      const { employeeId } = await getNextEmployeeIdAction();
+      form.setValue('employee_id', employeeId);
+    };
+    fetchNextEmployeeId();
+  }, [form]);
 
    const { fields: expFields, append: appendExp, remove: removeExp } = useFieldArray({ control: form.control, name: "experience" });
    const { fields: eduFields, append: appendEdu, remove: removeEdu } = useFieldArray({ control: form.control, name: "education" });
@@ -242,13 +251,53 @@ export default function AddStaffForm({ onAddStaff, roles }: AddStaffFormProps) {
     if (!formDataForDialog) return;
 
     startTransition(async () => {
-      let resumeData: { file: File; dataUri: string } | undefined;
-      if (resumeFile && resumeDataUri) {
-          resumeData = { file: resumeFile, dataUri: resumeDataUri };
+      let resumeData: { url: string, fileName: string, fileType: string, fileSize: number } | undefined;
+      
+      // Upload resume file via API route if present
+      if (resumeFile) {
+        try {
+          // Create a temporary member ID for upload (will be replaced with actual ID)
+          const tempMemberId = 'temp-' + Date.now();
+          
+          const formData = new FormData();
+          formData.append('file', resumeFile);
+          formData.append('memberId', tempMemberId);
+          
+          const uploadResponse = await fetch('/api/upload-resume', {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (uploadResponse.ok) {
+            const uploadResult = await uploadResponse.json();
+            resumeData = {
+              url: uploadResult.url,
+              fileName: uploadResult.fileName,
+              fileType: uploadResult.fileType,
+              fileSize: uploadResult.fileSize
+            };
+          } else {
+            const error = await uploadResponse.json();
+            toast({
+              title: 'Resume Upload Failed',
+              description: error.error || 'Failed to upload resume. The member will be created without the resume.',
+              variant: 'destructive',
+            });
+          }
+        } catch (uploadError) {
+          console.error('Error uploading resume:', uploadError);
+          toast({
+            title: 'Resume Upload Error',
+            description: 'Failed to upload resume. The member will be created without the resume.',
+            variant: 'destructive',
+          });
+        }
       }
 
-      const result = await onAddStaff({ staff: formDataForDialog, sendInvite, isDraft: false, resumeFile: resumeData, role_id: formDataForDialog.role_id });
+      const result = await onAddStaff({ staff: formDataForDialog, sendInvite, isDraft: false, resumeData, role_id: formDataForDialog.role_id });
 
+      setShowInviteDialog(false);
+      
       if (result.success) {
           toast({
               title: 'Member Added!',
@@ -260,7 +309,10 @@ export default function AddStaffForm({ onAddStaff, roles }: AddStaffFormProps) {
                   description: `An invitation has been sent to ${formDataForDialog.first_name}. Check the server console for the link.`,
               });
           }
-          router.push('/admin/members');
+          // Use setTimeout to ensure navigation happens after state updates
+          setTimeout(() => {
+            router.push('/admin/members');
+          }, 100);
       } else {
             toast({
               title: 'Error Saving Member',
@@ -268,7 +320,6 @@ export default function AddStaffForm({ onAddStaff, roles }: AddStaffFormProps) {
               variant: 'destructive',
           });
       }
-      setShowInviteDialog(false);
     });
   }
 
@@ -276,15 +327,43 @@ export default function AddStaffForm({ onAddStaff, roles }: AddStaffFormProps) {
     const data = form.getValues();
     
     startTransition(async () => {
-      let resumeData: { file: File; dataUri: string } | undefined;
-      if (resumeFile && resumeDataUri) {
-          resumeData = { file: resumeFile, dataUri: resumeDataUri };
+      let resumeData: { url: string, fileName: string, fileType: string, fileSize: number } | undefined;
+      
+      // Upload resume file via API route if present
+      if (resumeFile) {
+        try {
+          const tempMemberId = 'temp-' + Date.now();
+          
+          const formData = new FormData();
+          formData.append('file', resumeFile);
+          formData.append('memberId', tempMemberId);
+          
+          const uploadResponse = await fetch('/api/upload-resume', {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (uploadResponse.ok) {
+            const uploadResult = await uploadResponse.json();
+            resumeData = {
+              url: uploadResult.url,
+              fileName: uploadResult.fileName,
+              fileType: uploadResult.fileType,
+              fileSize: uploadResult.fileSize
+            };
+          }
+        } catch (uploadError) {
+          console.error('Error uploading resume:', uploadError);
+        }
       }
 
-      const result = await onAddStaff({ staff: data, sendInvite: false, isDraft: true, resumeFile: resumeData, role_id: data.role_id });
+      const result = await onAddStaff({ staff: data, sendInvite: false, isDraft: true, resumeData, role_id: data.role_id });
+      
       if (result.success) {
         toast({ title: "Draft Saved", description: "The member's profile has been saved as a draft." });
-        router.push('/admin/members');
+        setTimeout(() => {
+          router.push('/admin/members');
+        }, 100);
       } else {
         toast({ title: 'Error Saving Draft', description: result.error || 'An unknown error occurred.', variant: 'destructive' });
       }
@@ -452,7 +531,7 @@ export default function AddStaffForm({ onAddStaff, roles }: AddStaffFormProps) {
                                             <FormField control={form.control} name="department_id" render={({ field }) => (<FormItem><FormLabel>Department</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a department" /></SelectTrigger></FormControl><SelectContent>{departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                                              <ReviewFieldWrapper confidence={parsedData.branch?.confidence}><FormField control={form.control} name="branch" render={({ field }) => ( <FormItem><FormLabel>Branch</FormLabel><FormControl><Input {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
                                             <FormField control={form.control} name="job_title" render={({ field }) => (<FormItem><FormLabel>Job Title</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                                            <FormField control={form.control} name="employee_id" render={({ field }) => (<FormItem><FormLabel>Employee ID <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                                            <FormField control={form.control} name="employee_id" render={({ field }) => (<FormItem><FormLabel>Employee ID <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} value={field.value ?? ''} disabled className="bg-muted" /></FormControl><FormMessage /></FormItem>)} />
                                             <FormField control={form.control} name="start_date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Start Date</FormLabel><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)} />
                                             <ReviewFieldWrapper confidence={parsedData.employment_type?.confidence}><FormField control={form.control} name="employment_type" render={({ field }) => (<FormItem><FormLabel>Employment Type</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger></FormControl><SelectContent>{employmentTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
                                             <ReviewFieldWrapper confidence={parsedData.employee_level?.confidence}><FormField control={form.control} name="employee_level" render={({ field }) => (<FormItem><FormLabel>Employee Level</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a level" /></SelectTrigger></FormControl><SelectContent>{employeeLevels.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /></ReviewFieldWrapper>

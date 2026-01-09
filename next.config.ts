@@ -50,6 +50,9 @@ const nextConfig: NextConfig = {
       }
     ],
   },
+  serverActions: {
+    bodySizeLimit: '10mb', // Increased to handle resume file uploads
+  },
 };
 
 export default nextConfig;

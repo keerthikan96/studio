@@ -49,6 +49,36 @@ const sriLankanBranches = ['Nothern', 'Central', 'Eastern'];
 const employmentCategories = ['Full-time', 'Part-time', 'Contract'];
 const workLocations = ['Office', 'Work from home'];
 
+const tabs = ["General", "Employment History", "Leave", "Notes", "Performance", "Documents", "Courses", "Assessments"];
+
+// Define tab permissions - tabs that require specific permissions to view
+const tabPermissions: Record<string, { anyOf?: string[], allOf?: string[], isOwnProfile?: boolean }> = {
+  "General": { isOwnProfile: true }, // Always available for own profile
+  "Employment History": { isOwnProfile: true }, // Always available for own profile
+  "Leave": { 
+    anyOf: ['leave.read_all'], // Only those with leave read permission
+    isOwnProfile: true // Or viewing own profile
+  },
+  "Notes": { 
+    anyOf: ['members.read_sensitive', 'members.update_sensitive']
+  },
+  "Performance": { 
+    anyOf: ['performance.read_all', 'performance.read_confidential'],
+    isOwnProfile: true // Users can view their own performance
+  },
+  "Documents": { 
+    anyOf: ['documents.read', 'documents.create'],
+    isOwnProfile: true // Users can view their own documents
+  },
+  "Courses": { 
+    isOwnProfile: true // Always available for own profile
+  },
+  "Assessments": { 
+    anyOf: ['self_assessment.read_all'],
+    isOwnProfile: true // Users can always view their own assessments
+  },
+};
+
 const workExperienceSchema = z.object({
   companyName: z.string().min(1, 'Company name is required.'),
   role: z.string().min(1, 'Role is required.'),
@@ -636,28 +666,11 @@ export default function ProfilePage() {
     } else {
         toast({ title: "Not logged in", description: "Could not find user information.", variant: "destructive"})
     }
-  }, [resetFormValues, toast]);
+  }, [resetFormValues, toast, startTransition]);
 
   useEffect(() => {
     fetchMember();
   }, [fetchMember]);
-
-  
-  const handleCoverUploadSuccess = (newUrl: string) => {
-    if (!member) return;
-    const updatedMember = { ...member, cover_photo_url: newUrl };
-    setMember(updatedMember);
-    form.setValue('cover_photo_url', newUrl, { shouldDirty: true });
-    onSubmit({ cover_photo_url: newUrl });
-  };
-  
-  const handleProfilePicUploadSuccess = (newUrl: string) => {
-    if (!member) return;
-    const updatedMember = { ...member, profile_picture_url: newUrl };
-    setMember(updatedMember);
-    form.setValue('profile_picture_url', newUrl, { shouldDirty: true });
-    onSubmit({ profile_picture_url: newUrl });
-  };
 
   const onSubmit = useCallback(async (data?: Partial<ProfileFormValues>) => {
     if (!member) return;
@@ -708,40 +721,89 @@ export default function ProfilePage() {
     }
   }, [isDirty, form, dirtyFields, member, toast, resetFormValues]);
 
+  const handleCoverUploadSuccess = useCallback((newUrl: string) => {
+    if (!member) return;
+    const updatedMember = { ...member, cover_photo_url: newUrl };
+    setMember(updatedMember);
+    form.setValue('cover_photo_url', newUrl, { shouldDirty: true });
+    onSubmit({ cover_photo_url: newUrl });
+  }, [member, form, onSubmit]);
+  
+  const handleProfilePicUploadSuccess = useCallback((newUrl: string) => {
+    if (!member) return;
+    const updatedMember = { ...member, profile_picture_url: newUrl };
+    setMember(updatedMember);
+    form.setValue('profile_picture_url', newUrl, { shouldDirty: true });
+    onSubmit({ profile_picture_url: newUrl });
+  }, [member, form, onSubmit]);
+
   const handleFormSubmit = handleSubmit(() => onSubmit());
 
-  const handleTabChange = (value: string) => {
+  const handleTabChange = useCallback((value: string) => {
     if (isDirty) {
       setNextTab(value);
       setShowUnsavedDialog(true);
     } else {
       setCurrentTab(value);
     }
-  };
+  }, [isDirty]);
 
-  const handleLeavePage = () => {
-      resetFormValues(member!);
+  const handleLeavePage = useCallback(() => {
+      if (member) {
+        resetFormValues(member);
+      }
       setShowUnsavedDialog(false);
       if (nextTab) {
           setCurrentTab(nextTab);
           setNextTab(null);
       }
-  };
+  }, [member, nextTab, resetFormValues]);
 
-  const handleSaveAndLeave = async () => {
+  const handleSaveAndLeave = useCallback(async () => {
       await handleFormSubmit();
       setShowUnsavedDialog(false);
       if (nextTab) {
           setCurrentTab(nextTab);
           setNextTab(null);
       }
-  };
-  
-  if (!member) {
-      return <div className='flex justify-center items-center h-full'><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
-  }
+  }, [handleFormSubmit, nextTab]);
 
-  if (permissionsLoading) {
+  // Filter tabs based on permissions
+  const getAvailableTabs = useCallback(() => {
+    return tabs.filter(tab => {
+      const permission = tabPermissions[tab];
+      
+      // If tab definition doesn't exist or only requires own profile, show it
+      if (!permission || permission.isOwnProfile) {
+        return true;
+      }
+
+      // Check if user has any of the required permissions
+      if (permission.anyOf && permission.anyOf.length > 0) {
+        return permission.anyOf.some(perm => hasPermission(perm));
+      }
+
+      // Check if user has all of the required permissions
+      if (permission.allOf && permission.allOf.length > 0) {
+        return permission.allOf.every(perm => hasPermission(perm));
+      }
+
+      // Default to not showing the tab if no permission check matches
+      return false;
+    });
+  }, [hasPermission]);
+
+  const availableTabs = getAvailableTabs();
+
+  // Update current tab if it's not available anymore
+  useEffect(() => {
+    if (!permissionsLoading && availableTabs.length > 0 && !availableTabs.includes(currentTab)) {
+      setCurrentTab(availableTabs[0]);
+    }
+  }, [availableTabs, currentTab, permissionsLoading]);
+  
+  // Show loading state while member or permissions are loading
+  if (!member || permissionsLoading) {
       return <div className='flex justify-center items-center h-full'><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
   
@@ -780,70 +842,6 @@ export default function ProfilePage() {
             return <PlaceholderContent title={tab} />;
     }
   }
-
-  const tabs = ["General", "Employment History", "Leave", "Notes", "Performance", "Documents", "Courses", "Assessments"];
-
-  // Define tab permissions - tabs that require specific permissions to view
-  const tabPermissions: Record<string, { anyOf?: string[], allOf?: string[], isOwnProfile?: boolean }> = {
-    "General": { isOwnProfile: true }, // Always available for own profile
-    "Employment History": { isOwnProfile: true }, // Always available for own profile
-    "Leave": { 
-      anyOf: ['leave.read_all'], // Only those with leave read permission
-      isOwnProfile: true // Or viewing own profile
-    },
-    "Notes": { 
-      anyOf: ['members.read_sensitive', 'members.update_sensitive']
-    },
-    "Performance": { 
-      anyOf: ['performance.read_all', 'performance.read_confidential'],
-      isOwnProfile: true // Users can view their own performance
-    },
-    "Documents": { 
-      anyOf: ['documents.read', 'documents.create'],
-      isOwnProfile: true // Users can view their own documents
-    },
-    "Courses": { 
-      isOwnProfile: true // Always available for own profile
-    },
-    "Assessments": { 
-      anyOf: ['self_assessment.read_all'],
-      isOwnProfile: true // Users can always view their own assessments
-    },
-  };
-
-  // Filter tabs based on permissions
-  const getAvailableTabs = () => {
-    return tabs.filter(tab => {
-      const permission = tabPermissions[tab];
-      
-      // If tab definition doesn't exist or only requires own profile, show it
-      if (!permission || permission.isOwnProfile) {
-        return true;
-      }
-
-      // Check if user has any of the required permissions
-      if (permission.anyOf && permission.anyOf.length > 0) {
-        return permission.anyOf.some(perm => hasPermission(perm));
-      }
-
-      // Check if user has all of the required permissions
-      if (permission.allOf && permission.allOf.length > 0) {
-        return permission.allOf.every(perm => hasPermission(perm));
-      }
-
-      // Default to not showing the tab if no permission check matches
-      return false;
-    });
-  };
-
-  const availableTabs = getAvailableTabs();
-
-  // Update current tab if it's not available anymore
-  useEffect(() => {
-    if (!permissionsLoading && availableTabs.length > 0 && !availableTabs.includes(currentTab)) {
-      setCurrentTab(availableTabs[0]);
-    }
-  }, [availableTabs, currentTab, permissionsLoading]);
 
   return (
     <div className='space-y-6'>

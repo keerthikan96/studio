@@ -11,6 +11,16 @@ const SENDER_NAME = process.env.EMAIL_SENDER_NAME || "Your Company";
 const INVITE_TEMPLATE_ID = process.env.EMAIL_INVITE_TEMPLATE_ID || "jy7zpl9dzzpg5vx6";
 const RESET_TEMPLATE_ID = process.env.EMAIL_RESET_TEMPLATE_ID || "jy7zpl9dzzpg5vx6";
 
+// Timeout wrapper for email operations (10 seconds)
+const withTimeout = <T>(promise: Promise<T>, timeoutMs = 10000): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error('Email operation timed out')), timeoutMs)
+    ),
+  ]);
+};
+
 interface SendInviteEmailParams {
   recipientEmail: string;
   recipientName: string;
@@ -126,6 +136,12 @@ export async function sendInviteEmail({
       </html>
     `;
 
+    // Check if email is properly configured
+    if (!process.env.EMAIL_API_TOKEN || process.env.EMAIL_API_TOKEN === '') {
+      console.warn('⚠️  EMAIL_API_TOKEN not configured. Skipping email send.');
+      return { success: false, error: 'Email service not configured' };
+    }
+
     const emailParams = new EmailParams()
       .setFrom(sentFrom)
       .setTo(recipients)
@@ -135,7 +151,7 @@ export async function sendInviteEmail({
       // .setTemplateId(INVITE_TEMPLATE_ID) // Template commented out
       // .setPersonalization(personalization);
 
-    const response = await mailerSend.email.send(emailParams);
+    const response = await withTimeout(mailerSend.email.send(emailParams), 10000);
     
     console.log(`✅ Invitation email sent to ${recipientEmail}`);
     return { success: true };
@@ -266,6 +282,12 @@ export async function sendPasswordResetEmail({
       </html>
     `;
 
+    // Check if email is properly configured
+    if (!process.env.EMAIL_API_TOKEN || process.env.EMAIL_API_TOKEN === '') {
+      console.warn('⚠️  EMAIL_API_TOKEN not configured. Skipping email send.');
+      return { success: false, error: 'Email service not configured' };
+    }
+
     const emailParams = new EmailParams()
       .setFrom(sentFrom)
       .setTo(recipients)
@@ -275,7 +297,7 @@ export async function sendPasswordResetEmail({
       // .setTemplateId(RESET_TEMPLATE_ID) // Template commented out
       // .setPersonalization(personalization);
 
-    const response = await mailerSend.email.send(emailParams);
+    const response = await withTimeout(mailerSend.email.send(emailParams), 10000);
     
     console.log(`✅ Password reset email sent to ${recipientEmail}`);
     return { success: true };
@@ -322,6 +344,12 @@ export async function sendCustomEmail({
   personalizationData: Record<string, any>;
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    // Check if email is properly configured
+    if (!process.env.EMAIL_API_TOKEN || process.env.EMAIL_API_TOKEN === '') {
+      console.warn('⚠️  EMAIL_API_TOKEN not configured. Skipping email send.');
+      return { success: false, error: 'Email service not configured' };
+    }
+
     const sentFrom = new Sender(SENDER_EMAIL, SENDER_NAME);
     const recipients = [new Recipient(recipientEmail, recipientName)];
 
@@ -340,7 +368,7 @@ export async function sendCustomEmail({
       .setTemplateId(templateId)
       .setPersonalization(personalization);
 
-    const response = await mailerSend.email.send(emailParams);
+    const response = await withTimeout(mailerSend.email.send(emailParams), 10000);
     
     console.log(`✅ Email sent to ${recipientEmail}`);
     return { success: true };
