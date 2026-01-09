@@ -58,6 +58,8 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
       citizenship, national_id, passport_no, visa_work_permit, visa_work_permit_expiry,
       employee_id, employment_type, employee_level, reporting_supervisor_id, volunteer_work
   } = staff;
+  
+  const department_id = (staff as any).department_id; // Handle department_id
 
   const status = isDraft ? 'pending' : 'active';
   const client = await db.connect();
@@ -107,6 +109,14 @@ export async function addStaffAction(staffData: { staff: Omit<Member, 'id' | 'st
       'INSERT INTO role_members (member_id, role_id) VALUES ($1, $2)',
       [newMember.id, role_id]
     );
+    
+    // Assign to department if provided
+    if (department_id) {
+      await client.query(
+        'INSERT INTO department_members (member_id, department_id, is_primary) VALUES ($1, $2, $3)',
+        [newMember.id, department_id, true] // First department is primary
+      );
+    }
 
     if (resumeFile && resumeFile.file.size > 0) {
       const buffer = Buffer.from(await resumeFile.file.arrayBuffer());
@@ -204,15 +214,18 @@ export async function getMembersAction(currentUserId: string): Promise<Member[] 
     }
 }
 
-export async function getMemberByIdAction(id: string, currentUserId: string): Promise<Member | { error: string } | null> {
+export async function getMemberByIdAction(id: string, currentUserId?: string): Promise<Member | { error: string } | null> {
     // Check permission - allow users to view their own profile
-    const isOwnProfile = id === currentUserId;
-    const canReadAll = await hasPermission(currentUserId, 'members.read_all');
-    const canReadPublic = await hasPermission(currentUserId, 'members.read_basic');
-    const canReadSensitive = await hasPermission(currentUserId, 'members.read_sensitive');
-    
-    if (!isOwnProfile && !canReadAll && !canReadPublic) {
-        return { error: 'You do not have permission to view member profiles.' } as any;
+    // If no currentUserId provided, allow (for backward compatibility)
+    if (currentUserId) {
+        const isOwnProfile = id === currentUserId;
+        const canReadAll = await hasPermission(currentUserId, 'members.read_all');
+        const canReadPublic = await hasPermission(currentUserId, 'members.read_basic');
+        const canReadSensitive = await hasPermission(currentUserId, 'members.read_sensitive');
+        
+        if (!isOwnProfile && !canReadAll && !canReadPublic) {
+            return { error: 'You do not have permission to view member profiles.' } as any;
+        }
     }
     
     try {
@@ -228,18 +241,25 @@ export async function getMemberByIdAction(id: string, currentUserId: string): Pr
         const member = result.rows[0];
         
         // If user cannot read sensitive data, filter it out (unless viewing own profile)
-        if (!isOwnProfile && !canReadSensitive && !canReadAll) {
-            return {
-                ...member,
-                salary: null,
-                national_id: null,
-                passport_no: null,
-                visa_work_permit: null,
-                visa_work_permit_expiry: null,
-                emergency_contact_name: null,
-                emergency_contact_phone: null,
-                emergency_contact_relationship: null,
-            };
+        // Only filter if currentUserId is provided
+        if (currentUserId) {
+            const isOwnProfile = id === currentUserId;
+            const canReadSensitive = await hasPermission(currentUserId, 'members.read_sensitive');
+            const canReadAll = await hasPermission(currentUserId, 'members.read_all');
+            
+            if (!isOwnProfile && !canReadSensitive && !canReadAll) {
+                return {
+                    ...member,
+                    salary: null,
+                    national_id: null,
+                    passport_no: null,
+                    visa_work_permit: null,
+                    visa_work_permit_expiry: null,
+                    emergency_contact_name: null,
+                    emergency_contact_phone: null,
+                    emergency_contact_relationship: null,
+                };
+            }
         }
         
         return member;
@@ -250,7 +270,7 @@ export async function getMemberByIdAction(id: string, currentUserId: string): Pr
 }
 
 export async function updateMemberAction(id: string, data: Omit<Partial<Member>, 'id' | 'created_at' | 'updated_at'>, currentUserId: string): Promise<Member | { error: string }> {
-    // Check permissions
+    // Check permissions - need at least one update permission
     const canUpdateBasic = await hasPermission(currentUserId, 'members.update_basic');
     const canUpdateSensitive = await hasPermission(currentUserId, 'members.update_sensitive');
     
@@ -259,6 +279,7 @@ export async function updateMemberAction(id: string, data: Omit<Partial<Member>,
     }
     
     const { name, email, phone, domain, country, branch, experience, education, skills, status, profile_picture_url, cover_photo_url, job_title, date_of_birth, start_date, address, emergency_contact_name, emergency_contact_phone, hobbies, volunteer_work, role_id } = data;
+    const department_id = (data as any).department_id; // Handle department_id
     
     // Sensitive fields that require special permission
     const sensitiveFields = ['salary', 'national_id', 'passport_no', 'visa_work_permit', 'visa_work_permit_expiry', 'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relationship'];
@@ -308,6 +329,32 @@ export async function updateMemberAction(id: string, data: Omit<Partial<Member>,
             await client.query('DELETE FROM role_members WHERE member_id = $1', [id]);
             await client.query('INSERT INTO role_members (member_id, role_id) VALUES ($1, $2)', [id, role_id]);
         }
+        
+        // Update department if provided
+        if (department_id !== undefined) {
+            if (department_id) {
+                // Check if already in this department
+                const existing = await client.query(
+                    'SELECT * FROM department_members WHERE member_id = $1 AND department_id = $2',
+                    [id, department_id]
+                );
+                
+                if (existing.rows.length === 0) {
+                    // Check if member has any departments
+                    const hasDepts = await client.query(
+                        'SELECT COUNT(*) as count FROM department_members WHERE member_id = $1',
+                        [id]
+                    );
+                    const isFirst = parseInt(hasDepts.rows[0].count) === 0;
+                    
+                    // Add to new department
+                    await client.query(
+                        'INSERT INTO department_members (member_id, department_id, is_primary) VALUES ($1, $2, $3)',
+                        [id, department_id, isFirst] // Make primary if first department
+                    );
+                }
+            }
+        }
 
         await logWithClient(client, {
             action: 'staff.update',
@@ -318,7 +365,7 @@ export async function updateMemberAction(id: string, data: Omit<Partial<Member>,
 
         await client.query('COMMIT');
         
-        const updatedMember = await getMemberByIdAction(id);
+        const updatedMember = await getMemberByIdAction(id, currentUserId);
         if (!updatedMember) return { error: "Failed to retrieve updated member."};
 
         return updatedMember;

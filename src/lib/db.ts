@@ -129,6 +129,36 @@ export async function setupDatabase() {
         `);
 
         await client.query(`
+            CREATE TABLE IF NOT EXISTS departments (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                name VARCHAR(255) UNIQUE NOT NULL,
+                description TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
+
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS department_members (
+                department_id UUID NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
+                member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+                is_primary BOOLEAN DEFAULT false,
+                assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (department_id, member_id)
+            );
+        `);
+
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_department_members_member_id 
+            ON department_members(member_id);
+        `);
+
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_department_members_primary 
+            ON department_members(member_id, is_primary) WHERE is_primary = true;
+        `);
+
+        await client.query(`
             CREATE TABLE IF NOT EXISTS member_notes (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
@@ -411,15 +441,28 @@ export async function setupDatabase() {
             }
         }
         
-         // Seed permissions
-        const { rows: permCount } = await client.query('SELECT COUNT(*) FROM permissions');
-        if (parseInt(permCount[0].count, 10) === 0) {
-            for (const perm of ALL_PERMISSIONS) {
-                await client.query(
-                    'INSERT INTO permissions (id, description, resource) VALUES ($1, $2, $3)',
-                    [perm.id, perm.description, perm.resource]
-                );
+        // Seed default departments
+        const { rows: deptCount } = await client.query('SELECT COUNT(*) FROM departments');
+        if (parseInt(deptCount[0].count, 10) === 0) {
+            const defaultDepartments = [
+                { name: 'People and Culture', description: 'Human Resources, recruitment, employee relations, and organizational culture.' },
+                { name: 'Solution Development', description: 'Software development, engineering, and technical solutions.' },
+                { name: 'AI and BI', description: 'Artificial Intelligence, Business Intelligence, data analytics, and machine learning.' },
+            ];
+            for (const dept of defaultDepartments) {
+                await client.query('INSERT INTO departments (name, description) VALUES ($1, $2)', [dept.name, dept.description]);
             }
+        }
+        
+         // Seed/sync permissions (insert new ones, update existing ones)
+        for (const perm of ALL_PERMISSIONS) {
+            await client.query(
+                `INSERT INTO permissions (id, description, resource) 
+                 VALUES ($1, $2, $3)
+                 ON CONFLICT (id) 
+                 DO UPDATE SET description = $2, resource = $3`,
+                [perm.id, perm.description, perm.resource]
+            );
         }
 
         // Assign all permissions to Super Admin role
