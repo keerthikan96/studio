@@ -277,11 +277,23 @@ export default function DepartmentDetailPage() {
                         <ArrowLeft className="h-4 w-4" />
                     </Link>
                 </Button>
-                <div>
+                <div className="flex-1">
                     <h1 className="text-3xl font-bold">{department.name}</h1>
                     {department.description && (
                         <p className="text-muted-foreground mt-1">{department.description}</p>
                     )}
+                    <div className="flex gap-4 mt-2">
+                        {department.lead_name && (
+                            <div className="flex items-center gap-2">
+                                <Badge variant="secondary">Lead: {department.lead_name}</Badge>
+                            </div>
+                        )}
+                        {department.supervisor_name && (
+                            <div className="flex items-center gap-2">
+                                <Badge variant="outline">Supervisor: {department.supervisor_name}</Badge>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 

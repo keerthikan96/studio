@@ -1,12 +1,11 @@
-
 'use client';
 
 import { useEffect, useState, useTransition } from "react";
-import { getDepartmentsAction, createDepartmentAction, updateDepartmentAction, deleteDepartmentAction } from "@/app/actions/departments";
+import { getDepartmentsAction, createDepartmentAction, updateDepartmentAction, deleteDepartmentAction, getActiveEmployeesAction, checkExistingLeadOrSupervisorAction } from "@/app/actions/departments";
 import { Department } from "@/lib/mock-data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, Edit, Trash2, MoreHorizontal, Users } from "lucide-react";
+import { Loader2, PlusCircle, Edit, Trash2, MoreHorizontal, Users, AlertTriangle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -14,19 +13,53 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ExistingAssignmentWarningDialog } from "@/components/existing-assignment-warning-dialog";
 import { format } from "date-fns";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 
+type Employee = {
+    id: string;
+    name: string;
+    email: string;
+    job_title: string;
+};
+
 export default function DepartmentPage() {
     const [departments, setDepartments] = useState<Department[]>([]);
+    const [employees, setEmployees] = useState<Employee[]>([]);
     const [isPending, startTransition] = useTransition();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
     const [deletingDepartmentId, setDeletingDepartmentId] = useState<string | null>(null);
-    const [formData, setFormData] = useState({ name: '', description: '' });
+    const [formData, setFormData] = useState({ 
+        name: '', 
+        description: '', 
+        leadId: '', 
+        supervisorId: '' 
+    });
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [warningDialog, setWarningDialog] = useState<{
+        open: boolean;
+        employeeName: string;
+        isLead: boolean;
+        isSupervisor: boolean;
+        leadDepartments: string[];
+        supervisorDepartments: string[];
+        fieldType: 'lead' | 'supervisor' | null;
+        pendingValue: string;
+    }>({
+        open: false,
+        employeeName: '',
+        isLead: false,
+        isSupervisor: false,
+        leadDepartments: [],
+        supervisorDepartments: [],
+        fieldType: null,
+        pendingValue: ''
+    });
     const { toast } = useToast();
 
     const fetchDepartments = () => {
@@ -50,17 +83,37 @@ export default function DepartmentPage() {
         });
     };
 
+    const fetchEmployees = () => {
+        const storedUser = sessionStorage.getItem('loggedInUser');
+        const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
+        
+        getActiveEmployeesAction(currentUserId).then((result) => {
+            if (Array.isArray(result)) {
+                setEmployees(result);
+            } else {
+                console.error('Failed to fetch employees:', result.error);
+                setEmployees([]);
+            }
+        });
+    };
+
     useEffect(() => {
         fetchDepartments();
+        fetchEmployees();
     }, []);
 
     const handleOpenDialog = (department?: Department) => {
         if (department) {
             setEditingDepartment(department);
-            setFormData({ name: department.name, description: department.description || '' });
+            setFormData({ 
+                name: department.name, 
+                description: department.description || '',
+                leadId: department.lead_id || '',
+                supervisorId: department.supervisor_id || ''
+            });
         } else {
             setEditingDepartment(null);
-            setFormData({ name: '', description: '' });
+            setFormData({ name: '', description: '', leadId: '', supervisorId: '' });
         }
         setIsDialogOpen(true);
     };
@@ -68,7 +121,79 @@ export default function DepartmentPage() {
     const handleCloseDialog = () => {
         setIsDialogOpen(false);
         setEditingDepartment(null);
-        setFormData({ name: '', description: '' });
+        setFormData({ name: '', description: '', leadId: '', supervisorId: '' });
+    };
+
+    const handleEmployeeSelection = async (value: string, fieldType: 'lead' | 'supervisor') => {
+        if (!value || value === 'none') {
+            if (fieldType === 'lead') {
+                setFormData({ ...formData, leadId: '' });
+            } else {
+                setFormData({ ...formData, supervisorId: '' });
+            }
+            return;
+        }
+
+        const storedUser = sessionStorage.getItem('loggedInUser');
+        const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
+
+        // Check if employee is already a lead or supervisor
+        const checkResult = await checkExistingLeadOrSupervisorAction(
+            value,
+            currentUserId,
+            editingDepartment?.id
+        );
+
+        if ('error' in checkResult) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: checkResult.error
+            });
+            return;
+        }
+
+        const selectedEmployee = employees.find(e => e.id === value);
+
+        if (checkResult.isLead || checkResult.isSupervisor) {
+            // Show warning
+            setWarningDialog({
+                open: true,
+                employeeName: selectedEmployee?.name || 'Employee',
+                isLead: checkResult.isLead,
+                isSupervisor: checkResult.isSupervisor,
+                leadDepartments: checkResult.leadDepartments,
+                supervisorDepartments: checkResult.supervisorDepartments,
+                fieldType,
+                pendingValue: value
+            });
+        } else {
+            // No warning needed, proceed with assignment
+            if (fieldType === 'lead') {
+                setFormData({ ...formData, leadId: value });
+            } else {
+                setFormData({ ...formData, supervisorId: value });
+            }
+        }
+    };
+
+    const handleWarningConfirm = () => {
+        const { fieldType, pendingValue } = warningDialog;
+        if (fieldType === 'lead') {
+            setFormData({ ...formData, leadId: pendingValue });
+        } else if (fieldType === 'supervisor') {
+            setFormData({ ...formData, supervisorId: pendingValue });
+        }
+        setWarningDialog({
+            open: false,
+            employeeName: '',
+            isLead: false,
+            isSupervisor: false,
+            leadDepartments: [],
+            supervisorDepartments: [],
+            fieldType: null,
+            pendingValue: ''
+        });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -84,12 +209,16 @@ export default function DepartmentPage() {
                 result = await updateDepartmentAction(editingDepartment.id, {
                     name: formData.name,
                     description: formData.description,
+                    leadId: formData.leadId || null,
+                    supervisorId: formData.supervisorId || null,
                     currentUserId
                 });
             } else {
                 result = await createDepartmentAction({
                     name: formData.name,
                     description: formData.description,
+                    leadId: formData.leadId || null,
+                    supervisorId: formData.supervisorId || null,
                     currentUserId
                 });
             }
@@ -196,6 +325,44 @@ export default function DepartmentPage() {
                                             rows={3}
                                         />
                                     </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="lead">Department Lead</Label>
+                                        <Select
+                                            value={formData.leadId || 'none'}
+                                            onValueChange={(value) => handleEmployeeSelection(value, 'lead')}
+                                        >
+                                            <SelectTrigger id="lead">
+                                                <SelectValue placeholder="Select a lead (optional)" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="none">None</SelectItem>
+                                                {employees.map(emp => (
+                                                    <SelectItem key={emp.id} value={emp.id}>
+                                                        {emp.name} - {emp.job_title}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="supervisor">Department Supervisor</Label>
+                                        <Select
+                                            value={formData.supervisorId || 'none'}
+                                            onValueChange={(value) => handleEmployeeSelection(value, 'supervisor')}
+                                        >
+                                            <SelectTrigger id="supervisor">
+                                                <SelectValue placeholder="Select a supervisor (optional)" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="none">None</SelectItem>
+                                                {employees.map(emp => (
+                                                    <SelectItem key={emp.id} value={emp.id}>
+                                                        {emp.name} - {emp.job_title}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </div>
                                 <DialogFooter>
                                     <Button type="button" variant="outline" onClick={handleCloseDialog}>
@@ -216,6 +383,8 @@ export default function DepartmentPage() {
                             <TableRow>
                                 <TableHead>Department Name</TableHead>
                                 <TableHead>Description</TableHead>
+                                <TableHead>Lead</TableHead>
+                                <TableHead>Supervisor</TableHead>
                                 <TableHead>Date Created</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -223,7 +392,7 @@ export default function DepartmentPage() {
                         <TableBody>
                             {isPending && departments.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
+                                    <TableCell colSpan={6} className="h-24 text-center">
                                         <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                     </TableCell>
                                 </TableRow>
@@ -232,6 +401,8 @@ export default function DepartmentPage() {
                                     <TableRow key={department.id}>
                                         <TableCell className="font-medium">{department.name}</TableCell>
                                         <TableCell className="text-muted-foreground">{department.description || 'No description'}</TableCell>
+                                        <TableCell className="text-muted-foreground">{department.lead_name || '-'}</TableCell>
+                                        <TableCell className="text-muted-foreground">{department.supervisor_name || '-'}</TableCell>
                                         <TableCell>{format(new Date(department.created_at), 'PPP')}</TableCell>
                                         <TableCell className="text-right">
                                             <DropdownMenu>
@@ -269,7 +440,7 @@ export default function DepartmentPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
+                                    <TableCell colSpan={6} className="h-24 text-center">
                                         No departments found. Create your first department to get started.
                                     </TableCell>
                                 </TableRow>
@@ -278,6 +449,24 @@ export default function DepartmentPage() {
                     </Table>
                 </CardContent>
             </Card>
+
+            <ExistingAssignmentWarningDialog
+                open={warningDialog.open}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setWarningDialog({
+                            ...warningDialog,
+                            open: false
+                        });
+                    }
+                }}
+                onConfirm={handleWarningConfirm}
+                employeeName={warningDialog.employeeName}
+                isLead={warningDialog.isLead}
+                isSupervisor={warningDialog.isSupervisor}
+                leadDepartments={warningDialog.leadDepartments}
+                supervisorDepartments={warningDialog.supervisorDepartments}
+            />
 
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <AlertDialogContent>

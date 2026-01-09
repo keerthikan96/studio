@@ -15,7 +15,16 @@ export async function getDepartmentsAction(currentUserId: string): Promise<Depar
     }
     
     try {
-        const result = await db.query('SELECT * FROM departments ORDER BY name ASC');
+        const result = await db.query(`
+            SELECT 
+                d.*,
+                l.name as lead_name,
+                s.name as supervisor_name
+            FROM departments d
+            LEFT JOIN members l ON d.lead_id = l.id
+            LEFT JOIN members s ON d.supervisor_id = s.id
+            ORDER BY d.name ASC
+        `);
         return result.rows;
     } catch (error) {
         console.error('Error fetching departments:', error);
@@ -31,7 +40,16 @@ export async function getDepartmentAction(id: string, currentUserId: string): Pr
     }
     
     try {
-        const departmentResult = await db.query('SELECT * FROM departments WHERE id = $1', [id]);
+        const departmentResult = await db.query(`
+            SELECT 
+                d.*,
+                l.name as lead_name,
+                s.name as supervisor_name
+            FROM departments d
+            LEFT JOIN members l ON d.lead_id = l.id
+            LEFT JOIN members s ON d.supervisor_id = s.id
+            WHERE d.id = $1
+        `, [id]);
         if (departmentResult.rows.length === 0) {
             return null;
         }
@@ -44,10 +62,12 @@ export async function getDepartmentAction(id: string, currentUserId: string): Pr
 
 export async function createDepartmentAction(data: { 
     name: string; 
-    description?: string; 
+    description?: string;
+    leadId?: string | null;
+    supervisorId?: string | null;
     currentUserId: string 
 }): Promise<Department | { error: string }> {
-    const { name, description, currentUserId } = data;
+    const { name, description, leadId, supervisorId, currentUserId } = data;
     
     // Check permission
     const canCreate = await hasPermission(currentUserId, 'departments.create');
@@ -60,8 +80,8 @@ export async function createDepartmentAction(data: {
         await client.query('BEGIN');
 
         const departmentResult = await client.query(
-            'INSERT INTO departments (name, description) VALUES ($1, $2) RETURNING *',
-            [name, description || null]
+            'INSERT INTO departments (name, description, lead_id, supervisor_id) VALUES ($1, $2, $3, $4) RETURNING *',
+            [name, description || null, leadId || null, supervisorId || null]
         );
         const newDepartment = departmentResult.rows[0];
         
@@ -70,7 +90,7 @@ export async function createDepartmentAction(data: {
             action: 'department.create',
             resource_type: 'department',
             resource_id: newDepartment.id,
-            details: { name, description }
+            details: { name, description, leadId, supervisorId }
         }, client);
 
         await client.query('COMMIT');
@@ -89,10 +109,12 @@ export async function createDepartmentAction(data: {
 
 export async function updateDepartmentAction(id: string, data: { 
     name: string; 
-    description?: string; 
+    description?: string;
+    leadId?: string | null;
+    supervisorId?: string | null;
     currentUserId: string 
 }): Promise<Department | { error: string }> {
-    const { name, description, currentUserId } = data;
+    const { name, description, leadId, supervisorId, currentUserId } = data;
     
     // Check permission
     const canUpdate = await hasPermission(currentUserId, 'departments.update');
@@ -105,8 +127,8 @@ export async function updateDepartmentAction(id: string, data: {
         await client.query('BEGIN');
 
         const departmentResult = await client.query(
-            'UPDATE departments SET name = $1, description = $2, updated_at = NOW() WHERE id = $3 RETURNING *',
-            [name, description || null, id]
+            'UPDATE departments SET name = $1, description = $2, lead_id = $3, supervisor_id = $4, updated_at = NOW() WHERE id = $5 RETURNING *',
+            [name, description || null, leadId || null, supervisorId || null, id]
         );
         if (departmentResult.rows.length === 0) {
             throw new Error('Department not found.');
@@ -117,7 +139,7 @@ export async function updateDepartmentAction(id: string, data: {
             action: 'department.update',
             resource_type: 'department',
             resource_id: id,
-            details: { name, description }
+            details: { name, description, leadId, supervisorId }
         }, client);
 
         await client.query('COMMIT');
@@ -430,5 +452,83 @@ export async function setPrimaryDepartmentAction(data: {
         return { error: `Failed to set primary department: ${error.message || 'Unknown error'}` };
     } finally {
         client.release();
+    }
+}
+
+// ========== HELPER ACTIONS FOR LEAD/SUPERVISOR ==========
+
+export async function getActiveEmployeesAction(currentUserId: string): Promise<Array<{id: string, name: string, email: string, job_title: string}> | { error: string }> {
+    // Check permission - user needs to be able to read departments to assign leads/supervisors
+    const canRead = await hasPermission(currentUserId, 'departments.read');
+    if (!canRead) {
+        return { error: 'You do not have permission to view employees.' };
+    }
+    
+    try {
+        const result = await db.query(`
+            SELECT id, name, email, job_title 
+            FROM members 
+            WHERE status = 'active'
+            ORDER BY name ASC
+        `);
+        return result.rows;
+    } catch (error) {
+        console.error('Error fetching active employees:', error);
+        return [];
+    }
+}
+
+export async function checkExistingLeadOrSupervisorAction(
+    memberId: string,
+    currentUserId: string,
+    excludeDepartmentId?: string
+): Promise<{ isLead: boolean; isSupervisor: boolean; leadDepartments: string[]; supervisorDepartments: string[] } | { error: string }> {
+    // Check permission
+    const canRead = await hasPermission(currentUserId, 'departments.read');
+    if (!canRead) {
+        return { error: 'You do not have permission to check department assignments.' };
+    }
+    
+    try {
+        let query = `
+            SELECT 
+                id,
+                name,
+                lead_id,
+                supervisor_id
+            FROM departments
+            WHERE (lead_id = $1 OR supervisor_id = $1)
+        `;
+        
+        const params: any[] = [memberId];
+        
+        if (excludeDepartmentId) {
+            query += ` AND id != $2`;
+            params.push(excludeDepartmentId);
+        }
+        
+        const result = await db.query(query, params);
+        
+        const leadDepartments: string[] = [];
+        const supervisorDepartments: string[] = [];
+        
+        result.rows.forEach(dept => {
+            if (dept.lead_id === memberId) {
+                leadDepartments.push(dept.name);
+            }
+            if (dept.supervisor_id === memberId) {
+                supervisorDepartments.push(dept.name);
+            }
+        });
+        
+        return {
+            isLead: leadDepartments.length > 0,
+            isSupervisor: supervisorDepartments.length > 0,
+            leadDepartments,
+            supervisorDepartments
+        };
+    } catch (error) {
+        console.error('Error checking existing lead/supervisor:', error);
+        return { error: 'Failed to check existing assignments' };
     }
 }

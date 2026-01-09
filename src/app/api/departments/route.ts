@@ -5,11 +5,17 @@ export async function GET() {
     try {
         const result = await db.query(`
             SELECT 
-                id, 
-                name,
-                description
-            FROM departments 
-            ORDER BY name ASC
+                d.id, 
+                d.name,
+                d.description,
+                d.lead_id,
+                d.supervisor_id,
+                l.name as lead_name,
+                s.name as supervisor_name
+            FROM departments d
+            LEFT JOIN members l ON d.lead_id = l.id
+            LEFT JOIN members s ON d.supervisor_id = s.id
+            ORDER BY d.name ASC
         `);
         
         return NextResponse.json(result.rows);

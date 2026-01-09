@@ -11,6 +11,10 @@ export type Department = {
     id: string;
     name: string;
     description?: string;
+    lead_id?: string | null;
+    supervisor_id?: string | null;
+    lead_name?: string | null;
+    supervisor_name?: string | null;
     created_at: string;
     updated_at?: string;
 };
