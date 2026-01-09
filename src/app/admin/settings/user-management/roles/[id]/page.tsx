@@ -88,7 +88,6 @@ export function RoleEditor({ isNewRole = false }: RoleEditorProps) {
                 });
                 router.push('/admin/settings/user-management/roles');
             }
-            }
         });
     };
     
