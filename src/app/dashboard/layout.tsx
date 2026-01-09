@@ -15,7 +15,7 @@ import {
   SidebarTrigger,
   SidebarInput,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, Newspaper, User, Search, Bell } from "lucide-react";
+import { LayoutDashboard, Users, Newspaper, User, Search, Bell, Clock } from "lucide-react";
 import Logo from "@/components/logo";
 import UserNav from "@/components/user-nav";
 import { Input } from "@/components/ui/input";
@@ -51,6 +51,12 @@ export default function DashboardLayout({
       label: "Members", 
       icon: Users,
       permissions: ['members.read_all', 'members.read_basic'] // Any of these permissions
+    },
+    { 
+      href: "/dashboard/timesheet", 
+      label: "Timesheet", 
+      icon: Clock,
+      permissions: ['timesheet.create_entry', 'timesheet.read_own'] // Any of these permissions
     },
     { 
       href: "/dashboard/workfeed", 

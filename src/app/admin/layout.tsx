@@ -93,6 +93,16 @@ export default function AdminLayout({
       items: [
         { href: "/admin/calendar", label: "Calendar", icon: CalendarIcon, permission: null },
         { href: "/admin/leave", label: "Leave", icon: CalendarIcon, permission: 'leave.read_all' },
+        { 
+          href: "/admin/timesheet",
+          label: "Timesheet", 
+          icon: ClipboardList,
+          permission: 'timesheet.read_all',
+          subItems: [
+            { href: "/admin/timesheet", label: "Approvals", permission: 'timesheet.approve' },
+            { href: "/admin/timesheet/projects", label: "Projects", permission: 'timesheet.manage_projects' }
+          ]
+        },
       ]
     },
     {

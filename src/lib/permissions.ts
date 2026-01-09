@@ -112,10 +112,24 @@ const departmentPermissions = definePermissions(
     }
 );
 
+const timesheetPermissions = definePermissions(
+    'timesheet',
+    ['create_entry', 'read_own', 'read_all', 'approve', 'reject', 'manage_projects', 'manage_milestones'],
+    {
+        create_entry: 'Can create and edit own time entries.',
+        read_own: 'Can view own timesheet entries.',
+        read_all: 'Can view all team timesheets.',
+        approve: 'Can approve timesheet submissions.',
+        reject: 'Can reject timesheet submissions.',
+        manage_projects: 'Can create and configure projects.',
+        manage_milestones: 'Can manage project milestones.'
+    }
+);
+
 
 export const PERMISSION_RESOURCES = [
     'members', 'roles', 'leave', 'workfeed', 
-    'documents', 'performance', 'self_assessment', 'departments'
+    'documents', 'performance', 'self_assessment', 'departments', 'timesheet'
 ] as const;
 
 export const ALL_PERMISSIONS: Permission[] = [
@@ -127,4 +141,5 @@ export const ALL_PERMISSIONS: Permission[] = [
     ...performancePermissions,
     ...selfAssessmentPermissions,
     ...departmentPermissions,
+    ...timesheetPermissions,
 ];

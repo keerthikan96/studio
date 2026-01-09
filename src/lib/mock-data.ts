@@ -223,6 +223,93 @@ export type LeaveRequest = {
     updated_at: string;
 };
 
+// ========== TIMESHEET SYSTEM TYPES ==========
+
+export type PayType = 'REGULAR' | 'OVERTIME' | 'DOUBLE_TIME' | 'PTO' | 'HOLIDAY' | 'UNPAID';
+export type TimesheetWeekStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'LOCKED';
+export type ProjectStatus = 'ACTIVE' | 'ARCHIVED';
+
+export interface Project {
+    id: string;
+    name: string;
+    code?: string;
+    description?: string;
+    status: ProjectStatus;
+    created_by: string;
+    created_at: string;
+    updated_at?: string;
+    milestones?: ProjectMilestone[]; // joined for display
+}
+
+export interface ProjectMilestone {
+    id: string;
+    project_id: string;
+    name: string;
+    due_date?: string;
+    is_billable: boolean;
+    created_by: string;
+    created_at: string;
+    updated_at?: string;
+}
+
+export interface MemberProject {
+    id: string;
+    project_id: string;
+    user_id: string;
+    role?: string;
+    created_at: string;
+    project_name?: string; // joined
+}
+
+export interface TimeEntry {
+    id: string;
+    timesheet_week_id?: string;
+    user_id: string;
+    date: string; // YYYY-MM-DD
+    project_id?: string;
+    project_name?: string; // joined
+    milestone_id?: string;
+    milestone_name?: string; // joined
+    hours: number;
+    pay_type: PayType;
+    description?: string;
+    is_billable: boolean;
+    created_by: string;
+    created_at: string;
+    updated_at?: string;
+}
+
+export interface TimesheetWeek {
+    id: string;
+    user_id: string;
+    user_name?: string; // joined
+    week_start_date: string;
+    week_end_date: string;
+    status: TimesheetWeekStatus;
+    total_hours: number;
+    submitted_at?: string;
+    approved_at?: string;
+    submitted_by?: string;
+    approved_by?: string;
+    approved_by_name?: string; // joined
+    manager_id?: string;
+    notes?: string;
+    entries?: TimeEntry[]; // joined
+    created_at: string;
+    updated_at?: string;
+}
+
+export interface TimesheetAudit {
+    id: string;
+    entity_type: string;
+    entity_id: string;
+    action: string;
+    performed_by: string;
+    performed_by_name?: string; // joined
+    performed_at: string;
+    details?: any;
+}
+
 export const mockMembers: Member[] = [
     { 
         id: 'm_1', 

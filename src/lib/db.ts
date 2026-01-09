@@ -424,6 +424,143 @@ export async function setupDatabase() {
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
         `);
+
+        // ========== TIMESHEET SYSTEM TABLES ==========
+        
+        // Create ENUMs for timesheet system
+        await client.query(`
+            DO $$ BEGIN
+                CREATE TYPE pay_type_enum AS ENUM ('REGULAR','OVERTIME','DOUBLE_TIME','PTO','HOLIDAY','UNPAID');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+        `);
+
+        await client.query(`
+            DO $$ BEGIN
+                CREATE TYPE timesheet_week_status AS ENUM ('DRAFT','SUBMITTED','APPROVED','REJECTED','LOCKED');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+        `);
+
+        await client.query(`
+            DO $$ BEGIN
+                CREATE TYPE project_status AS ENUM ('ACTIVE','ARCHIVED');
+            EXCEPTION
+                WHEN duplicate_object THEN null;
+            END $$;
+        `);
+
+        // Projects table
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS projects (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                name TEXT NOT NULL,
+                code TEXT,
+                description TEXT,
+                status project_status NOT NULL DEFAULT 'ACTIVE',
+                created_by UUID NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
+
+        // Project milestones table
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS project_milestones (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                name TEXT NOT NULL,
+                due_date DATE,
+                is_billable BOOLEAN NOT NULL DEFAULT true,
+                created_by UUID NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
+
+        // Member projects junction table
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS member_projects (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                user_id UUID NOT NULL,
+                role TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                UNIQUE(project_id, user_id)
+            );
+        `);
+
+        // Timesheet weeks table
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS timesheet_weeks (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID NOT NULL,
+                week_start_date DATE NOT NULL,
+                week_end_date DATE NOT NULL,
+                status timesheet_week_status NOT NULL DEFAULT 'DRAFT',
+                total_hours NUMERIC(5,2) NOT NULL DEFAULT 0,
+                submitted_at TIMESTAMPTZ,
+                approved_at TIMESTAMPTZ,
+                submitted_by UUID,
+                approved_by UUID,
+                manager_id UUID,
+                notes TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                UNIQUE(user_id, week_start_date)
+            );
+        `);
+
+        // Time entries table
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS time_entries (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                timesheet_week_id UUID REFERENCES timesheet_weeks(id) ON DELETE CASCADE,
+                user_id UUID NOT NULL,
+                date DATE NOT NULL,
+                project_id UUID REFERENCES projects(id),
+                milestone_id UUID REFERENCES project_milestones(id),
+                hours NUMERIC(5,2) NOT NULL CHECK (hours >= 0 AND hours <= 24),
+                pay_type pay_type_enum NOT NULL DEFAULT 'REGULAR',
+                description TEXT,
+                is_billable BOOLEAN NOT NULL DEFAULT true,
+                created_by UUID NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
+
+        // Timesheet audit table
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS timesheet_audit (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                entity_type TEXT NOT NULL,
+                entity_id UUID NOT NULL,
+                action TEXT NOT NULL,
+                performed_by UUID NOT NULL,
+                performed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                details JSONB
+            );
+        `);
+
+        // Create indexes for performance
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_time_entries_user_date ON time_entries(user_id, date);
+        `);
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_timesheet_weeks_user_week ON timesheet_weeks(user_id, week_start_date);
+        `);
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_project_status ON projects(status);
+        `);
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_member_projects_user ON member_projects(user_id);
+        `);
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_timesheet_audit_entity ON timesheet_audit(entity_type, entity_id);
+        `);
         
         // Seed default roles
         const { rows: roleCount } = await client.query('SELECT COUNT(*) FROM roles');
