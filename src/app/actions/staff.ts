@@ -205,12 +205,13 @@ export async function getMembersAction(currentUserId: string): Promise<Member[] 
 }
 
 export async function getMemberByIdAction(id: string, currentUserId: string): Promise<Member | { error: string } | null> {
-    // Check permission
+    // Check permission - allow users to view their own profile
+    const isOwnProfile = id === currentUserId;
     const canReadAll = await hasPermission(currentUserId, 'members.read_all');
     const canReadPublic = await hasPermission(currentUserId, 'members.read_basic');
     const canReadSensitive = await hasPermission(currentUserId, 'members.read_sensitive');
     
-    if (!canReadAll && !canReadPublic) {
+    if (!isOwnProfile && !canReadAll && !canReadPublic) {
         return { error: 'You do not have permission to view member profiles.' } as any;
     }
     
@@ -226,8 +227,8 @@ export async function getMemberByIdAction(id: string, currentUserId: string): Pr
         
         const member = result.rows[0];
         
-        // If user cannot read sensitive data, filter it out
-        if (!canReadSensitive && !canReadAll) {
+        // If user cannot read sensitive data, filter it out (unless viewing own profile)
+        if (!isOwnProfile && !canReadSensitive && !canReadAll) {
             return {
                 ...member,
                 salary: null,

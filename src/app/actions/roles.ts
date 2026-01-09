@@ -73,6 +73,7 @@ export async function createRoleAction(data: { name: string; description?: strin
         }
         
         await logAuditEvent({
+            actorId: currentUserId,
             action: 'role.create',
             resource_type: 'role',
             resource_id: newRole.id,
@@ -84,10 +85,15 @@ export async function createRoleAction(data: { name: string; description?: strin
     } catch (error: any) {
         await client.query('ROLLBACK');
         console.error('Error creating role:', error);
+        console.error('Error details:', {
+            message: error.message,
+            code: error.code,
+            detail: error.detail
+        });
         if (error.code === '23505') { // unique_violation
             return { error: 'A role with this name already exists.' };
         }
-        return { error: 'Failed to create role.' };
+        return { error: `Failed to create role: ${error.message || 'Unknown error'}` };
     } finally {
         client.release();
     }
@@ -126,6 +132,7 @@ export async function updateRoleAction(id: string, data: { name: string; descrip
         }
 
         await logAuditEvent({
+            actorId: currentUserId,
             action: 'role.update',
             resource_type: 'role',
             resource_id: id,
@@ -137,10 +144,16 @@ export async function updateRoleAction(id: string, data: { name: string; descrip
     } catch (error: any) {
         await client.query('ROLLBACK');
         console.error(`Error updating role with id ${id}:`, error);
+        console.error('Error details:', {
+            message: error.message,
+            code: error.code,
+            detail: error.detail,
+            stack: error.stack
+        });
         if (error.code === '23505') { // unique_violation
             return { error: 'A role with this name already exists.' };
         }
-        return { error: 'Failed to update role.' };
+        return { error: `Failed to update role: ${error.message || 'Unknown error'}` };
     } finally {
         client.release();
     }

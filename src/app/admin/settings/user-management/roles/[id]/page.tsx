@@ -119,7 +119,7 @@ export function RoleEditor({ isNewRole = false }: RoleEditorProps) {
                 <CardHeader>
                     <CardTitle>{isNewRole ? "Create New Role" : "Edit Role"}</CardTitle>
                     <CardDescription>
-                        {isNewRole ? "Define a new role and assign permissions." : `Editing permissions for the "${role?.name}" role.`}
+                        {isNewRole ? "Define a new role and assign permissions." : `Editing permissions for the "${form.getValues('name') || role?.name || 'selected'}" role.`}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
