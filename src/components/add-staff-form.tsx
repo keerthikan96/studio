@@ -44,7 +44,6 @@ import { ReviewFieldWrapper } from './review-field-wrapper';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Textarea } from './ui/textarea';
 
-const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const employmentTypes = ['Full-time', 'Part-time', 'Contract', 'Intern'];
 const employeeLevels = ['L1', 'L2', 'L3', 'Manager', 'Senior Manager', 'Director'];
 
@@ -74,7 +73,7 @@ const formSchema = z.object({
   state_province: z.string().optional(),
   postal_code: z.string().optional(),
   country: z.string().optional(),
-  domain: z.enum(domains as [string, ...string[]]).optional(),
+  department_id: z.string().optional(),
   branch: z.string().optional(),
   job_title: z.string().optional(),
   date_of_birth: z.date().optional(),
@@ -123,11 +122,19 @@ export default function AddStaffForm({ onAddStaff, roles }: AddStaffFormProps) {
   const [skillInput, setSkillInput] = useState('');
   const [parsedData, setParsedData] = useState<ParseResumeToAutofillProfileOutput | null>(null);
   const [countries, setCountries] = useState<string[]>([]);
+  const [departments, setDepartments] = useState<Array<{id: string, name: string}>>([]);
 
   const { toast } = useToast();
   const router = useRouter();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Fetch departments
+    fetch('/api/departments').then(res => res.json()).then(data => {
+      if (Array.isArray(data)) setDepartments(data);
+    }).catch(err => console.error('Failed to fetch departments:', err));
+  }, []);
 
   const form = useForm<StaffFormValues>({
     resolver: zodResolver(formSchema),
@@ -442,7 +449,7 @@ export default function AddStaffForm({ onAddStaff, roles }: AddStaffFormProps) {
                                                     <FormMessage />
                                                 </FormItem>
                                             )} />
-                                            <ReviewFieldWrapper confidence={parsedData.domain?.confidence}><FormField control={form.control} name="domain" render={({ field }) => (<FormItem><FormLabel>Domain</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a domain" /></SelectTrigger></FormControl><SelectContent>{domains.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
+                                            <FormField control={form.control} name="department_id" render={({ field }) => (<FormItem><FormLabel>Department</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a department" /></SelectTrigger></FormControl><SelectContent>{departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                                              <ReviewFieldWrapper confidence={parsedData.branch?.confidence}><FormField control={form.control} name="branch" render={({ field }) => ( <FormItem><FormLabel>Branch</FormLabel><FormControl><Input {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} /></ReviewFieldWrapper>
                                             <FormField control={form.control} name="job_title" render={({ field }) => (<FormItem><FormLabel>Job Title</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                                             <FormField control={form.control} name="employee_id" render={({ field }) => (<FormItem><FormLabel>Employee ID <span className="text-destructive">*</span></FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />

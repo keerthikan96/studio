@@ -45,7 +45,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { LeaveTab } from '@/components/member-profile-tabs/leave-tab';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
-const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
 const sriLankanBranches = ['Nothern', 'Central', 'Eastern'];
 const employmentCategories = ['Full-time', 'Part-time', 'Contract'];
@@ -69,7 +68,7 @@ const profileSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }).optional(),
   phone: z.string().optional(),
   job_title: z.string().optional().nullable(),
-  domain: z.enum(domains as [string, ...string[]]).optional(),
+  department_id: z.string().optional().nullable(),
   country: z.enum(countries as [string, ...string[]]).optional(),
   branch: z.string().optional(),
   experience: z.array(workExperienceSchema).optional(),
@@ -105,6 +104,14 @@ const GeneralInfoTab = ({ form, isPending, roles, isEditMode }: { form: any, isP
   const [skillInput, setSkillInput] = useState('');
   const [hobbyInput, setHobbyInput] = useState('');
   const [volunteerInput, setVolunteerInput] = useState('');
+  const [departments, setDepartments] = useState<Array<{id: string, name: string}>>([]);
+
+  useEffect(() => {
+    // Fetch departments
+    fetch('/api/departments').then(res => res.json()).then(data => {
+      if (Array.isArray(data)) setDepartments(data);
+    }).catch(err => console.error('Failed to fetch departments:', err));
+  }, []);
 
   const { fields: expFields, append: appendExp, remove: removeExp } = useFieldArray({
     control: form.control, name: "experience",
@@ -357,18 +364,18 @@ const GeneralInfoTab = ({ form, isPending, roles, isEditMode }: { form: any, isP
                     />
                     <FormField
                         control={form.control}
-                        name="domain"
+                        name="department_id"
                         render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Domain</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value} disabled={!isEditMode}>
+                            <FormLabel>Department</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value ?? undefined} disabled={!isEditMode}>
                                 <FormControl>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select a domain" />
+                                        <SelectValue placeholder="Select a department" />
                                     </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                    {domains.map(domain => <SelectItem key={domain} value={domain}>{domain}</SelectItem>)}
+                                    {departments.map(dept => <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                             <FormMessage />
