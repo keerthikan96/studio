@@ -23,7 +23,7 @@ const breadcrumbNameMap: { [key: string]: string } = {
 
 // Helper to check if a string looks like a UUID
 const isUUID = (str: string): boolean => {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(str);
 };
 
@@ -31,11 +31,6 @@ export default function Breadcrumbs() {
   const pathname = usePathname();
   const pathSegments = pathname.split('/').filter(Boolean);
   const [dynamicNames, setDynamicNames] = useState<{ [key: string]: string }>({});
-
-  // Don't show breadcrumbs on root admin pages like /admin/dashboard
-  if (pathSegments.length <= 1 || (pathSegments.length === 2 && pathSegments[1] === 'dashboard')) {
-    return null;
-  }
 
   useEffect(() => {
     const fetchDynamicNames = async () => {
@@ -91,6 +86,11 @@ export default function Breadcrumbs() {
 
     fetchDynamicNames();
   }, [pathname]);
+
+  // Don't show breadcrumbs on root admin pages like /admin/dashboard
+  if (pathSegments.length <= 1 || (pathSegments.length === 2 && pathSegments[1] === 'dashboard')) {
+    return null;
+  }
 
   return (
     <Breadcrumb>
