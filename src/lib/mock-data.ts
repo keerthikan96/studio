@@ -7,6 +7,21 @@ export type Role = {
     created_at: string;
 };
 
+export type Department = {
+    id: string;
+    name: string;
+    description?: string;
+    created_at: string;
+    updated_at?: string;
+};
+
+export type DepartmentMember = {
+    department_id: string;
+    member_id: string;
+    is_primary: boolean;
+    assigned_at: string;
+};
+
 export type WorkExperience = {
     companyName: string;
     role: string;

@@ -100,10 +100,22 @@ const selfAssessmentPermissions = definePermissions(
     }
 );
 
+const departmentPermissions = definePermissions(
+    'departments',
+    ['create', 'read', 'update', 'delete', 'manage_members'],
+    {
+        create: 'Can create new departments.',
+        read: 'Can view all departments.',
+        update: 'Can edit department details.',
+        delete: 'Can delete departments.',
+        manage_members: 'Can add/remove members from departments.'
+    }
+);
+
 
 export const PERMISSION_RESOURCES = [
     'members', 'roles', 'leave', 'workfeed', 
-    'documents', 'performance', 'self_assessment'
+    'documents', 'performance', 'self_assessment', 'departments'
 ] as const;
 
 export const ALL_PERMISSIONS: Permission[] = [
@@ -114,4 +126,5 @@ export const ALL_PERMISSIONS: Permission[] = [
     ...documentPermissions,
     ...performancePermissions,
     ...selfAssessmentPermissions,
+    ...departmentPermissions,
 ];
