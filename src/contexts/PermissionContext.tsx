@@ -21,33 +21,36 @@ interface PermissionProviderProps {
 export function PermissionProvider({ children, userId }: PermissionProviderProps) {
   const [permissions, setPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>(userId);
 
   const fetchPermissions = async () => {
     try {
       setLoading(true);
       
       // Get userId from session storage if not provided
-      let currentUserId = userId;
+      let userIdToUse = currentUserId || userId;
       
-      if (!currentUserId && typeof window !== 'undefined') {
+      if (!userIdToUse && typeof window !== 'undefined') {
         const storedUser = sessionStorage.getItem('loggedInUser');
         if (storedUser) {
           try {
             const user = JSON.parse(storedUser);
-            currentUserId = user.id;
+            userIdToUse = user.id;
+            setCurrentUserId(user.id);
           } catch (e) {
             console.error('Error parsing logged in user:', e);
           }
         }
       }
       
-      if (!currentUserId) {
+      if (!userIdToUse) {
         setPermissions([]);
+        setLoading(false);
         return;
       }
 
       // Fetch permissions from the server
-      const response = await fetch(`/api/permissions?userId=${currentUserId}`);
+      const response = await fetch(`/api/permissions?userId=${userIdToUse}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -64,9 +67,36 @@ export function PermissionProvider({ children, userId }: PermissionProviderProps
     }
   };
 
+  // Initial fetch on mount
   useEffect(() => {
     fetchPermissions();
+  }, []);
+
+  // Listen for changes when userId prop changes
+  useEffect(() => {
+    if (userId) {
+      setCurrentUserId(userId);
+      fetchPermissions();
+    }
   }, [userId]);
+
+  // Listen for storage events (for cross-tab updates)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'loggedInUser' && e.newValue) {
+        try {
+          const user = JSON.parse(e.newValue);
+          setCurrentUserId(user.id);
+          fetchPermissions();
+        } catch (error) {
+          console.error('Error parsing storage event:', error);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const hasPermission = (permissionId: string): boolean => {
     return permissions.includes(permissionId);
