@@ -86,6 +86,7 @@ export function RoleEditor({ isNewRole = false }: RoleEditorProps) {
                 });
                 router.push('/admin/settings/user-management/roles');
             }
+            }
         });
     };
     
@@ -117,7 +118,7 @@ export function RoleEditor({ isNewRole = false }: RoleEditorProps) {
                 <CardHeader>
                     <CardTitle>{isNewRole ? "Create New Role" : "Edit Role"}</CardTitle>
                     <CardDescription>
-                        {isNewRole ? "Define a new role and assign permissions." : `Editing permissions for the "${form.getValues('name') || role?.name || 'selected'}" role.`}
+                        {isNewRole ? "Define a new role and assign permissions." : `Editing permissions for the "${role?.name}" role.`}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
