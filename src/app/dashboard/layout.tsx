@@ -21,6 +21,7 @@ import UserNav from "@/components/user-nav";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import Breadcrumbs from "@/components/breadcrumbs";
+import { usePermissions } from "@/contexts/PermissionContext";
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -31,17 +32,50 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const [isClient, setIsClient] = useState(false);
+  const { hasPermission, hasAnyPermission, loading: permissionsLoading } = usePermissions();
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
+  // Define menu items with their required permissions
   const menuItems = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/dashboard/members", label: "Members", icon: Users },
-    { href: "/dashboard/workfeed", label: "Workfeed", icon: Newspaper },
-    { href: "/dashboard/profile", label: "My Profile", icon: User },
+    { 
+      href: "/dashboard", 
+      label: "Dashboard", 
+      icon: LayoutDashboard,
+      permissions: [] // Dashboard is always visible
+    },
+    { 
+      href: "/dashboard/members", 
+      label: "Members", 
+      icon: Users,
+      permissions: ['members.read_all', 'members.read_basic'] // Any of these permissions
+    },
+    { 
+      href: "/dashboard/workfeed", 
+      label: "Workfeed", 
+      icon: Newspaper,
+      permissions: [] // Workfeed is always visible
+    },
+    { 
+      href: "/dashboard/profile", 
+      label: "My Profile", 
+      icon: User,
+      permissions: [] // Own profile is always visible
+    },
   ];
+
+  // Filter menu items based on permissions
+  const visibleMenuItems = menuItems.filter(item => {
+    // If no permissions required, show it
+    if (!item.permissions || item.permissions.length === 0) {
+      return true;
+    }
+    
+    // Check if user has any of the required permissions
+    return hasAnyPermission(item.permissions);
+  });
   
   const getIsActive = (href: string) => {
      if (href === '/dashboard' && pathname !== '/dashboard') {
@@ -74,7 +108,7 @@ export default function DashboardLayout({
         </SidebarHeader>
         <SidebarContent>
            <SidebarMenu>
-            {isClient && menuItems.map((item, index) => (
+            {isClient && !permissionsLoading && visibleMenuItems.map((item, index) => (
                 <SidebarMenuItem key={index}>
                     <Link href={item.href}>
                         <SidebarMenuButton

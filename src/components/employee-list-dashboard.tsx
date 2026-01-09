@@ -21,59 +21,27 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { getMembersAction } from '@/app/actions/staff';
+import { Member } from '@/lib/mock-data';
+import { format } from 'date-fns';
 
-const data: Employee[] = [
-  {
-    id: '1',
-    name: 'Robert Fox',
-    reason: 'Official',
-    date: '13/09/2025',
-    status: 'Recruit',
-    avatar: '/placeholder.svg'
-  },
-  {
-    id: '2',
-    name: 'Wade Warren',
-    reason: 'Personal',
-    date: '09/08/2025',
-    status: 'Recruit',
-    avatar: '/placeholder.svg'
-  },
-  {
-    id: '3',
-    name: 'Albert Flores',
-    reason: 'Official',
-    date: '16/07/2025',
-    status: 'Recruit',
-    avatar: '/placeholder.svg'
-  },
-    {
-    id: '4',
-    name: 'Ralph Edwards',
-    reason: 'Personal',
-    date: '22/06/2025',
-    status: 'Recruit',
-    avatar: '/placeholder.svg'
-  },
-];
-
-type Employee = {
+type EmployeeDisplay = {
   id: string;
   name: string;
-  reason: string;
-  date: string;
-  status: 'Recruit';
+  jobTitle: string;
+  joinDate: string;
+  status: string;
   avatar: string;
 };
 
-const columns: ColumnDef<Employee>[] = [
+const columns: ColumnDef<EmployeeDisplay>[] = [
   {
     accessorKey: 'name',
     header: 'NAME',
     cell: ({ row }) => (
         <div className="flex items-center gap-2">
             <Avatar className="h-8 w-8">
-                <AvatarImage src={`https://i.pravatar.cc/40?u=${row.original.id}`} />
+                <AvatarImage src={row.original.avatar} />
                 <AvatarFallback>{row.original.name.charAt(0)}</AvatarFallback>
             </Avatar>
             <span>{row.getValue('name')}</span>
@@ -81,29 +49,83 @@ const columns: ColumnDef<Employee>[] = [
     ),
   },
   {
-    accessorKey: 'reason',
-    header: 'REASON',
+    accessorKey: 'jobTitle',
+    header: 'POSITION',
   },
   {
-    accessorKey: 'date',
-    header: 'DATE',
+    accessorKey: 'joinDate',
+    header: 'JOIN DATE',
   },
   {
     accessorKey: 'status',
     header: 'STATUS',
-    cell: ({ row }) => (
-      <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">{row.getValue('status')}</Badge>
-    ),
+    cell: ({ row }) => {
+      const status = row.getValue('status') as string;
+      const variant = status === 'active' ? 'default' : status === 'pending' ? 'secondary' : 'outline';
+      const colorClass = status === 'active' 
+        ? 'text-green-600 border-green-200 bg-green-50' 
+        : status === 'pending'
+        ? 'text-yellow-600 border-yellow-200 bg-yellow-50'
+        : 'text-gray-600 border-gray-200 bg-gray-50';
+      
+      return (
+        <Badge variant="outline" className={colorClass}>
+          {status.charAt(0).toUpperCase() + status.slice(1)}
+        </Badge>
+      );
+    },
   },
 ];
 
 export function EmployeeListDashboard() {
+  const [data, setData] = React.useState<EmployeeDisplay[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const storedUser = sessionStorage.getItem('loggedInUser');
+        const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
+        
+        const result = await getMembersAction(currentUserId);
+        if (Array.isArray(result)) {
+          const employeeData: EmployeeDisplay[] = result
+            .slice(0, 10) // Show latest 10 employees
+            .map(member => ({
+              id: member.id,
+              name: member.name,
+              jobTitle: member.job_title || 'N/A',
+              joinDate: member.start_date ? format(new Date(member.start_date), 'dd/MM/yyyy') : 'N/A',
+              status: member.status || 'active',
+              avatar: member.profile_picture_url || `https://i.pravatar.cc/40?u=${member.id}`
+            }));
+          setData(employeeData);
+        }
+      } catch (error) {
+        console.error('Error fetching employees:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
+
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: 5,
+      },
+    },
   });
+
+  if (loading) {
+    return <div className="text-center py-8 text-muted-foreground">Loading employees...</div>;
+  }
 
   return (
     <div className="w-full">

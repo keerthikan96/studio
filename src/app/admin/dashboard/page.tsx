@@ -18,8 +18,8 @@ import {
 } from "lucide-react";
 import { DailyAttendanceChart } from "@/components/daily-attendance-chart";
 import { DashboardCalendar } from "@/components/loan-payment-chart";
-import { PositionWiseRecruitmentChart } from "@/components/position-wise-recruitment-chart";
-import { SalesAnalyticsChart } from "@/components/sales-analytics-chart";
+import { DepartmentHeadcountChart } from "@/components/department-headcount-chart";
+import { LeaveRequestsTrendChart } from "@/components/leave-requests-trend-chart";
 import { EmployeeListDashboard } from "@/components/employee-list-dashboard";
 import { EmployeeAwardList } from "@/components/employee-award-list";
 import { Button } from "@/components/ui/button";
@@ -27,8 +27,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DashboardStatCard } from "@/components/dashboard-stat-card";
 import { DashboardEvents, Event } from "@/components/dashboard-events";
 import { getMembersAction } from '@/app/actions/staff';
+import { getLeaveRequestsAction } from '@/app/actions/leave';
 import { Member } from '@/lib/mock-data';
-import { differenceInYears } from 'date-fns';
+import { differenceInYears, isToday, startOfDay } from 'date-fns';
 import DashboardCarousel from '@/components/dashboard-carousel';
 
 const containerVariants = {
@@ -67,37 +68,95 @@ const notices = [
   },
 ];
 
-const totalEmployeeData = [
-    { id: 'e1', name: 'Robert Fox', avatarUrl: 'https://i.pravatar.cc/40?u=e1', reason: 'Developer' },
-    { id: 'e2', name: 'Wade Warren', avatarUrl: 'https://i.pravatar.cc/40?u=e2', reason: 'Designer' },
-    { id: 'e3', name: 'Albert Flores', avatarUrl: 'https://i.pravatar.cc/40?u=e3', reason: 'Marketing' },
-];
-
-const workFromHomeData = [
-    { id: 'wfh1', name: 'John Doe', avatarUrl: 'https://i.pravatar.cc/40?u=wfh1', reason: 'Approved for project deadline' },
-    { id: 'wfh2', name: 'Jane Smith', avatarUrl: 'https://i.pravatar.cc/40?u=wfh2', reason: 'Approved for personal reasons' },
-];
-
-const leaveData = [
-    { id: 'l1', name: 'John Doe', avatarUrl: 'https://i.pravatar.cc/40?u=m_1', reason: 'Sick Leave' },
-    { id: 'l2', name: 'Jane Smith', avatarUrl: 'https://i.pravatar.cc/40?u=m_2', reason: 'Personal' },
-    { id: 'l3', name: 'Peter Jones', avatarUrl: 'https://i.pravatar.cc/40?u=m_3', reason: 'Vacation' },
-];
-
 export default function AdminDashboard() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isPending, startTransition] = useTransition();
   const [allEvents, setAllEvents] = useState<Event[]>([]);
+  const [totalEmployees, setTotalEmployees] = useState(0);
+  const [todayLeaveCount, setTodayLeaveCount] = useState(0);
+  const [pendingLeaveCount, setPendingLeaveCount] = useState(0);
+  const [recentEmployees, setRecentEmployees] = useState<Array<{id: string, name: string, avatarUrl: string, reason: string}>>([]);
+  const [todayLeaveEmployees, setTodayLeaveEmployees] = useState<Array<{id: string, name: string, avatarUrl: string, reason: string}>>([]);
+  const [pendingLeaveRequests, setPendingLeaveRequests] = useState<Array<{id: string, name: string, avatarUrl: string, reason: string}>>([]);
+  const [previousEmployeeCount, setPreviousEmployeeCount] = useState(0);
 
   useEffect(() => {
-    startTransition(() => {
+    startTransition(async () => {
         const storedUser = sessionStorage.getItem('loggedInUser');
         const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
-        getMembersAction(currentUserId).then(result => {
-            const members = Array.isArray(result) ? result : [];
-            const events = generateEventsFromMembers(members);
-            setAllEvents(events);
-        });
+        
+        // Fetch members
+        const membersResult = await getMembersAction(currentUserId);
+        const members = Array.isArray(membersResult) ? membersResult : [];
+        
+        // Generate events
+        const events = generateEventsFromMembers(members);
+        setAllEvents(events);
+        
+        // Calculate stats
+        const activeMembers = members.filter(m => m.status === 'active');
+        setTotalEmployees(activeMembers.length);
+        
+        // Get recent employees (last 30 days)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const recentHires = activeMembers
+          .filter(m => m.start_date && new Date(m.start_date) >= thirtyDaysAgo)
+          .slice(0, 3)
+          .map(m => ({
+            id: m.id,
+            name: m.name,
+            avatarUrl: m.profile_picture_url || `https://i.pravatar.cc/40?u=${m.id}`,
+            reason: m.job_title || 'New Employee'
+          }));
+        setRecentEmployees(recentHires);
+        
+        // Calculate previous month count for percentage
+        const sixtyDaysAgo = new Date();
+        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+        const previousCount = members.filter(m => 
+          m.start_date && new Date(m.start_date) <= thirtyDaysAgo
+        ).length;
+        setPreviousEmployeeCount(previousCount);
+        
+        // Fetch today's leave requests
+        const leaveResult = await getLeaveRequestsAction(currentUserId);
+        if (Array.isArray(leaveResult)) {
+          const todayLeaves = leaveResult.filter(leave => {
+            const startDate = startOfDay(new Date(leave.start_date));
+            const endDate = startOfDay(new Date(leave.end_date));
+            const today = startOfDay(new Date());
+            return leave.status === 'Approved' && today >= startDate && today <= endDate;
+          });
+          
+          setTodayLeaveCount(todayLeaves.length);
+          
+          const leaveEmployeeList = todayLeaves.slice(0, 3).map(leave => {
+            const member = members.find(m => m.id === leave.member_id);
+            return {
+              id: leave.member_id,
+              name: leave.member_name || 'Unknown',
+              avatarUrl: member?.profile_picture_url || `https://i.pravatar.cc/40?u=${leave.member_id}`,
+              reason: leave.leave_category_name || 'Leave'
+            };
+          });
+          setTodayLeaveEmployees(leaveEmployeeList);
+          
+          // Get pending leave requests
+          const pendingLeaves = leaveResult.filter((leave: any) => leave.status === 'Pending');
+          setPendingLeaveCount(pendingLeaves.length);
+          
+          const pendingList = pendingLeaves.slice(0, 3).map((leave: any) => {
+            const member = members.find(m => m.id === leave.member_id);
+            return {
+              id: leave.member_id,
+              name: leave.member_name || 'Unknown',
+              avatarUrl: member?.profile_picture_url || `https://i.pravatar.cc/40?u=${leave.member_id}`,
+              reason: leave.leave_category_name || 'Leave Request'
+            };
+          });
+          setPendingLeaveRequests(pendingList);
+        }
     });
   }, []);
 
@@ -148,6 +207,12 @@ export default function AdminDashboard() {
     return events;
   };
 
+  // Calculate percentage change
+  const employeeChangePercent = previousEmployeeCount > 0 
+    ? (((totalEmployees - previousEmployeeCount) / previousEmployeeCount) * 100).toFixed(1)
+    : '0.0';
+  const employeeChangeType = totalEmployees >= previousEmployeeCount ? 'positive' : 'negative';
+
   return (
     <div className="flex flex-col gap-8 relative">
       {/* Ambient Background Effects */}
@@ -184,36 +249,36 @@ export default function AdminDashboard() {
       >
         <DashboardStatCard
             title="Total employee"
-            value="127"
-            change="+6.4%"
-            changeType="positive"
+            value={totalEmployees.toString()}
+            change={`${employeeChangeType === 'positive' ? '+' : ''}${employeeChangePercent}%`}
+            changeType={employeeChangeType}
             icon={<Users className="h-6 w-6 text-blue-600" />}
             iconBgColor="bg-blue-100"
-            detailsTitle="All Employees"
-            detailsData={totalEmployeeData}
-            detailsCta={{ href: '/admin/members', text: 'Go to Member List' }}
+            detailsTitle="Recent Employees"
+            detailsData={recentEmployees}
+            detailsCta={{ href: '/admin/add-staff', text: 'Add New Employee' }}
         />
         <DashboardStatCard
             title="Today leave"
-            value="13"
-            change="-1.9%"
-            changeType="negative"
+            value={todayLeaveCount.toString()}
+            change={todayLeaveCount > 0 ? `${todayLeaveCount} on leave` : 'No leaves'}
+            changeType="positive"
             icon={<UserMinus className="h-6 w-6 text-orange-600" />}
             iconBgColor="bg-orange-100"
             detailsTitle="Employees on Leave Today"
-            detailsData={leaveData}
-            detailsCta={{ href: '/admin/leave', text: 'Go to Leave Management' }}
+            detailsData={todayLeaveEmployees}
+            detailsCta={{ href: '/admin/leave', text: 'Manage Leave Requests' }}
         />
         <DashboardStatCard
-            title="Work from home"
-            value="5"
-            change="+2.1%"
-            changeType="positive"
+            title="Pending requests"
+            value={pendingLeaveCount.toString()}
+            change={pendingLeaveCount > 0 ? `${pendingLeaveCount} awaiting review` : 'All reviewed'}
+            changeType={pendingLeaveCount > 0 ? 'negative' : 'positive'}
             icon={<Briefcase className="h-6 w-6 text-purple-600" />}
             iconBgColor="bg-purple-100"
-            detailsTitle="Work From Home Today"
-            detailsData={workFromHomeData}
-            detailsCta={{ href: '/admin/attendance', text: 'Go to Attendance' }}
+            detailsTitle="Pending Leave Requests"
+            detailsData={pendingLeaveRequests}
+            detailsCta={{ href: '/admin/leave', text: 'Review Requests' }}
         />
       </motion.div>
 
@@ -234,7 +299,7 @@ export default function AdminDashboard() {
               {/* Calendar */}
               <div className="space-y-4">
                 <h3 className="font-medium text-sm text-muted-foreground">Calendar</h3>
-                <DashboardCalendar selectedDate={selectedDate} onDateChange={setSelectedDate} />
+                <DashboardCalendar selectedDate={selectedDate} onDateChange={(date) => date && setSelectedDate(date)} />
               </div>
               
               {/* Events */}
@@ -319,41 +384,40 @@ export default function AdminDashboard() {
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
-                <CardTitle>Position Wise Recruitment</CardTitle>
-                <Select defaultValue="yearly">
+                <CardTitle>Department Headcount</CardTitle>
+                <Select defaultValue="all">
                   <SelectTrigger className="w-[120px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="yearly">Yearly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="all">All Depts</SelectItem>
+                    <SelectItem value="active">Active Only</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </CardHeader>
             <CardContent>
-              <PositionWiseRecruitmentChart />
+              <DepartmentHeadcountChart />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
-                <CardTitle>Sales Analytics</CardTitle>
-                <Select defaultValue="department">
+                <CardTitle>Leave Requests Trend</CardTitle>
+                <Select defaultValue="6months">
                   <SelectTrigger className="w-[120px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="department">Department</SelectItem>
-                    <SelectItem value="sales">Sales</SelectItem>
-                    <SelectItem value="marketing">Marketing</SelectItem>
+                    <SelectItem value="6months">6 Months</SelectItem>
+                    <SelectItem value="year">This Year</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </CardHeader>
             <CardContent>
-              <SalesAnalyticsChart />
+              <LeaveRequestsTrendChart />
             </CardContent>
           </Card>
         </div>

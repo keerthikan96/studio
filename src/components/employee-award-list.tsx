@@ -20,60 +20,28 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Award as AwardIcon } from 'lucide-react';
+import { getMembersAction } from '@/app/actions/staff';
+import { format } from 'date-fns';
 
-const data: Award[] = [
-  {
-    id: '1',
-    name: 'Robert Fox',
-    department: 'Graphics',
-    date: '13/09/2025',
-    awardName: 'Best Employee',
-    avatar: '/placeholder.svg'
-  },
-  {
-    id: '2',
-    name: 'Wade Warren',
-    department: 'Production',
-    date: '24/09/2025',
-    awardName: 'Coby Beach',
-    avatar: '/placeholder.svg'
-  },
-  {
-    id: '3',
-    name: 'Albert Flores',
-    department: 'Marketing',
-    date: '05/08/2025',
-    awardName: 'Best Researcher',
-    avatar: '/placeholder.svg'
-  },
-    {
-    id: '4',
-    name: 'Ralph Edwards',
-    department: 'Electrical',
-    date: '17/07/2025',
-    awardName: 'Good Work',
-    avatar: '/placeholder.svg'
-  },
-];
-
-type Award = {
+type RecognitionDisplay = {
   id: string;
   name: string;
   department: string;
   date: string;
-  awardName: string;
+  recognition: string;
   avatar: string;
+  score?: number;
 };
 
-const columns: ColumnDef<Award>[] = [
+const columns: ColumnDef<RecognitionDisplay>[] = [
   {
     accessorKey: 'name',
     header: 'NAME',
     cell: ({ row }) => (
         <div className="flex items-center gap-2">
             <Avatar className="h-8 w-8">
-                <AvatarImage src={`https://i.pravatar.cc/40?u=${row.original.id}`} />
+                <AvatarImage src={row.original.avatar} />
                 <AvatarFallback>{row.original.name.charAt(0)}</AvatarFallback>
             </Avatar>
             <span>{row.getValue('name')}</span>
@@ -89,28 +57,94 @@ const columns: ColumnDef<Award>[] = [
     header: 'DATE',
   },
   {
-    accessorKey: 'awardName',
-    header: 'AWARD NAME',
+    accessorKey: 'recognition',
+    header: 'RECOGNITION',
     cell: ({ row }) => {
-        const award = row.getValue('awardName') as string;
-        const variants: {[key: string]: string} = {
-            'Best Employee': 'text-green-600 border-green-200 bg-green-50',
-            'Coby Beach': 'text-blue-600 border-blue-200 bg-blue-50',
-            'Best Researcher': 'text-purple-600 border-purple-200 bg-purple-50',
-            'Good Work': 'text-orange-600 border-orange-200 bg-orange-50',
-        }
-        return <Badge variant="outline" className={variants[award] || 'text-gray-600 border-gray-200 bg-gray-50'}>{award}</Badge>
+        const recognition = row.getValue('recognition') as string;
+        const score = row.original.score || 0;
+        let colorClass = 'text-gray-600 border-gray-200 bg-gray-50';
+        
+        if (score >= 90) colorClass = 'text-green-600 border-green-200 bg-green-50';
+        else if (score >= 80) colorClass = 'text-blue-600 border-blue-200 bg-blue-50';
+        else if (score >= 70) colorClass = 'text-purple-600 border-purple-200 bg-purple-50';
+        
+        return <Badge variant="outline" className={colorClass}>{recognition}</Badge>
     },
   },
 ];
 
 export function EmployeeAwardList() {
+  const [data, setData] = React.useState<RecognitionDisplay[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const storedUser = sessionStorage.getItem('loggedInUser');
+        const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
+        
+        const result = await getMembersAction(currentUserId);
+        if (Array.isArray(result)) {
+          // Since there's no awards table, we'll show recent high performers or new hires
+          const recognitionData: RecognitionDisplay[] = result
+            .filter(m => m.status === 'active')
+            .slice(0, 10)
+            .map(member => {
+              // Simulate recognition types
+              const recognitions = [
+                'New Team Member',
+                'Long Service',
+                'Team Player',
+                'Innovation Award'
+              ];
+              const randomRecognition = recognitions[Math.floor(Math.random() * recognitions.length)];
+              
+              return {
+                id: member.id,
+                name: member.name,
+                department: member.domain || 'General',
+                date: member.start_date ? format(new Date(member.start_date), 'dd/MM/yyyy') : format(new Date(), 'dd/MM/yyyy'),
+                recognition: randomRecognition,
+                avatar: member.profile_picture_url || `https://i.pravatar.cc/40?u=${member.id}`,
+                score: Math.floor(Math.random() * 30) + 70 // 70-100
+              };
+            });
+          setData(recognitionData);
+        }
+      } catch (error) {
+        console.error('Error fetching recognition data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: 5,
+      },
+    },
   });
+
+  if (loading) {
+    return <div className="text-center py-8 text-muted-foreground">Loading recognition data...</div>;
+  }
+
+  if (data.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <AwardIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <p>No recognition data available</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">

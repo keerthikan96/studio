@@ -41,6 +41,7 @@ import { CoursesAndCertificatesTab } from '@/components/member-profile-tabs/cour
 import { EmploymentHistoryTab } from '@/components/member-profile-tabs/payslip-tab';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { LeaveTab } from '@/components/member-profile-tabs/leave-tab';
+import { usePermissions } from '@/contexts/PermissionContext';
 
 const domains = ['Engineering', 'Design', 'Marketing', 'Sales', 'HR'];
 const countries = ['Canada', 'USA', 'Sri Lanka'];
@@ -577,6 +578,7 @@ export default function ProfilePage() {
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [nextTab, setNextTab] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<string>("General");
+  const { hasPermission, loading: permissionsLoading } = usePermissions();
 
 
   const form = useForm<ProfileFormValues>({
@@ -738,6 +740,10 @@ export default function ProfilePage() {
   if (!member) {
       return <div className='flex justify-center items-center h-full'><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
+
+  if (permissionsLoading) {
+      return <div className='flex justify-center items-center h-full'><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
   
   const renderTabContent = (tab: string) => {
     const FormWrapper = ({ children }: { children: React.ReactNode }) => (
@@ -776,6 +782,68 @@ export default function ProfilePage() {
   }
 
   const tabs = ["General", "Employment History", "Leave", "Notes", "Performance", "Documents", "Courses", "Assessments"];
+
+  // Define tab permissions - tabs that require specific permissions to view
+  const tabPermissions: Record<string, { anyOf?: string[], allOf?: string[], isOwnProfile?: boolean }> = {
+    "General": { isOwnProfile: true }, // Always available for own profile
+    "Employment History": { isOwnProfile: true }, // Always available for own profile
+    "Leave": { 
+      anyOf: ['leave.read_all'], // Only those with leave read permission
+      isOwnProfile: true // Or viewing own profile
+    },
+    "Notes": { 
+      anyOf: ['members.read_sensitive', 'members.update_sensitive']
+    },
+    "Performance": { 
+      anyOf: ['performance.read_all', 'performance.read_confidential'],
+      isOwnProfile: true // Users can view their own performance
+    },
+    "Documents": { 
+      anyOf: ['documents.read', 'documents.create'],
+      isOwnProfile: true // Users can view their own documents
+    },
+    "Courses": { 
+      isOwnProfile: true // Always available for own profile
+    },
+    "Assessments": { 
+      anyOf: ['self_assessment.read_all'],
+      isOwnProfile: true // Users can always view their own assessments
+    },
+  };
+
+  // Filter tabs based on permissions
+  const getAvailableTabs = () => {
+    return tabs.filter(tab => {
+      const permission = tabPermissions[tab];
+      
+      // If tab definition doesn't exist or only requires own profile, show it
+      if (!permission || permission.isOwnProfile) {
+        return true;
+      }
+
+      // Check if user has any of the required permissions
+      if (permission.anyOf && permission.anyOf.length > 0) {
+        return permission.anyOf.some(perm => hasPermission(perm));
+      }
+
+      // Check if user has all of the required permissions
+      if (permission.allOf && permission.allOf.length > 0) {
+        return permission.allOf.every(perm => hasPermission(perm));
+      }
+
+      // Default to not showing the tab if no permission check matches
+      return false;
+    });
+  };
+
+  const availableTabs = getAvailableTabs();
+
+  // Update current tab if it's not available anymore
+  useEffect(() => {
+    if (!permissionsLoading && availableTabs.length > 0 && !availableTabs.includes(currentTab)) {
+      setCurrentTab(availableTabs[0]);
+    }
+  }, [availableTabs, currentTab, permissionsLoading]);
 
   return (
     <div className='space-y-6'>
@@ -827,10 +895,10 @@ export default function ProfilePage() {
 
         <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 xl:grid-cols-10">
-                 {tabs.map(tab => <TabsTrigger key={tab} value={tab}>{tab}</TabsTrigger>)}
+                 {availableTabs.map(tab => <TabsTrigger key={tab} value={tab}>{tab}</TabsTrigger>)}
             </TabsList>
 
-            {tabs.map(tab => (
+            {availableTabs.map(tab => (
                  <TabsContent key={tab} value={tab} className='mt-6' forceMount={currentTab !== tab ? undefined : true}>
                     {renderTabContent(tab)}
                  </TabsContent>
