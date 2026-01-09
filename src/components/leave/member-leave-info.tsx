@@ -31,12 +31,15 @@ export function MemberLeaveInfo({ memberId, refetchTrigger }: MemberLeaveInfoPro
     const fetchData = React.useCallback(() => {
          startTransition(async () => {
             const currentYear = new Date().getFullYear();
+            const storedUser = sessionStorage.getItem('loggedInUser');
+            const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
+            
             const [ents, reqs] = await Promise.all([
                 getMemberEntitlementsAction(memberId, currentYear),
-                getMemberLeaveRequestsAction(memberId),
+                getMemberLeaveRequestsAction(memberId, currentUserId),
             ]);
-            setEntitlements(ents);
-            setRequests(reqs);
+            setEntitlements(Array.isArray(ents) ? ents : []);
+            setRequests(Array.isArray(reqs) ? reqs : []);
         });
     }, [memberId]);
 
