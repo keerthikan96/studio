@@ -31,6 +31,12 @@ import { usePermissions } from "@/contexts/PermissionContext";
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+// Helper to check if a string looks like a UUID
+const isUUID = (str: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
 export default function AdminLayout({
   children,
 }: {
@@ -39,6 +45,7 @@ export default function AdminLayout({
   const pathname = usePathname();
   const [isClient, setIsClient] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [dynamicPageTitle, setDynamicPageTitle] = useState<string | null>(null);
   const { hasPermission, hasAnyPermission, loading: permissionsLoading } = usePermissions();
 
   useEffect(() => {
@@ -136,6 +143,62 @@ export default function AdminLayout({
      return pathname === href;
   }
   
+  // Fetch dynamic names for UUID segments
+  useEffect(() => {
+    const pathSegments = pathname.split('/').filter(Boolean);
+    const lastSegment = pathSegments[pathSegments.length - 1];
+    const prevSegment = pathSegments.length > 1 ? pathSegments[pathSegments.length - 2] : null;
+
+    // Check if last segment is a UUID and fetch its name
+    if (isUUID(lastSegment) && prevSegment) {
+      const fetchDynamicName = async () => {
+        try {
+          let name = '';
+
+          // Fetch department name
+          if (prevSegment === 'department') {
+            const response = await fetch(`/api/departments`);
+            if (response.ok) {
+              const departments = await response.json();
+              const department = departments.find((d: any) => d.id === lastSegment);
+              if (department) {
+                name = department.name;
+              }
+            }
+          }
+          
+          // Fetch role name
+          else if (prevSegment === 'roles') {
+            const storedUser = sessionStorage.getItem('loggedInUser');
+            const currentUserId = storedUser ? JSON.parse(storedUser).id : '';
+            
+            const response = await fetch(`/api/roles?userId=${currentUserId}`);
+            if (response.ok) {
+              const roles = await response.json();
+              const role = roles.find((r: any) => r.id === lastSegment);
+              if (role) {
+                name = role.name;
+              }
+            }
+          }
+
+          if (name) {
+            setDynamicPageTitle(name);
+          } else {
+            setDynamicPageTitle(null);
+          }
+        } catch (error) {
+          console.error('Failed to fetch dynamic page title:', error);
+          setDynamicPageTitle(null);
+        }
+      };
+
+      fetchDynamicName();
+    } else {
+      setDynamicPageTitle(null);
+    }
+  }, [pathname]);
+
   const pathSegments = pathname.split('/').filter(Boolean);
   let pageTitle = 'Dashboard'; 
 
@@ -152,6 +215,11 @@ export default function AdminLayout({
   }
    if (pathname === '/admin/dashboard') {
     pageTitle = 'Dashboard';
+  }
+
+  // Use dynamic title if available
+  if (dynamicPageTitle) {
+    pageTitle = dynamicPageTitle;
   }
 
   const canAccessSettings = isClient && !permissionsLoading ? hasAnyPermission(['roles.read', 'leave.manage_categories', 'performance.create_review_record']) : false;
