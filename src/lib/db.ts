@@ -679,6 +679,19 @@ export async function setupDatabase() {
             }
         }
 
+        if (
+            process.env.AUTH_PROVIDER === 'firebase' ||
+            process.env.DATA_BACKEND_PROVIDER === 'firebase' ||
+            process.env.FILE_STORAGE_PROVIDER === 'firebase'
+        ) {
+            try {
+                const { ensureFirebaseAdminBootstrap } = await import('./firebase-backend');
+                await ensureFirebaseAdminBootstrap();
+            } catch (firebaseError) {
+                console.error('Failed to bootstrap Firebase admin user:', firebaseError);
+            }
+        }
+
         const { rows: firstNameCheck } = await client.query(`
             SELECT 1 FROM information_schema.columns 
             WHERE table_name='members' AND column_name='first_name';

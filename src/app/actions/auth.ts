@@ -5,6 +5,17 @@ import { db, setupDatabase } from '@/lib/db';
 import { Member } from '@/lib/mock-data';
 import crypto from 'crypto';
 import { sendInviteEmail, sendPasswordResetEmail } from '@/lib/email-service';
+import {
+    createFirebaseAuthFlow,
+    deleteFirebaseAuthFlow,
+    ensureFirebaseAdminBootstrap,
+    getFirebaseAuthFlow,
+    getFirebaseMemberProfileByEmail,
+    setFirebasePasswordForEmail,
+    signInWithFirebaseEmailPassword,
+    syncSqlMemberToFirebaseProfile,
+} from '@/lib/firebase-backend';
+import { hasFirebaseAdminConfiguration, isFirebaseAuthEnabled, shouldUseFirebaseBackend } from '@/lib/firebase-admin';
 
 // In a real app, you'd use a robust hashing library like bcrypt
 async function hashPassword(password: string) {
@@ -15,9 +26,45 @@ async function verifyPassword(password: string, hash: string) {
     return (await hashPassword(password)) === hash;
 }
 
+async function updateSqlMemberPassword(email: string, newPassword: string) {
+    const hashedPassword = await hashPassword(newPassword);
+    await db.query(
+        'UPDATE members SET password = $1, status = \'active\', updated_at = NOW() WHERE email = $2',
+        [hashedPassword, email]
+    );
+}
+
 export async function loginAction(credentials: { email: string, password: string }): Promise<{ user?: { id: string, name: string, email: string, role: string }, error?: string }> {
     await setupDatabase();
     const { email, password } = credentials;
+
+    if (isFirebaseAuthEnabled() && hasFirebaseAdminConfiguration()) {
+        try {
+            await ensureFirebaseAdminBootstrap();
+            const firebaseResult = await signInWithFirebaseEmailPassword(email, password);
+
+            if (firebaseResult.success && firebaseResult.profile) {
+                if (firebaseResult.profile.status !== 'active') {
+                    return { error: `This account is ${firebaseResult.profile.status} and cannot be logged into.` };
+                }
+
+                return {
+                    user: {
+                        id: firebaseResult.profile.id,
+                        name: firebaseResult.profile.name,
+                        email: firebaseResult.profile.email,
+                        role: firebaseResult.profile.role,
+                    }
+                };
+            }
+
+            if (firebaseResult.error && firebaseResult.error !== 'No user found with this email.') {
+                return { error: firebaseResult.error };
+            }
+        } catch (firebaseError) {
+            console.error('Firebase login failed, falling back to SQL login:', firebaseError);
+        }
+    }
     
     // Regular member login
     try {
@@ -28,7 +75,7 @@ export async function loginAction(credentials: { email: string, password: string
             LEFT JOIN roles r ON rm.role_id = r.id
             WHERE m.email = $1
         `, [email]);
-        const member: Member = result.rows[0];
+        const member = result.rows[0] as (Member & { password?: string | null; role?: string }) | undefined;
 
         if (!member) {
             return { error: 'No user found with this email.' };
@@ -46,7 +93,10 @@ export async function loginAction(credentials: { email: string, password: string
             : password === 'password';
 
         if (isPasswordCorrect) {
-            return { user: { id: member.id, name: member.name, email: member.email, role: member.role } };
+            if (shouldUseFirebaseBackend() && hasFirebaseAdminConfiguration()) {
+                await syncSqlMemberToFirebaseProfile(member);
+            }
+            return { user: { id: member.id, name: member.name, email: member.email, role: member.role || 'Employee' } };
         } else {
             return { error: 'Invalid password.' };
         }
@@ -62,6 +112,11 @@ export async function requestPasswordResetAction(email: string, isInvitation = f
     try {
         let memberId: string | null = null;
         let memberName: string = '';
+
+        const useFirebase = shouldUseFirebaseBackend() && hasFirebaseAdminConfiguration();
+        if (useFirebase) {
+            await ensureFirebaseAdminBootstrap();
+        }
         
         if (email === 'admin@gmail.com') {
             memberId = 'admin-user-001';
@@ -69,12 +124,50 @@ export async function requestPasswordResetAction(email: string, isInvitation = f
         } else {
             const memberResult = await db.query('SELECT id, name FROM members WHERE email = $1', [email]);
             if (memberResult.rows.length === 0) {
+                 const firebaseMember = useFirebase ? await getFirebaseMemberProfileByEmail(email) : null;
+                 if (firebaseMember) {
+                    memberId = firebaseMember.id;
+                    memberName = firebaseMember.name;
+                 }
+            }
+
+            if (!memberId && memberResult.rows.length === 0) {
                  console.log(`Password reset/invitation requested for non-existent user: ${email}. Silently failing.`);
                  // Still return success to prevent user enumeration
                  return { success: true };
             }
-            memberId = memberResult.rows[0].id;
-            memberName = memberResult.rows[0].name;
+
+            if (!memberId) {
+                memberId = memberResult.rows[0].id;
+                memberName = memberResult.rows[0].name;
+            }
+        }
+
+        const baseUrl = baseUrlR || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9000';
+
+        if (useFirebase) {
+            const type = isInvitation ? 'invitation' : 'reset';
+            const flow = await createFirebaseAuthFlow(email, type);
+
+            if (flow) {
+                const resetLink = `${baseUrl}/reset-password?token=${flow.token}`;
+                const invitationLink = `${baseUrl}/set-password?token=${flow.token}&email=${encodeURIComponent(email)}`;
+
+                if (isInvitation) {
+                    console.log('--- FIREBASE INVITATION LINK ---');
+                    console.log(`To: ${email}`);
+                    console.log(invitationLink);
+                    console.log('--------------------------------');
+                    return { success: true, invitationLink };
+                }
+
+                console.log('--- FIREBASE PASSWORD RESET ---');
+                console.log(`To: ${email}`);
+                console.log(`Reset Link: ${resetLink}`);
+                console.log(`OTP: ${flow.otp}`);
+                console.log('-------------------------------');
+                return { success: true };
+            }
         }
 
         const token = crypto.randomBytes(32).toString('hex');
@@ -87,7 +180,6 @@ export async function requestPasswordResetAction(email: string, isInvitation = f
             [email, token, otp, expires_at, type]
         );
         
-        const baseUrl = baseUrlR || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9000';
         const resetLink = `${baseUrl}/reset-password?token=${token}`;
         const invitationLink = `${baseUrl}/set-password?token=${token}&email=${encodeURIComponent(email)}`;
 
@@ -142,6 +234,36 @@ export async function setNewPasswordAction(data: { token: string, newPassword: s
     await setupDatabase();
     try {
         const { token, newPassword } = data;
+
+        if (shouldUseFirebaseBackend() && hasFirebaseAdminConfiguration()) {
+            const firebaseFlow = await getFirebaseAuthFlow(token, 'invitation');
+
+            if (firebaseFlow) {
+                if (new Date() > new Date(firebaseFlow.expires_at)) {
+                    await deleteFirebaseAuthFlow(token);
+                    return { success: false, error: 'Invitation token has expired. Please request a new one.' };
+                }
+
+                const profile = await getFirebaseMemberProfileByEmail(firebaseFlow.email);
+                await setFirebasePasswordForEmail(firebaseFlow.email, newPassword, {
+                    id: profile?.id || '',
+                    email: firebaseFlow.email,
+                    name: profile?.name || firebaseFlow.email,
+                    role: profile?.role || 'Employee',
+                    status: 'active',
+                    permissions: profile?.permissions || [],
+                    legacyId: profile?.legacyId,
+                });
+
+                const memberResult = await db.query('SELECT id FROM members WHERE email = $1', [firebaseFlow.email]);
+                if (memberResult.rows.length > 0) {
+                    await updateSqlMemberPassword(firebaseFlow.email, newPassword);
+                }
+
+                await deleteFirebaseAuthFlow(token);
+                return { success: true, email: firebaseFlow.email };
+            }
+        }
         
         const resetRecordResult = await db.query('SELECT * FROM password_resets WHERE token = $1 AND type = \'invitation\'', [token]);
         const resetRecord = resetRecordResult.rows[0];
@@ -159,8 +281,7 @@ export async function setNewPasswordAction(data: { token: string, newPassword: s
 
         // The admin user is not in the 'members' table, so we handle it separately.
         if (email !== 'admin@gmail.com') {
-            const hashedPassword = await hashPassword(newPassword);
-            await db.query('UPDATE members SET password = $1, status = \'active\', updated_at = NOW() WHERE email = $2', [hashedPassword, email]);
+            await updateSqlMemberPassword(email, newPassword);
         } else {
             console.log(`Admin password has been set. In a real application, you would store this securely.`);
         }
@@ -180,6 +301,40 @@ export async function resetPasswordAction(data: { token: string, newPassword: st
     await setupDatabase();
     try {
         const { token, otp, newPassword } = data;
+
+        if (shouldUseFirebaseBackend() && hasFirebaseAdminConfiguration()) {
+            const firebaseFlow = await getFirebaseAuthFlow(token, 'reset');
+
+            if (firebaseFlow) {
+                if (new Date() > new Date(firebaseFlow.expires_at)) {
+                    await deleteFirebaseAuthFlow(token);
+                    return { success: false, error: 'Reset token has expired. Please request a new one.' };
+                }
+
+                if (otp !== firebaseFlow.otp) {
+                    return { success: false, error: 'Invalid OTP.' };
+                }
+
+                const profile = await getFirebaseMemberProfileByEmail(firebaseFlow.email);
+                await setFirebasePasswordForEmail(firebaseFlow.email, newPassword, {
+                    id: profile?.id || '',
+                    email: firebaseFlow.email,
+                    name: profile?.name || firebaseFlow.email,
+                    role: profile?.role || 'Employee',
+                    status: 'active',
+                    permissions: profile?.permissions || [],
+                    legacyId: profile?.legacyId,
+                });
+
+                const memberResult = await db.query('SELECT id FROM members WHERE email = $1', [firebaseFlow.email]);
+                if (memberResult.rows.length > 0) {
+                    await updateSqlMemberPassword(firebaseFlow.email, newPassword);
+                }
+
+                await deleteFirebaseAuthFlow(token);
+                return { success: true, email: firebaseFlow.email };
+            }
+        }
 
         const resetRecordResult = await db.query('SELECT * FROM password_resets WHERE token = $1 AND type = \'reset\'', [token]);
         const resetRecord = resetRecordResult.rows[0];
@@ -201,8 +356,7 @@ export async function resetPasswordAction(data: { token: string, newPassword: st
 
         // The admin user is not in the 'members' table, so we handle it separately.
         if (email !== 'admin@gmail.com') {
-             const hashedPassword = await hashPassword(newPassword);
-            await db.query('UPDATE members SET password = $1, status = \'active\', updated_at = NOW() WHERE email = $2', [hashedPassword, email]);
+            await updateSqlMemberPassword(email, newPassword);
         } else {
             console.log(`Admin password has been reset. In a real application, you would store this securely.`);
         }

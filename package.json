@@ -10,7 +10,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "check-permissions": "NODE_OPTIONS='--require dotenv/config' tsx scripts/check-super-admin-permissions.ts"
+    "check-permissions": "NODE_OPTIONS='--require dotenv/config' tsx scripts/check-super-admin-permissions.ts",
+    "seed:firebase-admin": "NODE_OPTIONS='--require dotenv/config' tsx scripts/seed-firebase-admin.ts"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.18.0",
@@ -46,6 +47,7 @@
     "dotenv": "^16.5.0",
     "embla-carousel-react": "^8.6.0",
     "firebase": "^11.9.1",
+    "firebase-admin": "^13.7.0",
     "framer-motion": "^12.24.12",
     "genkit": "^1.14.1",
     "input-otp": "^1.2.4",

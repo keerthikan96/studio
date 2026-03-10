@@ -1,5 +1,6 @@
 
 import { BlobServiceClient, BlobSASPermissions, generateBlobSASQueryParameters, StorageSharedKeyCredential } from '@azure/storage-blob';
+import { getFirebaseAdminStorage, hasFirebaseAdminConfiguration, isFirebaseStorageEnabled } from './firebase-admin';
 
 let blobServiceClient: BlobServiceClient | null = null;
 let containerName: string | null = null;
@@ -36,6 +37,56 @@ const getContainerName = () => {
     return containerName;
 };
 
+const getContentType = (destination: string) => {
+    if (destination.endsWith('.pdf')) return 'application/pdf';
+    if (destination.endsWith('.doc')) return 'application/msword';
+    if (destination.endsWith('.docx')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    if (destination.endsWith('.png')) return 'image/png';
+    if (destination.endsWith('.jpg') || destination.endsWith('.jpeg')) return 'image/jpeg';
+    if (destination.endsWith('.webp')) return 'image/webp';
+    if (destination.endsWith('.csv')) return 'text/csv';
+    return 'application/octet-stream';
+};
+
+const uploadFileToFirebase = async (buffer: Buffer, destination: string): Promise<string> => {
+    if (!isFirebaseStorageEnabled() || !hasFirebaseAdminConfiguration()) {
+        throw new Error('Firebase Storage is not enabled or configured.');
+    }
+
+    const bucket = getFirebaseAdminStorage().bucket();
+    const file = bucket.file(destination);
+
+    await file.save(buffer, {
+        resumable: false,
+        metadata: {
+            contentType: getContentType(destination),
+            cacheControl: 'public, max-age=31536000',
+        },
+    });
+
+    const [signedUrl] = await file.getSignedUrl({
+        action: 'read',
+        expires: Date.now() + 8760 * 60 * 60 * 1000,
+    });
+
+    return signedUrl;
+};
+
+const generateFirebaseSignedUrl = async (blobName: string, expiryHours: number = 8760): Promise<string> => {
+    if (!isFirebaseStorageEnabled() || !hasFirebaseAdminConfiguration()) {
+        throw new Error('Firebase Storage is not enabled or configured.');
+    }
+
+    const bucket = getFirebaseAdminStorage().bucket();
+    const file = bucket.file(blobName);
+    const [signedUrl] = await file.getSignedUrl({
+        action: 'read',
+        expires: Date.now() + expiryHours * 60 * 60 * 1000,
+    });
+
+    return signedUrl;
+};
+
 /**
  * Uploads a file to Azure Blob Storage.
  * @param {Buffer} buffer The file buffer to upload.
@@ -44,6 +95,10 @@ const getContainerName = () => {
  */
 export const uploadFileToAzure = async (buffer: Buffer, destination: string): Promise<string> => {
     try {
+        if (isFirebaseStorageEnabled()) {
+            return await uploadFileToFirebase(buffer, destination);
+        }
+
         const client = getBlobServiceClient();
         const container = getContainerName();
         
@@ -56,13 +111,7 @@ export const uploadFileToAzure = async (buffer: Buffer, destination: string): Pr
         const blockBlobClient = containerClient.getBlockBlobClient(destination);
         
         // Set proper content type based on file extension
-        const contentType = destination.endsWith('.pdf') 
-            ? 'application/pdf' 
-            : destination.endsWith('.doc')
-            ? 'application/msword'
-            : destination.endsWith('.docx')
-            ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            : 'application/octet-stream';
+        const contentType = getContentType(destination);
         
         await blockBlobClient.upload(buffer, buffer.length, {
             blobHTTPHeaders: { blobContentType: contentType }
@@ -90,6 +139,10 @@ export const uploadFileToAzure = async (buffer: Buffer, destination: string): Pr
  * @returns {string} The blob URL with SAS token.
  */
 export const generateSasUrl = (blobName: string, expiryHours: number = 8760): string => {
+    if (isFirebaseStorageEnabled()) {
+        throw new Error('generateSasUrl is synchronous, but Firebase Storage signed URLs must be generated asynchronously. Use generateSignedUrlAsync instead.');
+    }
+
     if (!accountName || !accountKey) {
         getBlobServiceClient(); // Ensure credentials are loaded
     }
@@ -112,4 +165,12 @@ export const generateSasUrl = (blobName: string, expiryHours: number = 8760): st
     const sasToken = generateBlobSASQueryParameters(sasOptions, sharedKeyCredential).toString();
     
     return `https://${accountName}.blob.core.windows.net/${container}/${blobName}?${sasToken}`;
+};
+
+export const generateSignedUrlAsync = async (blobName: string, expiryHours: number = 8760): Promise<string> => {
+    if (isFirebaseStorageEnabled()) {
+        return generateFirebaseSignedUrl(blobName, expiryHours);
+    }
+
+    return generateSasUrl(blobName, expiryHours);
 };

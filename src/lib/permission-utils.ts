@@ -1,6 +1,8 @@
 'use server';
 
 import { db } from '@/lib/db';
+import { ALL_PERMISSIONS } from './permissions';
+import { getFirebaseMemberProfileByAnyId } from './firebase-backend';
 
 /**
  * Permission Utility Functions
@@ -20,6 +22,11 @@ interface Permission {
  */
 export async function getUserPermissions(userId: string): Promise<string[]> {
   try {
+    const firebaseProfile = await getFirebaseMemberProfileByAnyId(userId);
+    if (firebaseProfile?.permissions?.length) {
+      return firebaseProfile.permissions;
+    }
+
     const result = await db.query(
       `
       SELECT DISTINCT p.id as permission_id
@@ -50,6 +57,11 @@ export async function hasPermission(
   permissionId: string
 ): Promise<boolean> {
   try {
+    const firebaseProfile = await getFirebaseMemberProfileByAnyId(userId);
+    if (firebaseProfile?.permissions) {
+      return firebaseProfile.permissions.includes(permissionId);
+    }
+
     const result = await db.query(
       `
       SELECT EXISTS (
@@ -85,6 +97,11 @@ export async function hasAnyPermission(
   }
 
   try {
+    const firebaseProfile = await getFirebaseMemberProfileByAnyId(userId);
+    if (firebaseProfile?.permissions) {
+      return permissionIds.some(id => firebaseProfile.permissions.includes(id));
+    }
+
     const result = await db.query(
       `
       SELECT EXISTS (
@@ -120,6 +137,11 @@ export async function hasAllPermissions(
   }
 
   try {
+    const firebaseProfile = await getFirebaseMemberProfileByAnyId(userId);
+    if (firebaseProfile?.permissions) {
+      return permissionIds.every(id => firebaseProfile.permissions.includes(id));
+    }
+
     const result = await db.query(
       `
       SELECT COUNT(DISTINCT p.id) as permission_count
@@ -148,6 +170,11 @@ export async function getUserPermissionDetails(
   userId: string
 ): Promise<Permission[]> {
   try {
+    const firebaseProfile = await getFirebaseMemberProfileByAnyId(userId);
+    if (firebaseProfile?.permissions?.length) {
+      return ALL_PERMISSIONS.filter((permission) => firebaseProfile.permissions.includes(permission.id));
+    }
+
     const result = await db.query(
       `
       SELECT DISTINCT p.id, p.description, p.resource
