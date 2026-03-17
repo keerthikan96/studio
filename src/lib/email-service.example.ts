@@ -49,13 +49,7 @@ async function exampleCustomEmail() {
     recipientEmail: 'user@example.com',
     recipientName: 'Bob Johnson',
     subject: 'Welcome to Our Platform!',
-    templateId: 'your-custom-template-id',
-    personalizationData: {
-      username: 'bobjohnson',
-      account_type: 'Premium',
-      activation_date: '2026-01-08',
-      support_email: 'support@yourcompany.com',
-    },
+    htmlContent: '<h1>Welcome, Bob!</h1><p>Your account is now active.</p>',
   });
 
   if (result.success) {

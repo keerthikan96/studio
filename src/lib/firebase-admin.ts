@@ -4,7 +4,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
 type BackendProvider = 'postgres' | 'firebase';
-type StorageProvider = 'azure' | 'firebase';
+type StorageProvider = 'gcs' | 'firebase';
 
 const authProvider = (process.env.AUTH_PROVIDER || '').toLowerCase() as BackendProvider | '';
 const dataProvider = (process.env.DATA_BACKEND_PROVIDER || '').toLowerCase() as BackendProvider | '';
@@ -83,4 +83,21 @@ export function getFirebaseAdminDb() {
 
 export function getFirebaseAdminStorage() {
   return getStorage(getFirebaseAdminApp());
+}
+
+// Initializes Firebase Admin for email (works regardless of DATA_BACKEND_PROVIDER setting)
+function getOrInitFirebaseAdminApp() {
+  if (getApps().length > 0) {
+    return getApps()[0];
+  }
+  const serviceAccount = getServiceAccountFromEnv();
+  return initializeApp({
+    credential: serviceAccount ? cert(serviceAccount) : applicationDefault(),
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+  });
+}
+
+export function getFirestoreForEmail() {
+  return getFirestore(getOrInitFirebaseAdminApp());
 }

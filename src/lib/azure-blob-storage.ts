@@ -1,40 +1,22 @@
 
-import { BlobServiceClient, BlobSASPermissions, generateBlobSASQueryParameters, StorageSharedKeyCredential } from '@azure/storage-blob';
+import { Storage } from '@google-cloud/storage';
 import { getFirebaseAdminStorage, hasFirebaseAdminConfiguration, isFirebaseStorageEnabled } from './firebase-admin';
 
-let blobServiceClient: BlobServiceClient | null = null;
-let containerName: string | null = null;
-let accountName: string | null = null;
-let accountKey: string | null = null;
+let storageClient: Storage | null = null;
 
-const getBlobServiceClient = () => {
-    if (!blobServiceClient) {
-        const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
-        if (!connectionString) {
-            throw new Error('Azure Storage connection string is not set in environment variables (AZURE_STORAGE_CONNECTION_STRING).');
-        }
-        
-        // Parse connection string to extract account name and key
-        const accountNameMatch = connectionString.match(/AccountName=([^;]+)/);
-        const accountKeyMatch = connectionString.match(/AccountKey=([^;]+)/);
-        
-        if (accountNameMatch) accountName = accountNameMatch[1];
-        if (accountKeyMatch) accountKey = accountKeyMatch[1];
-        
-        blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
+const getStorageClient = (): Storage => {
+    if (!storageClient) {
+        storageClient = new Storage();
     }
-    return blobServiceClient;
+    return storageClient;
 };
 
-const getContainerName = () => {
-    if (!containerName) {
-        const name = process.env.AZURE_STORAGE_CONTAINER_NAME;
-        if (!name) {
-            throw new Error('Azure Storage container name is not set in environment variables (AZURE_STORAGE_CONTAINER_NAME).');
-        }
-        containerName = name;
+const getBucketName = (): string => {
+    const name = process.env.GCS_BUCKET_NAME;
+    if (!name) {
+        throw new Error('GCS_BUCKET_NAME environment variable is not set.');
     }
-    return containerName;
+    return name;
 };
 
 const getContentType = (destination: string) => {
@@ -88,10 +70,10 @@ const generateFirebaseSignedUrl = async (blobName: string, expiryHours: number =
 };
 
 /**
- * Uploads a file to Azure Blob Storage.
+ * Uploads a file to Google Cloud Storage.
  * @param {Buffer} buffer The file buffer to upload.
- * @param {string} destination The destination path/blob name in the container (e.g., 'profile-pictures/user-123.png').
- * @returns {Promise<string>} The public URL of the uploaded file.
+ * @param {string} destination The destination path in the bucket (e.g., 'profile-pictures/user-123.png').
+ * @returns {Promise<string>} A signed URL for the uploaded file.
  */
 export const uploadFileToAzure = async (buffer: Buffer, destination: string): Promise<string> => {
     try {
@@ -99,72 +81,31 @@ export const uploadFileToAzure = async (buffer: Buffer, destination: string): Pr
             return await uploadFileToFirebase(buffer, destination);
         }
 
-        const client = getBlobServiceClient();
-        const container = getContainerName();
-        
-        console.log(`Uploading to Azure: container="${container}", destination="${destination}", size=${buffer.length} bytes`);
-        
-        const containerClient = client.getContainerClient(container);
-        // Create container with private access (public access is disabled on this storage account)
-        await containerClient.createIfNotExists();
+        const storage = getStorageClient();
+        const bucketName = getBucketName();
+        const file = storage.bucket(bucketName).file(destination);
 
-        const blockBlobClient = containerClient.getBlockBlobClient(destination);
-        
-        // Set proper content type based on file extension
-        const contentType = getContentType(destination);
-        
-        await blockBlobClient.upload(buffer, buffer.length, {
-            blobHTTPHeaders: { blobContentType: contentType }
+        console.log(`Uploading to GCS: bucket="${bucketName}", destination="${destination}", size=${buffer.length} bytes`);
+
+        await file.save(buffer, {
+            resumable: false,
+            metadata: {
+                contentType: getContentType(destination),
+                cacheControl: 'public, max-age=31536000',
+            },
         });
 
-        console.log(`Successfully uploaded to Azure: ${blockBlobClient.url}`);
-        
-        // Generate a SAS URL with read access (valid for 1 year)
-        const sasUrl = generateSasUrl(destination);
-        return sasUrl;
+        console.log(`Successfully uploaded to GCS: gs://${bucketName}/${destination}`);
+
+        return await generateSignedUrlAsync(destination);
 
     } catch (error) {
-        console.error('Error uploading to Azure Blob Storage:', error);
+        console.error('Error uploading to Google Cloud Storage:', error);
         if (error instanceof Error) {
-            throw new Error(`Failed to upload file to Azure: ${error.message}`);
+            throw new Error(`Failed to upload file to GCS: ${error.message}`);
         }
-        throw new Error('Failed to upload file to Azure.');
+        throw new Error('Failed to upload file to GCS.');
     }
-};
-
-/**
- * Generates a SAS URL for a blob with read permissions.
- * @param {string} blobName The name/path of the blob in the container.
- * @param {number} expiryHours How many hours the SAS token should be valid for (default: 8760 = 1 year).
- * @returns {string} The blob URL with SAS token.
- */
-export const generateSasUrl = (blobName: string, expiryHours: number = 8760): string => {
-    if (isFirebaseStorageEnabled()) {
-        throw new Error('generateSasUrl is synchronous, but Firebase Storage signed URLs must be generated asynchronously. Use generateSignedUrlAsync instead.');
-    }
-
-    if (!accountName || !accountKey) {
-        getBlobServiceClient(); // Ensure credentials are loaded
-    }
-    
-    if (!accountName || !accountKey) {
-        throw new Error('Azure Storage account credentials not available.');
-    }
-    
-    const container = getContainerName();
-    const sharedKeyCredential = new StorageSharedKeyCredential(accountName, accountKey);
-    
-    const sasOptions = {
-        containerName: container,
-        blobName: blobName,
-        permissions: BlobSASPermissions.parse('r'), // Read-only
-        startsOn: new Date(),
-        expiresOn: new Date(Date.now() + expiryHours * 60 * 60 * 1000),
-    };
-    
-    const sasToken = generateBlobSASQueryParameters(sasOptions, sharedKeyCredential).toString();
-    
-    return `https://${accountName}.blob.core.windows.net/${container}/${blobName}?${sasToken}`;
 };
 
 export const generateSignedUrlAsync = async (blobName: string, expiryHours: number = 8760): Promise<string> => {
@@ -172,5 +113,13 @@ export const generateSignedUrlAsync = async (blobName: string, expiryHours: numb
         return generateFirebaseSignedUrl(blobName, expiryHours);
     }
 
-    return generateSasUrl(blobName, expiryHours);
+    const storage = getStorageClient();
+    const file = storage.bucket(getBucketName()).file(blobName);
+    const [signedUrl] = await file.getSignedUrl({
+        action: 'read',
+        expires: Date.now() + expiryHours * 60 * 60 * 1000,
+        version: 'v4',
+    });
+
+    return signedUrl;
 };

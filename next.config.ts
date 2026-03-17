@@ -44,7 +44,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'mdpv2storage.blob.core.windows.net',
+        hostname: '*.googleapis.com',
         port: '',
         pathname: '/**',
       }
